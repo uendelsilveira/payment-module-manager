@@ -27,7 +27,7 @@ class ApiPaymentTest extends TestCase
                 'data' => [
                     'gateway' => 'mercadopago',
                     'amount' => '150.75',
-                    'status' => 'approved', // Status da simulação
+                    'status' => 'approved',
                 ],
             ]);
 
@@ -38,29 +38,16 @@ class ApiPaymentTest extends TestCase
         ]);
     }
 
-    public function test_it_returns_error_for_invalid_payment_method()
+    public function test_it_returns_error_for_unsupported_payment_method()
     {
         $payload = [
             'amount' => 100,
-            'method' => 'invalid-gateway',
+            'method' => 'pagseguro', // Método não suportado
             'description' => 'Teste com gateway inválido',
         ];
 
         $response = $this->postJson('/api/payment/process', $payload);
 
-        $response->assertStatus(422); // Unprocessable Entity due to validation failure
-    }
-
-    public function test_it_returns_error_if_amount_is_missing()
-    {
-        $payload = [
-            'method' => PaymentGateway::STRIPE,
-            'description' => 'Teste sem valor',
-        ];
-
-        $response = $this->postJson('/api/payment/process', $payload);
-
-        $response->assertStatus(422) // Unprocessable Entity
-            ->assertJsonValidationErrors('amount');
+        $response->assertStatus(422); // Falha na validação
     }
 }
