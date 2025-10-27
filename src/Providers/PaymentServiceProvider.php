@@ -46,12 +46,8 @@ class PaymentServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Carrega as rotas da API do pacote dentro do grupo de rotas 'api' do Laravel
-        Route::prefix('api')
-            ->middleware('api')
-            ->group(function () {
-                $this->loadRoutesFrom(__DIR__.'/../../routes/api.php');
-            });
+        // Carrega as rotas da API do pacote (o prefixo e middleware já estão no arquivo de rotas)
+        $this->loadRoutesFrom(__DIR__.'/../../routes/api.php');
 
         // Carrega as migrations do pacote
         $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
