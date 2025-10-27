@@ -1,4 +1,5 @@
 <?php
+
 /*
  By Uendel Silveira
  Developer Web
@@ -20,10 +21,10 @@ class GatewayManager
     public function create(string $gateway): PaymentGatewayInterface
     {
         return match ($gateway) {
-            PaymentGateway::MERCADOPAGO => new MercadoPagoStrategy(),
-            PaymentGateway::PAGSEGURO => new PagSeguroStrategy(),
-            PaymentGateway::PAYPAL => new PayPalStrategy(),
-            PaymentGateway::STRIPE => new StripeStrategy(),
+            PaymentGateway::MERCADOPAGO => new MercadoPagoStrategy,
+            PaymentGateway::PAGSEGURO => new PagSeguroStrategy,
+            PaymentGateway::PAYPAL => new PayPalStrategy,
+            PaymentGateway::STRIPE => new StripeStrategy,
             default => throw new \InvalidArgumentException('Gateway de pagamento inválido.'),
         };
     }
