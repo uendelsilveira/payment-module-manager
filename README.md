@@ -158,4 +158,4 @@ Para executar os testes unitários e de feature do pacote:
 
 Este projeto está licenciado sob a Licença MIT.
 
-© 2023 Uendel Silveira
+© 2025 Uendel Silveira - Full Laravel Developer
