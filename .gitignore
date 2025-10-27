@@ -22,7 +22,7 @@
 
 # IDE & Sistema Operacional
 .idea/
-.idea
+*.idea
 .vscode/
 .phpstorm.meta.php
 *.iml
