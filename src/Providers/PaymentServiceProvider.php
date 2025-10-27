@@ -1,43 +1,54 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 27/10/2025 13:59:40
-*/
-
 namespace Us\PaymentModuleManager\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Us\PaymentModuleManager\Services\MercadoPagoClient;
+use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use Us\PaymentModuleManager\Repositories\TransactionRepository;
+use Us\PaymentModuleManager\Services\GatewayManager;
+use Us\PaymentModuleManager\Services\PaymentService;
 
 class PaymentServiceProvider extends ServiceProvider
 {
-    public function register()
+    /**
+     * Register any application services.
+     */
+    public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/payment.php', 'payment');
+        // Faz o merge do arquivo de configuração do pacote com o da aplicação
+        $this->mergeConfigFrom(__DIR__.'/../../config/payment.php', 'payment');
 
-        $this->app->singleton('payment', function ($app) {
-            $provider = config('payment.default');
+        // Registra o binding da interface para a implementação do repositório
+        $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
 
-            return match ($provider) {
-                'mercadopago' => new MercadoPagoClient,
-                default => null,
-            };
+        // Registra o GatewayManager como um singleton
+        $this->app->singleton(GatewayManager::class, function ($app) {
+            return new GatewayManager();
+        });
+
+        // Registra o PaymentService como um singleton
+        $this->app->singleton(PaymentService::class, function ($app) {
+            return new PaymentService(
+                $app->make(GatewayManager::class),
+                $app->make(TransactionRepositoryInterface::class)
+            );
         });
     }
 
-    public function boot()
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
     {
+        // Carrega as rotas da API do pacote
+        $this->loadRoutesFrom(__DIR__.'/../../routes/api.php');
+
+        // Carrega as migrations do pacote
+        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+
+        // Permite que o usuário publique o arquivo de configuração
         $this->publishes([
-            __DIR__.'../config/payment.php' => $this->config_path('payment.php'),
+            __DIR__.'/../../config/payment.php' => config_path('payment.php'),
         ], 'config');
-    }
-
-    private function config_path($string)
-    {
-        return $this->app()->basePath().'/config/'.$string;
-
     }
 }

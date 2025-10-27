@@ -1,19 +1,38 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 27/10/2025 13:59:40
-*/
-
 return [
-    'default' => env('PAYMENT_PROVIDER', 'mercadopago'),
-    'providers' => [
+    /*
+    |--------------------------------------------------------------------------
+    | Configurações dos Gateways de Pagamento
+    |--------------------------------------------------------------------------
+    |
+    | Aqui você pode definir as credenciais para cada gateway de pagamento
+    | que seu aplicativo suporta. Preencha os valores de acordo com as
+    | chaves fornecidas pelo provedor de pagamento.
+    |
+    */
+
+    'gateways' => [
         'mercadopago' => [
-            'client_id' => env('MERCADOPAGO_CLIENT_ID'),
-            'client_secret' => env('MERCADOPAGO_CLIENT_SECRET'),
+            'public_key' => env('MERCADOPAGO_PUBLIC_KEY', ''),
+            'access_token' => env('MERCADOPAGO_ACCESS_TOKEN', ''),
         ],
-        // futuros provedores
+
+        'pagseguro' => [
+            'email' => env('PAGSEGURO_EMAIL', ''),
+            'token' => env('PAGSEGURO_TOKEN', ''),
+            'sandbox' => env('PAGSEGURO_SANDBOX', true),
+        ],
+
+        'paypal' => [
+            'client_id' => env('PAYPAL_CLIENT_ID', ''),
+            'secret' => env('PAYPAL_SECRET', ''),
+            'mode' => env('PAYPAL_MODE', 'sandbox'), // 'sandbox' ou 'live'
+        ],
+
+        'stripe' => [
+            'key' => env('STRIPE_KEY', ''),
+            'secret' => env('STRIPE_SECRET', ''),
+        ],
     ],
 ];

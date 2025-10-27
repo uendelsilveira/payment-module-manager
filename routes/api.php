@@ -1,8 +1,16 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+use Us\PaymentModuleManager\Http\Controllers\PaymentController;
+
 /*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 27/10/2025 13:59:40
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Aqui é onde você pode registrar as rotas da API para o seu pacote.
+|
 */
+
+Route::post('payment/process', [PaymentController::class, 'process'])
+    ->name('payment.process');

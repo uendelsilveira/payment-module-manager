@@ -1,84 +1,72 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 27/10/2025 13:59:40
-*/
-
 namespace Us\PaymentModuleManager\Services;
 
-use App\Models\Payment;
-use App\Models\User;
-use Exception;
+use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use Us\PaymentModuleManager\Models\Transaction;
 use Illuminate\Support\Facades\DB;
-use US\PaymentModuleManager\Repositories\PaymentRepository;
+use Throwable;
 
 class PaymentService
 {
-    protected $paymentRepository;
+    protected GatewayManager $gatewayManager;
+    protected TransactionRepositoryInterface $transactionRepository;
 
-    public function __construct(PaymentRepository $paymentRepository)
+    /**
+     * @param GatewayManager $gatewayManager
+     * @param TransactionRepositoryInterface $transactionRepository
+     */
+    public function __construct(GatewayManager $gatewayManager, TransactionRepositoryInterface $transactionRepository)
     {
-        $this->paymentRepository = $paymentRepository;
+        $this->gatewayManager = $gatewayManager;
+        $this->transactionRepository = $transactionRepository;
     }
 
-    public function createPayment(array $data): Payment
+    /**
+     * Orquestra o processo completo de pagamento.
+     *
+     * @param array $data Dados validados da requisição (method, amount, description).
+     * @return Transaction
+     * @throws Throwable
+     */
+    public function processPayment(array $data): Transaction
     {
-        DB::beginTransaction();
+        // O GatewayManager seleciona a estratégia correta com base no 'method' escolhido pelo usuário.
+        $gatewayStrategy = $this->gatewayManager->create($data['method']);
 
-        try {
-            $payment = $this->paymentRepository->create($data);
-            DB::commit();
+        // Envolve a lógica em uma transação de banco de dados para garantir a consistência.
+        return DB::transaction(function () use ($data, $gatewayStrategy) {
+            // 1. Cria um registro inicial da transação no banco de dados.
+            $transaction = $this->transactionRepository->create([
+                'gateway' => $data['method'],
+                'amount' => $data['amount'],
+                'description' => $data['description'],
+                'status' => 'pending', // Status inicial
+            ]);
 
-            return $payment;
-        } catch (Exception $e) {
-            DB::rollBack();
+            try {
+                // 2. Executa a cobrança usando a API externa do gateway.
+                $gatewayResponse = $gatewayStrategy->charge($data['amount'], [
+                    'description' => $data['description'],
+                    // Outros dados relevantes podem ser passados aqui (ex: dados do cliente)
+                ]);
 
-            throw $e;
-        }
-    }
+                // 3. Atualiza a transação com a resposta bem-sucedida do gateway.
+                $transaction->external_id = $gatewayResponse['id'];
+                $transaction->status = $gatewayResponse['status'];
+                $transaction->metadata = $gatewayResponse; // Armazena a resposta completa para referência
+                $transaction->save();
 
-    public function getPaymentById(int $id): ?Payment
-    {
-        return $this->paymentRepository->find($id);
-    }
+            } catch (Throwable $e) {
+                // 4. Em caso de falha na comunicação com o gateway, marca a transação como 'failed'.
+                $transaction->status = 'failed';
+                $transaction->save();
 
-    public function updatePayment(int $id, array $data): ?Payment
-    {
-        DB::beginTransaction();
+                // Relança a exceção para que o controller possa capturá-la e retornar um erro apropriado.
+                throw $e;
+            }
 
-        try {
-            $payment = $this->paymentRepository->update($id, $data);
-            DB::commit();
-
-            return $payment;
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            throw $e;
-        }
-    }
-
-    public function deletePayment(int $id): bool
-    {
-        DB::beginTransaction();
-
-        try {
-            $deleted = $this->paymentRepository->delete($id);
-            DB::commit();
-
-            return $deleted;
-        } catch (Exception $e) {
-            DB::rollBack();
-
-            throw $e;
-        }
-    }
-
-    public function getPaymentsByUser(User $user)
-    {
-        return $this->paymentRepository->getPaymentsByUserId($user->id);
+            return $transaction;
+        });
     }
 }

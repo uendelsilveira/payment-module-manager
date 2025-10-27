@@ -1,15 +1,15 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 27/10/2025 13:59:40
-*/
-
 namespace Us\PaymentModuleManager\Contracts;
 
 interface PaymentGatewayInterface
 {
-    public function processPayment(array $data);
+    /**
+     * Processa uma cobrança.
+     *
+     * @param float $amount
+     * @param array $data Dados adicionais (ex: descrição, dados do cliente)
+     * @return array Retorna os dados da transação da API externa
+     */
+    public function charge(float $amount, array $data): array;
 }
