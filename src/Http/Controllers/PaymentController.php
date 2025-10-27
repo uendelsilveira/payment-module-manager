@@ -36,8 +36,7 @@ class PaymentController extends Controller
                 201 // Created
             );
         } catch (Throwable $e) {
-            // Em um ambiente de produção, você pode querer logar o erro completo
-            // e retornar uma mensagem mais genérica para o usuário.
+            // Em produção, retorna uma resposta de erro padronizada.
             return $this->errorResponse(
                 'Falha ao processar pagamento: ' . $e->getMessage(),
                 500 // Internal Server Error

@@ -8,6 +8,8 @@ use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use Us\PaymentModuleManager\Repositories\TransactionRepository;
 use Us\PaymentModuleManager\Services\GatewayManager;
 use Us\PaymentModuleManager\Services\PaymentService;
+use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use Us\PaymentModuleManager\Services\MercadoPagoClient;
 
 class PaymentServiceProvider extends ServiceProvider
 {
@@ -21,6 +23,9 @@ class PaymentServiceProvider extends ServiceProvider
 
         // Registra o binding da interface para a implementação do repositório
         $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
+
+        // Registra o binding da interface para a implementação do cliente Mercado Pago
+        $this->app->singleton(MercadoPagoClientInterface::class, MercadoPagoClient::class);
 
         // Registra o GatewayManager como um singleton
         $this->app->singleton(GatewayManager::class, function ($app) {

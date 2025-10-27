@@ -1,42 +1,73 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 27/10/2025 13:59:40
-*/
-
 namespace Us\PaymentModuleManager\Services;
 
-/**
- * Implementação concreta para uso no ServiceProvider.
- * Substitua/os métodos abaixo com a integração real da API MercadoPago.
- */
-class MercadoPagoClient
+use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use MercadoPago\Client\Payment\PaymentClient;
+use MercadoPago\Exceptions\MPApiException;
+use MercadoPago\MercadoPagoConfig;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
+
+class MercadoPagoClient implements MercadoPagoClientInterface
 {
-    protected array $config;
+    protected PaymentClient $client;
 
-    public function __construct(array $config = [])
+    public function __construct()
     {
-        $this->config = $config;
-        // inicialize SDK/cliente aqui se necessário
+        $accessToken = Config::get('payment.gateways.mercadopago.access_token');
+
+        if (empty($accessToken)) {
+            throw new \InvalidArgumentException('Mercado Pago access token não configurado.');
+        }
+
+        MercadoPagoConfig::setAccessToken($accessToken);
+        $this->client = new PaymentClient();
     }
 
-    // Exemplo genérico: criar cobrança
-    public function createPayment(array $data): array
+    /**
+     * Cria um pagamento no Mercado Pago.
+     *
+     * @param array $requestData
+     * @return object
+     * @throws \Exception
+     */
+    public function createPayment(array $requestData): object
     {
-        // Implementar chamada real ao MercadoPago SDK/API
-        return [
-            'success' => true,
-            'data' => $data,
-        ];
+        try {
+            return $this->client->create($requestData);
+        } catch (MPApiException $e) {
+            Log::error('Erro na API do Mercado Pago ao criar pagamento: ' . $e->getMessage(), [
+                'status_code' => $e->getApiResponse()->getStatusCode(),
+                'content' => $e->getApiResponse()->getContent(),
+            ]);
+            throw new \Exception('Erro ao criar pagamento com Mercado Pago: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('Erro inesperado ao criar pagamento no Mercado Pago: ' . $e->getMessage());
+            throw new \Exception('Erro inesperado ao criar pagamento: ' . $e->getMessage());
+        }
     }
 
-    // Exemplo genérico: estornar pagamento
-    public function refund(string $paymentId): bool
+    /**
+     * Obtém os detalhes de um pagamento no Mercado Pago.
+     *
+     * @param string $paymentId
+     * @return object
+     * @throws \Exception
+     */
+    public function getPayment(string $paymentId): object
     {
-        // Implementar lógica real de estorno
-        return true;
+        try {
+            return $this->client->get($paymentId);
+        } catch (MPApiException $e) {
+            Log::error('Erro na API do Mercado Pago ao obter pagamento: ' . $e->getMessage(), [
+                'status_code' => $e->getApiResponse()->getStatusCode(),
+                'content' => $e->getApiResponse()->getContent(),
+            ]);
+            throw new \Exception('Erro ao obter pagamento com Mercado Pago: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('Erro inesperado ao obter pagamento no Mercado Pago: ' . $e->getMessage());
+            throw new \Exception('Erro inesperado ao obter pagamento: ' . $e->getMessage());
+        }
     }
 }

@@ -3,27 +3,17 @@
 namespace Us\PaymentModuleManager\Gateways;
 
 use Us\PaymentModuleManager\Contracts\PaymentGatewayInterface;
-use MercadoPago\Client\Payment\PaymentClient;
-use MercadoPago\Exceptions\MPApiException;
-use MercadoPago\MercadoPagoConfig;
-use Illuminate\Support\Facades\Config;
+use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 
 class MercadoPagoStrategy implements PaymentGatewayInterface
 {
-    protected PaymentClient $client;
+    protected MercadoPagoClientInterface $mpClient;
 
-    public function __construct()
+    public function __construct(MercadoPagoClientInterface $mpClient)
     {
-        $accessToken = Config::get('payment.gateways.mercadopago.access_token');
-
-        if (empty($accessToken)) {
-            throw new \InvalidArgumentException('Mercado Pago access token não configurado.');
-        }
-
-        MercadoPagoConfig::setAccessToken($accessToken);
-        $this->client = new PaymentClient();
+        $this->mpClient = $mpClient;
     }
 
     /**
@@ -44,11 +34,10 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
                 "payer" => [
                     "email" => $data['payer_email'] ?? 'test_payer@example.com',
                 ],
-                // Adiciona a URL de notificação para o webhook
-                "notification_url" => route('mercadopago.webhook', [], true), // true para URL absoluta
+                "notification_url" => route('mercadopago.webhook', [], true),
             ];
 
-            $payment = $this->client->create($request);
+            $payment = $this->mpClient->createPayment($request);
 
             // Retorna os dados relevantes da resposta do Mercado Pago
             return [
@@ -59,18 +48,12 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
                 'payment_method_id' => $payment->payment_method_id,
                 'status_detail' => $payment->status_detail,
                 'external_resource_url' => $payment->point_of_interaction->transaction_data->qr_code_base64 ?? null,
-                'metadata' => (array) $payment->metadata, // Converte o objeto metadata para array
+                'metadata' => (array) $payment->metadata,
             ];
 
-        } catch (MPApiException $e) {
-            Log::error('Erro na API do Mercado Pago: ' . $e->getMessage(), [
-                'status_code' => $e->getApiResponse()->getStatusCode(),
-                'content' => $e->getApiResponse()->getContent(),
-            ]);
-            throw new \Exception('Erro ao processar pagamento com Mercado Pago: ' . $e->getMessage());
         } catch (\Exception $e) {
-            Log::error('Erro inesperado no Mercado Pago Strategy: ' . $e->getMessage());
-            throw new \Exception('Erro inesperado ao processar pagamento: ' . $e->getMessage());
+            Log::error('Erro ao processar pagamento com Mercado Pago: ' . $e->getMessage());
+            throw new \Exception('Erro ao processar pagamento: ' . $e->getMessage());
         }
     }
 }

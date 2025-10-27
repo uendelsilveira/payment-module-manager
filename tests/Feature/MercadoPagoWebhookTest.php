@@ -5,7 +5,7 @@ namespace Us\PaymentModuleManager\Tests\Feature;
 use Us\PaymentModuleManager\Models\Transaction;
 use Us\PaymentModuleManager\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use MercadoPago\Client\Payment\PaymentClient;
+use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use MercadoPago\MercadoPagoConfig;
 use Mockery;
 
@@ -17,12 +17,13 @@ class MercadoPagoWebhookTest extends TestCase
     {
         parent::setUp();
 
-        // Mock do MercadoPagoConfig e PaymentClient para evitar chamadas reais à API durante o teste
-        // Isso é crucial para testes de webhook, pois não queremos que o teste dependa da API externa
-        MercadoPagoConfig::setAccessToken('TEST_ACCESS_TOKEN'); // Apenas para inicializar
+        // Configura o access token para o SDK do MP, mesmo que seja um mock.
+        // Isso é necessário porque o construtor do MercadoPagoClient ainda tenta configurar o SDK.
+        MercadoPagoConfig::setAccessToken('TEST_ACCESS_TOKEN');
 
-        $this->mock(PaymentClient::class, function ($mock) {
-            $mock->shouldReceive('get')->andReturn((object)[
+        // Mock da interface MercadoPagoClientInterface
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+            $mock->shouldReceive('getPayment')->andReturn((object)[
                 'id' => 'mp_payment_id_123',
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
@@ -31,7 +32,7 @@ class MercadoPagoWebhookTest extends TestCase
                 'status_detail' => 'accredited',
                 'metadata' => (object)[],
             ]);
-        });
+        }));
     }
 
     protected function tearDown(): void

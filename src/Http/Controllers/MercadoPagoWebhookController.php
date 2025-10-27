@@ -7,13 +7,18 @@ use Illuminate\Routing\Controller;
 use Us\PaymentModuleManager\Models\Transaction;
 use Us\PaymentModuleManager\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Log;
-use MercadoPago\Client\Payment\PaymentClient;
-use MercadoPago\MercadoPagoConfig;
-use Illuminate\Support\Facades\Config;
+use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 
 class MercadoPagoWebhookController extends Controller
 {
     use ApiResponseTrait;
+
+    protected MercadoPagoClientInterface $mpClient;
+
+    public function __construct(MercadoPagoClientInterface $mpClient)
+    {
+        $this->mpClient = $mpClient;
+    }
 
     /**
      * Handle the incoming Mercado Pago webhook request.
@@ -37,16 +42,8 @@ class MercadoPagoWebhookController extends Controller
         }
 
         try {
-            // 1. Buscar o access_token e configurar o SDK do Mercado Pago
-            $accessToken = Config::get('payment.gateways.mercadopago.access_token');
-            if (empty($accessToken)) {
-                throw new \Exception('Mercado Pago access token não configurado para webhook.');
-            }
-            MercadoPagoConfig::setAccessToken($accessToken);
-            $client = new PaymentClient();
-
             // 2. Consultar a API do Mercado Pago para obter o status atual do pagamento
-            $mpPayment = $client->get($paymentId);
+            $mpPayment = $this->mpClient->getPayment($paymentId);
 
             // 3. Encontrar a transação local pelo external_id
             $transaction = Transaction::where('external_id', $paymentId)->first();
@@ -69,12 +66,6 @@ class MercadoPagoWebhookController extends Controller
 
             return $this->successResponse(null, 'Webhook processado com sucesso.');
 
-        } catch (MPApiException $e) {
-            Log::error('Erro na API do Mercado Pago ao consultar pagamento via webhook: ' . $e->getMessage(), [
-                'status_code' => $e->getApiResponse()->getStatusCode(),
-                'content' => $e->getApiResponse()->getContent(),
-            ]);
-            return $this->errorResponse('Erro ao consultar pagamento no Mercado Pago.', 500);
         } catch (\Exception $e) {
             Log::error('Erro inesperado no Mercado Pago Webhook Controller: ' . $e->getMessage());
             return $this->errorResponse('Erro interno ao processar webhook.', 500);

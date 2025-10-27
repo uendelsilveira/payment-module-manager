@@ -5,7 +5,8 @@ namespace Us\PaymentModuleManager\Tests\Unit;
 use Us\PaymentModuleManager\Enums\PaymentGateway;
 use Us\PaymentModuleManager\Gateways\MercadoPagoStrategy;
 use Us\PaymentModuleManager\Services\GatewayManager;
-use PHPUnit\Framework\TestCase;
+use Us\PaymentModuleManager\Tests\TestCase; // Alterado para estender o TestCase do pacote
+use Mockery;
 
 class GatewayManagerTest extends TestCase
 {
@@ -14,11 +15,27 @@ class GatewayManagerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Mock do MercadoPagoStrategy para evitar que seu construtor real seja chamado
+        // e cause o erro de Facade, já que estamos testando o GatewayManager, não a Strategy.
+        $this->mock(MercadoPagoStrategy::class, function ($mock) {
+            $mock->shouldReceive('__construct')->andReturnNull(); // Mocka o construtor
+            $mock->shouldReceive('charge')->andReturn([]); // Mocka o método charge se for chamado
+        });
+
         $this->gatewayManager = new GatewayManager();
+    }
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
     }
 
     public function test_it_creates_mercadopago_strategy_correctly()
     {
+        // Aqui, o GatewayManager tentará criar uma MercadoPagoStrategy.
+        // Como MercadoPagoStrategy está mockado, ele retornará a instância mockada.
         $strategy = $this->gatewayManager->create(PaymentGateway::MERCADOPAGO);
         $this->assertInstanceOf(MercadoPagoStrategy::class, $strategy);
     }

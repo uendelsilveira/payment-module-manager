@@ -17,7 +17,8 @@ class GatewayManager
     public function create(string $gateway): PaymentGatewayInterface
     {
         if ($gateway === PaymentGateway::MERCADOPAGO) {
-            return new MercadoPagoStrategy();
+            // Resolve a estratégia do container do Laravel para permitir mocking
+            return app(MercadoPagoStrategy::class);
         }
 
         throw new \InvalidArgumentException('O gateway de pagamento selecionado não é suportado.');
