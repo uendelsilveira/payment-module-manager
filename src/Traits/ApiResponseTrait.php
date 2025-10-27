@@ -14,7 +14,7 @@ trait ApiResponseTrait
      * @param int $statusCode
      * @return JsonResponse
      */
-    protected function successResponse($data, string $message = null, int $statusCode = 200): JsonResponse
+    protected function successResponse($data, ?string $message = null, int $statusCode = 200): JsonResponse
     {
         return response()->json([
             'success' => true,
@@ -31,7 +31,7 @@ trait ApiResponseTrait
      * @param mixed|null $errors
      * @return JsonResponse
      */
-    protected function errorResponse(string $message = null, int $statusCode = 400, $errors = null): JsonResponse
+    protected function errorResponse(?string $message = null, int $statusCode = 400, $errors = null): JsonResponse
     {
         return response()->json([
             'success' => false,
