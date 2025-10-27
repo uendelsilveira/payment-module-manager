@@ -22,10 +22,10 @@ Para usar este pacote em seu projeto Laravel, adicione-o via Composer:
 composer require us/payment-module-manager
 ```
 
-Se você estiver desenvolvendo o pacote localmente, pode configurá-lo como um repositório `path` no seu `composer.json`:
+Se você estiver a desenvolver o pacote localmente, pode configurá-lo como um repositório `path` no seu `composer.json`:
 
 ```json
-// composer.json do seu projeto Laravel
+
 {
     "repositories": [
         {
@@ -103,12 +103,12 @@ O pacote expõe um endpoint de API para processar pagamentos.
   "message": "Pagamento processado com sucesso.",
   "data": {
     "id": "123456789",
-    "status": "pending", // ou "approved"
+    "status": "pending",
     "transaction_amount": 199.90,
     "description": "Assinatura Premium",
     "payment_method_id": "pix",
     "status_detail": "pending_challenge",
-    "external_resource_url": "data:image/png;base64,...", // QR Code para PIX
+    "external_resource_url": "data:image/png;base64,...",
     "metadata": [],
     "gateway": "mercadopago",
     "amount": "199.90",
@@ -143,9 +143,12 @@ Para executar os testes unitários e de feature do pacote:
     ```bash
     composer update
     ```
-2.  Configure suas credenciais de teste do Mercado Pago no seu `.env` ou diretamente no `phpunit.xml` (para testes):
-    ```dotenv
-    MERCADOPAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN_DE_TESTE"
+2.  Configure suas credenciais de teste do Mercado Pago **no arquivo `phpunit.xml`** (na raiz do pacote) para o ambiente de teste:
+    ```xml
+    <!-- phpunit.xml -->
+    <php>
+        <env name="MERCADOPAGO_ACCESS_TOKEN" value="SEU_ACCESS_TOKEN_DE_TESTE"/>
+    </php>
     ```
 3.  Execute os testes:
     ```bash
