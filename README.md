@@ -34,7 +34,7 @@ Se você estiver a desenvolver o pacote localmente, você deve configurá-lo com
         }
     ],
     "require": {
-        "us/payment-module-manager": "@dev"
+        "us/payment-module-manager": "^1.0.0"
     }
 }
 ```
