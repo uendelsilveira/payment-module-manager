@@ -16,9 +16,11 @@ class ApiPaymentTest extends TestCase
             'amount' => 150.75,
             'method' => PaymentGateway::MERCADOPAGO,
             'description' => 'Teste de pagamento com Mercado Pago',
+            'payer_email' => 'test@example.com', // Adicionado para o Mercado Pago
         ];
 
-        $response = $this->postJson('/api/payment/process', $payload);
+        // Usando o helper route() para garantir a URL correta
+        $response = $this->postJson(route('payment.process'), $payload);
 
         $response->assertStatus(201)
             ->assertJson([
@@ -44,9 +46,11 @@ class ApiPaymentTest extends TestCase
             'amount' => 100,
             'method' => 'pagseguro', // Método não suportado
             'description' => 'Teste com gateway inválido',
+            'payer_email' => 'test@example.com',
         ];
 
-        $response = $this->postJson('/api/payment/process', $payload);
+        // Usando o helper route() para garantir a URL correta
+        $response = $this->postJson(route('payment.process'), $payload);
 
         $response->assertStatus(422); // Falha na validação
     }
