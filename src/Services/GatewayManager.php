@@ -1,31 +1,25 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 27/10/2025 13:59:40
-*/
-
 namespace Us\PaymentModuleManager\Services;
 
 use Us\PaymentModuleManager\Contracts\PaymentGatewayInterface;
 use Us\PaymentModuleManager\Enums\PaymentGateway;
 use Us\PaymentModuleManager\Gateways\MercadoPagoStrategy;
-use Us\PaymentModuleManager\Gateways\PagSeguroStrategy;
-use Us\PaymentModuleManager\Gateways\PayPalStrategy;
-use Us\PaymentModuleManager\Gateways\StripeStrategy;
 
 class GatewayManager
 {
+    /**
+     * Cria a instância do gateway de pagamento.
+     *
+     * @param string $gateway
+     * @return PaymentGatewayInterface
+     */
     public function create(string $gateway): PaymentGatewayInterface
     {
-        return match ($gateway) {
-            PaymentGateway::MERCADOPAGO => new MercadoPagoStrategy,
-            PaymentGateway::PAGSEGURO => new PagSeguroStrategy,
-            PaymentGateway::PAYPAL => new PayPalStrategy,
-            PaymentGateway::STRIPE => new StripeStrategy,
-            default => throw new \InvalidArgumentException('Gateway de pagamento inválido.'),
-        };
+        if ($gateway === PaymentGateway::MERCADOPAGO) {
+            return new MercadoPagoStrategy();
+        }
+
+        throw new \InvalidArgumentException('O gateway de pagamento selecionado não é suportado.');
     }
 }
