@@ -2,6 +2,7 @@
 
 namespace Us\PaymentModuleManager\Providers;
 
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use Us\PaymentModuleManager\Repositories\TransactionRepository;
@@ -40,8 +41,12 @@ class PaymentServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Carrega as rotas da API do pacote
-        $this->loadRoutesFrom(__DIR__.'/../../routes/api.php');
+        // Carrega as rotas da API do pacote dentro do grupo de rotas 'api' do Laravel
+        Route::prefix('api')
+            ->middleware('api')
+            ->group(function () {
+                $this->loadRoutesFrom(__DIR__.'/../../routes/api.php');
+            });
 
         // Carrega as migrations do pacote
         $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');

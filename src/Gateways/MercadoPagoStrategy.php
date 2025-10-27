@@ -8,6 +8,7 @@ use MercadoPago\Exceptions\MPApiException;
 use MercadoPago\MercadoPagoConfig;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 
 class MercadoPagoStrategy implements PaymentGatewayInterface
 {
@@ -36,10 +37,6 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     public function charge(float $amount, array $data): array
     {
         try {
-            // Os dados para criar o pagamento podem variar bastante dependendo do tipo de pagamento (cartão, pix, boleto).
-            // Para este exemplo, vamos simular um pagamento simples ou um PIX, que é mais direto.
-            // Em uma implementação completa, 'data' precisaria conter mais informações (ex: payment_method_id, payer, etc.)
-
             $request = [
                 "transaction_amount" => $amount,
                 "description" => $data['description'] ?? 'Pagamento via API',
@@ -47,9 +44,8 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
                 "payer" => [
                     "email" => $data['payer_email'] ?? 'test_payer@example.com',
                 ],
-                // Outros campos podem ser adicionados conforme a necessidade do Mercado Pago
-                // "installments" => 1,
-                // "notification_url" => "https://your-site.com/webhooks/mercadopago",
+                // Adiciona a URL de notificação para o webhook
+                "notification_url" => route('mercadopago.webhook', [], true), // true para URL absoluta
             ];
 
             $payment = $this->client->create($request);
