@@ -1,0 +1,59 @@
+# ========================================
+# Payment Module Manager - .gitignore
+# ========================================
+
+# Composer
+/vendor/
+/composer.lock
+
+# Laravel cache & logs (se o pacote tiver testes com app Laravel)
+/bootstrap/cache/
+/storage/*.key
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+
+# Arquivos de ambiente
+.env
+.env.*
+.env.backup
+*.local
+
+# IDE & Sistema Operacional
+.idea/
+.vscode/
+.phpstorm.meta.php
+*.iml
+.DS_Store
+Thumbs.db
+
+# Testes e Cobertura
+.phpunit.result.cache
+coverage/
+clover.xml
+*.coverage
+
+# Build / Distribuição
+/build/
+node_modules/
+npm-debug.log
+yarn-error.log
+*.tgz
+
+# Cache e temporários
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Docker / Sail (opcional)
+.docker/
+docker-compose.override.yml
+sail/
+.env.sail
+
+# Arquivos pessoais
+notes.md
+todo.md
+drafts/
