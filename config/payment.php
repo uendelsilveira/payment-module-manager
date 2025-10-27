@@ -1,6 +1,12 @@
 <?php
-	
-	return [
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created: 27/10/2025 13:59:40
+*/
+
+return [
 		'default' => env('PAYMENT_PROVIDER', 'mercadopago'),
 		'providers' => [
 			'mercadopago' => [

@@ -1,6 +1,12 @@
 <?php
-	
-	namespace Us\PaymentModuleManager\Providers;
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created: 27/10/2025 13:59:40
+*/
+
+namespace Us\PaymentModuleManager\Providers;
 	
 	use Illuminate\Support\ServiceProvider;
 	use Us\PaymentModuleManager\Services\MercadoPagoClient;
