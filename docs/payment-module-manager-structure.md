@@ -11,7 +11,9 @@ Permite integração plugável via composer (`us/payment-module-manager`).
 payment-module-manager/
 ├── composer.json
 ├── src/
-│   ├── Providers/
+│   ├── Contracts/
+│   │   └── PaymentProviderInterface.php
+│   ├── Providers/│
 │   │   └── PaymentServiceProvider.php
 │   ├── Http/
 │   │   ├── Controllers/
@@ -26,8 +28,6 @@ payment-module-manager/
 │   │   ├── PaymentService.php
 │   │   └── GatewayManager.php
 │   ├── Gateways/
-│   │   ├── Contracts/
-│   │   │   └── PaymentGateway.php
 │   │   ├── MercadoPagoStrategy.php
 │   │   ├── PagSeguroStrategy.php
 │   │   ├── PayPalStrategy.php
