@@ -1,4 +1,4 @@
-# 💳 Payment Module Manager (Mercado Pago Only)
+# 💳 Payment Module Manager
 
 Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração com o Mercado Pago. Projetado para ser plugável e fácil de usar em qualquer aplicação Laravel.
 
@@ -22,15 +22,15 @@ Para usar este pacote em seu projeto Laravel, adicione-o via Composer:
 composer require us/payment-module-manager
 ```
 
-Se você estiver a desenvolver o pacote localmente, pode configurá-lo como um repositório `path` no seu `composer.json`:
+Se você estiver a desenvolver o pacote localmente, você deve configurá-lo como um repositório `vcs` no seu `composer.json`:
 
 ```json
 
 {
     "repositories": [
         {
-            "type": "path",
-            "url": "../caminho/para/seu/payment-module-manager"
+            "type": "vcs",
+            "url": "https://github.com/uendelsilveira/payment-module-manager.git"
         }
     ],
     "require": {
