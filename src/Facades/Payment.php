@@ -13,14 +13,13 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @method static \UendelSilveira\PaymentModuleManager\Models\Transaction processPayment(array $data)
+ *
  * @see \UendelSilveira\PaymentModuleManager\Services\PaymentService
  */
 class Payment extends Facade
 {
     /**
      * Get the registered name of the component.
-     *
-     * @return string
      */
     protected static function getFacadeAccessor(): string
     {

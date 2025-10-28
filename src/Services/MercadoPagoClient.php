@@ -4,7 +4,7 @@
  By Uendel Silveira
  Developer Web
  IDE: PhpStorm
- Created: 28/10/2025 20:43:22
+ Created: 28/10/2025 20:43:21
 */
 
 namespace UendelSilveira\PaymentModuleManager\Services;
@@ -15,14 +15,19 @@ use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Exceptions\MPApiException;
 use MercadoPago\MercadoPagoConfig;
 use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 
 class MercadoPagoClient implements MercadoPagoClientInterface
 {
     protected PaymentClient $client;
 
-    public function __construct()
+    public function __construct(SettingsRepositoryInterface $settingsRepository)
     {
-        $accessToken = Config::get('payment.gateways.mercadopago.access_token');
+        // Tenta buscar o token do banco de dados primeiro, com fallback para o arquivo de configuração
+        $accessToken = $settingsRepository->get(
+            'mercadopago_access_token',
+            Config::get('payment.gateways.mercadopago.access_token')
+        );
 
         if (empty($accessToken)) {
             throw new \InvalidArgumentException('Mercado Pago access token não configurado.');
@@ -32,11 +37,6 @@ class MercadoPagoClient implements MercadoPagoClientInterface
         $this->client = new PaymentClient;
     }
 
-    /**
-     * Cria um pagamento no Mercado Pago.
-     *
-     * @throws \Exception
-     */
     public function createPayment(array $requestData): object
     {
         try {
@@ -55,11 +55,6 @@ class MercadoPagoClient implements MercadoPagoClientInterface
         }
     }
 
-    /**
-     * Obtém os detalhes de um pagamento no Mercado Pago.
-     *
-     * @throws \Exception
-     */
     public function getPayment(string $paymentId): object
     {
         try {
