@@ -7,7 +7,7 @@
  Created: 28/10/2025 20:57:39
 */
 
-namespace Us\PaymentModuleManager\Http\Middleware;
+namespace UendelSilveira\PaymentModuleManager\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;

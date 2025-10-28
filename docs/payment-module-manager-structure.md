@@ -1,7 +1,7 @@
 # 🧩 Payment Module Manager
 
 Pacote Laravel independente para gerenciar múltiplos gateways de pagamento (Mercado Pago, PagSeguro, PayPal, Stripe, etc).  
-Permite integração plugável via composer (`us/payment-module-manager`).
+Permite integração plugável via composer (`uendelsilveira/payment-module-manager`).
 
 ---
 
@@ -59,18 +59,18 @@ payment-module-manager/
 
 ```json
 {
-  "name": "us/payment-module-manager",
+  "name": "uendelsilveira/payment-module-manager",
   "description": "Pacote gerenciador de múltiplos gateways de pagamento para Laravel.",
   "type": "library",
   "autoload": {
     "psr-4": {
-      "Us\\PaymentModuleManager\\": "src/"
+      "UendelSilveira\\PaymentModuleManager\\": "src/"
     }
   },
   "extra": {
     "laravel": {
       "providers": [
-        "Us\\PaymentModuleManager\\Providers\\PaymentServiceProvider"
+        "UendelSilveira\\PaymentModuleManager\\Providers\\PaymentServiceProvider"
       ]
     }
   },
@@ -93,7 +93,7 @@ Para desenvolver e testar localmente, adicione o repositório ao seu projeto Lar
 
 ```bash
 composer config repositories.payment-module-manager path ../payment-module-manager
-composer require us/payment-module-manager:dev-main
+composer require uendelsilveira/payment-module-manager:dev-main
 ```
 
 ---
@@ -103,12 +103,12 @@ composer require us/payment-module-manager:dev-main
 ```php
 <?php
 
-namespace Us\PaymentModuleManager\Providers;
+namespace UendelSilveira\PaymentModuleManager\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Us\PaymentModuleManager\Repositories\TransactionRepository;
-use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
-use Us\PaymentModuleManager\Services\PaymentService;
+use UendelSilveira\PaymentModuleManager\Repositories\TransactionRepository;
+use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 
 class PaymentServiceProvider extends ServiceProvider
 {

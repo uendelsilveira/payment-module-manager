@@ -7,14 +7,14 @@
  Created: 28/10/2025 20:43:22
 */
 
-namespace Us\PaymentModuleManager\Http\Controllers;
+namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
-use Us\PaymentModuleManager\Models\Transaction;
-use Us\PaymentModuleManager\Traits\ApiResponseTrait;
+use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use UendelSilveira\PaymentModuleManager\Models\Transaction;
+use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
 class MercadoPagoWebhookController extends Controller
 {

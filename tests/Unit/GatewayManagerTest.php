@@ -7,13 +7,13 @@
  Created: 28/10/2025 20:43:21
 */
 
-namespace Us\PaymentModuleManager\Tests\Unit;
+namespace UendelSilveira\PaymentModuleManager\Tests\Unit;
 
 use Mockery;
-use Us\PaymentModuleManager\Enums\PaymentGateway;
-use Us\PaymentModuleManager\Gateways\MercadoPagoStrategy;
-use Us\PaymentModuleManager\Services\GatewayManager; // Alterado para estender o TestCase do pacote
-use Us\PaymentModuleManager\Tests\TestCase;
+use UendelSilveira\PaymentModuleManager\Enums\PaymentGateway;
+use UendelSilveira\PaymentModuleManager\Gateways\MercadoPagoStrategy;
+use UendelSilveira\PaymentModuleManager\Services\GatewayManager; // Alterado para estender o TestCase do pacote
+use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class GatewayManagerTest extends TestCase
 {

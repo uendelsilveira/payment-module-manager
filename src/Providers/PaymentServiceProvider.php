@@ -7,17 +7,17 @@
  Created: 28/10/2025 20:43:21
 */
 
-namespace Us\PaymentModuleManager\Providers;
+namespace UendelSilveira\PaymentModuleManager\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
-use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
-use Us\PaymentModuleManager\Http\Middleware\VerifyMercadoPagoSignature;
-use Us\PaymentModuleManager\Repositories\TransactionRepository;
-use Us\PaymentModuleManager\Services\GatewayManager;
-use Us\PaymentModuleManager\Services\MercadoPagoClient;
-use Us\PaymentModuleManager\Services\PaymentService;
+use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Http\Middleware\VerifyMercadoPagoSignature;
+use UendelSilveira\PaymentModuleManager\Repositories\TransactionRepository;
+use UendelSilveira\PaymentModuleManager\Services\GatewayManager;
+use UendelSilveira\PaymentModuleManager\Services\MercadoPagoClient;
+use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 
 class PaymentServiceProvider extends ServiceProvider
 {

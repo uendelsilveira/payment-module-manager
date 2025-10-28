@@ -7,10 +7,10 @@
  Created: 28/10/2025 20:43:22
 */
 
-namespace Us\PaymentModuleManager\Repositories;
+namespace UendelSilveira\PaymentModuleManager\Repositories;
 
-use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
-use Us\PaymentModuleManager\Models\Transaction;
+use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Models\Transaction;
 
 class TransactionRepository implements TransactionRepositoryInterface
 {

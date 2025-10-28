@@ -7,11 +7,11 @@
  Created: 28/10/2025 20:43:22
 */
 
-namespace Us\PaymentModuleManager\Gateways;
+namespace UendelSilveira\PaymentModuleManager\Gateways;
 
 use Illuminate\Support\Facades\Log;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
-use Us\PaymentModuleManager\Contracts\PaymentGatewayInterface;
+use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
 
 class MercadoPagoStrategy implements PaymentGatewayInterface
 {

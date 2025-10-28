@@ -7,14 +7,14 @@
  Created: 28/10/2025 20:43:22
 */
 
-namespace Us\PaymentModuleManager\Facades;
+namespace UendelSilveira\PaymentModuleManager\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static \Us\PaymentModuleManager\Models\Transaction processPayment(array $data)
+ * @method static \UendelSilveira\PaymentModuleManager\Models\Transaction processPayment(array $data)
  *
- * @see \Us\PaymentModuleManager\Services\PaymentService
+ * @see \UendelSilveira\PaymentModuleManager\Services\PaymentService
  */
 class Payment extends Facade
 {
@@ -23,6 +23,6 @@ class Payment extends Facade
      */
     protected static function getFacadeAccessor(): string
     {
-        return \Us\PaymentModuleManager\Services\PaymentService::class;
+        return \UendelSilveira\PaymentModuleManager\Services\PaymentService::class;
     }
 }

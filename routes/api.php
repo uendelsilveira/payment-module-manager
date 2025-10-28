@@ -8,8 +8,8 @@
 */
 
 use Illuminate\Support\Facades\Route;
-use Us\PaymentModuleManager\Http\Controllers\MercadoPagoWebhookController;
-use Us\PaymentModuleManager\Http\Controllers\PaymentController;
+use UendelSilveira\PaymentModuleManager\Http\Controllers\MercadoPagoWebhookController;
+use UendelSilveira\PaymentModuleManager\Http\Controllers\PaymentController;
 
 /*
 |--------------------------------------------------------------------------

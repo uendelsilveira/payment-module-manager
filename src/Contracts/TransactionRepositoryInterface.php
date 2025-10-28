@@ -4,12 +4,12 @@
  By Uendel Silveira
  Developer Web
  IDE: PhpStorm
- Created: 28/10/2025 20:43:22
+ Created: 28/10/2025 20:43:21
 */
 
-namespace Us\PaymentModuleManager\Contracts;
+namespace UendelSilveira\PaymentModuleManager\Contracts;
 
-use Us\PaymentModuleManager\Models\Transaction;
+use UendelSilveira\PaymentModuleManager\Models\Transaction;
 
 interface TransactionRepositoryInterface
 {

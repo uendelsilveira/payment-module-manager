@@ -7,11 +7,11 @@
  Created: 28/10/2025 20:43:22
 */
 
-namespace Us\PaymentModuleManager\Services;
+namespace UendelSilveira\PaymentModuleManager\Services;
 
-use Us\PaymentModuleManager\Contracts\PaymentGatewayInterface;
-use Us\PaymentModuleManager\Enums\PaymentGateway;
-use Us\PaymentModuleManager\Gateways\MercadoPagoStrategy;
+use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
+use UendelSilveira\PaymentModuleManager\Enums\PaymentGateway;
+use UendelSilveira\PaymentModuleManager\Gateways\MercadoPagoStrategy;
 
 class GatewayManager
 {

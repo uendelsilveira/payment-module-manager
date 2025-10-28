@@ -7,7 +7,7 @@
  Created at: 27/10/25
 */
 
-namespace US\PaymentModuleManager\Repositories;
+namespace UendelSilveira\PaymentModuleManager\Repositories;
 
 class PaymentRepository
 {

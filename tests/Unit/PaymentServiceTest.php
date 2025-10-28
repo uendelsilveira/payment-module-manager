@@ -7,12 +7,12 @@
  Created: 28/10/2025 20:57:39
 */
 
-namespace Us\PaymentModuleManager\Tests\Unit;
+namespace UendelSilveira\PaymentModuleManager\Tests\Unit;
 
-use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
-use Us\PaymentModuleManager\Services\GatewayManager;
-use Us\PaymentModuleManager\Services\PaymentService;
-use Us\PaymentModuleManager\Tests\TestCase;
+use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Services\GatewayManager;
+use UendelSilveira\PaymentModuleManager\Services\PaymentService;
+use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class PaymentServiceTest extends TestCase
 {

@@ -7,7 +7,7 @@
  Created: 28/10/2025 20:43:22
 */
 
-namespace Us\PaymentModuleManager\Traits;
+namespace UendelSilveira\PaymentModuleManager\Traits;
 
 use Illuminate\Http\JsonResponse;
 

@@ -7,12 +7,12 @@
  Created: 28/10/2025 20:43:21
 */
 
-namespace Us\PaymentModuleManager\Tests\Feature;
+namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
-use Us\PaymentModuleManager\Tests\TestCase;
 use Illuminate\Support\Facades\Config;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use Mockery;
+use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class VerifyMercadoPagoSignatureTest extends TestCase
 {
@@ -47,14 +47,14 @@ class VerifyMercadoPagoSignatureTest extends TestCase
         // Mock da dependência do controller para evitar chamadas reais à API
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
             // O método getPayment não será chamado neste teste, mas é bom ter um mock para ele
-            $mock->shouldReceive('getPayment')->andReturn((object)[]);
+            $mock->shouldReceive('getPayment')->andReturn((object) []);
         }));
 
         $payload = ['data' => ['id' => '12345']];
         $ts = time();
         $secret = Config::get('payment.gateways.mercadopago.webhook_secret');
 
-        $manifest = "id:{$payload['data']['id']};request-id:{$ts};ts:{$ts};" . json_encode($payload);
+        $manifest = "id:{$payload['data']['id']};request-id:{$ts};ts:{$ts};".json_encode($payload);
         $signature = hash_hmac('sha256', $manifest, $secret);
 
         $response = $this->withHeaders([

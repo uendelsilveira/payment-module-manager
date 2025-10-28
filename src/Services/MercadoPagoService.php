@@ -7,9 +7,9 @@
  Created at: 27/10/25
 */
 
-namespace Us\PaymentModuleManager\Services;
+namespace UendelSilveira\PaymentModuleManager\Services;
 
-use Us\PaymentModuleManager\Contracts\PaymentProviderInterface;
+use UendelSilveira\PaymentModuleManager\Contracts\PaymentProviderInterface;
 
 abstract class MercadoPagoService implements PaymentProviderInterface
 {

@@ -30,7 +30,7 @@ composer require us/payment-module-manager
 Publique o arquivo de configuração do pacote para sua aplicação:
 
 ```bash
-php artisan vendor:publish --provider="Us\PaymentModuleManager\Providers\PaymentServiceProvider" --tag="config"
+php artisan vendor:publish --provider="UendelSilveira\PaymentModuleManager\Providers\PaymentServiceProvider" --tag="config"
 ```
 
 Isso criará um arquivo `config/payment.php` onde você pode definir suas credenciais do Mercado Pago.

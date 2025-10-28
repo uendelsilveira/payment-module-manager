@@ -7,14 +7,14 @@
  Created: 28/10/2025 20:43:21
 */
 
-namespace Us\PaymentModuleManager\Tests\Feature;
+namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use MercadoPago\MercadoPagoConfig;
 use Mockery;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
-use Us\PaymentModuleManager\Models\Transaction;
-use Us\PaymentModuleManager\Tests\TestCase;
+use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use UendelSilveira\PaymentModuleManager\Models\Transaction;
+use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class MercadoPagoWebhookTest extends TestCase
 {

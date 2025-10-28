@@ -7,11 +7,11 @@
  Created: 28/10/2025 20:43:22
 */
 
-namespace Us\PaymentModuleManager\Http\Requests;
+namespace UendelSilveira\PaymentModuleManager\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\In;
-use Us\PaymentModuleManager\Enums\PaymentGateway;
+use UendelSilveira\PaymentModuleManager\Enums\PaymentGateway;
 
 class CreatePaymentRequest extends FormRequest
 {

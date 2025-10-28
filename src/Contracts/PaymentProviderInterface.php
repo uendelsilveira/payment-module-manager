@@ -7,7 +7,7 @@
  Created at: 27/10/25
 */
 
-namespace Us\PaymentModuleManager\Contracts;
+namespace UendelSilveira\PaymentModuleManager\Contracts;
 
 interface PaymentProviderInterface
 {

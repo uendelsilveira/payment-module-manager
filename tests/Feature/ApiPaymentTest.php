@@ -7,13 +7,13 @@
  Created: 28/10/2025 20:57:39
 */
 
-namespace Us\PaymentModuleManager\Tests\Feature;
+namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
-use Us\PaymentModuleManager\Enums\PaymentGateway;
-use Us\PaymentModuleManager\Tests\TestCase;
+use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use UendelSilveira\PaymentModuleManager\Enums\PaymentGateway;
+use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class ApiPaymentTest extends TestCase
 {

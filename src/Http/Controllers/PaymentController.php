@@ -7,14 +7,14 @@
  Created: 28/10/2025 20:43:22
 */
 
-namespace Us\PaymentModuleManager\Http\Controllers;
+namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Throwable;
-use Us\PaymentModuleManager\Http\Requests\CreatePaymentRequest;
-use Us\PaymentModuleManager\Services\PaymentService;
-use Us\PaymentModuleManager\Traits\ApiResponseTrait;
+use UendelSilveira\PaymentModuleManager\Http\Requests\CreatePaymentRequest;
+use UendelSilveira\PaymentModuleManager\Services\PaymentService;
+use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
 class PaymentController extends Controller
 {
