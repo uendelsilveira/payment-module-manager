@@ -29,7 +29,10 @@
     "laravel": {
       "providers": [
         "UendelSilveira\\PaymentModuleManager\\Providers\\PaymentServiceProvider"
-      ]
+      ],
+      "aliases": {
+        "Payment": "UendelSilveira\\PaymentModuleManager\\Facades\\Payment"
+      }
     }
   },
   "scripts": {
