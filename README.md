@@ -1,6 +1,15 @@
-# 💳 Payment Module Manager
+<?php
 
-Um pacote Laravel para gerir pagamentos, atualmente focado na integração com o Mercado Pago. Projetado para ser plugável e fácil de usar em qualquer aplicação Laravel.
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created: 28/10/2025 20:43:21
+*/
+
+# 💳 Payment Module Manager (Mercado Pago Only)
+
+Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração com o Mercado Pago. Projetado para ser plugável e fácil de usar em qualquer aplicação Laravel.
 
 ---
 
@@ -20,7 +29,19 @@ Um pacote Laravel para gerir pagamentos, atualmente focado na integração com o
 Para usar este pacote em seu projeto Laravel, adicione-o via Composer:
 
 ```bash
-composer require us/payment-module-manager
+composer require uendelsilveira/payment-module-manager
+```
+
+**Nota:** Se o pacote ainda não estiver publicado no [Packagist](https://packagist.org/), você precisará adicionar o repositório do GitHub ao seu `composer.json` antes de executar o comando acima:
+
+```json
+// composer.json
+"repositories": [
+    {
+        "type": "vcs",
+        "url": "https://github.com/uendelsilveira/payment-module-manager.git"
+    }
+]
 ```
 
 ---
@@ -61,6 +82,12 @@ php artisan migrate
 
 O pacote expõe um endpoint de API para processar pagamentos.
 
+### Documentação da API (OpenAPI/Swagger)
+
+Uma documentação detalhada da API, incluindo todos os endpoints, parâmetros e exemplos de resposta, está disponível no formato OpenAPI. Você pode visualizar este arquivo usando qualquer ferramenta compatível com OpenAPI, como o [Swagger Editor](https://editor.swagger.io/).
+
+[**Ver a Documentação da API (openapi.yaml)**](./docs/openapi.yaml)
+
 ### Endpoint
 
 `POST /api/payment/process`
@@ -86,12 +113,12 @@ O pacote expõe um endpoint de API para processar pagamentos.
   "description": "Assinatura Premium",
   "payer_email": "cliente@example.com",
   "payment_method_id": "credit_card",
-  "token": "...",
+  "token": "...", // Token gerado pelo frontend
   "installments": 1,
-  "issuer_id": "...",
+  "issuer_id": "...", // ID do emissor do cartão
   "payer": {
-    "first_name": "Uendel",
-    "last_name": "Silveira",
+    "first_name": "João",
+    "last_name": "Silva",
     "identification": {
       "type": "CPF",
       "number": "..."

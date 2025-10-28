@@ -1,0 +1,202 @@
+# By Uendel Silveira
+# Developer Web
+# IDE: PhpStorm
+# Created: 28/10/2025 20:43:21
+
+openapi: 3.0.3
+info:
+  title: Payment Module Manager API
+  description: API para processamento de pagamentos e recebimento de webhooks.
+  version: 2.0.0
+  contact:
+    name: Uendel Silveira
+    email: uendel.silveira@gmail.com
+
+servers:
+  - url: /api
+    description: Servidor da Aplicação Laravel
+
+paths:
+  /payment/process:
+    post:
+      summary: Processa um novo pagamento
+      description: Cria uma nova transação e a processa através do gateway do Mercado Pago.
+      tags:
+        - Pagamentos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '201':
+          description: Pagamento processado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: Erro de validação.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /mercadopago/webhook:
+    post:
+      summary: Recebe notificações de webhook do Mercado Pago
+      description: Endpoint para receber e processar atualizações de status de pagamento do Mercado Pago.
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MercadoPagoWebhook'
+      responses:
+        '200':
+          description: Webhook processado com sucesso.
+        '400':
+          description: "Requisição inválida. Exemplo: tipo de notificação não suportado."
+        '403':
+          description: "Acesso negado. Exemplo: assinatura inválida."
+
+components:
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required:
+        - amount
+        - method
+        - description
+        - payer_email
+        - payment_method_id
+      properties:
+        amount: 
+          type: number
+          format: float
+          example: 199.90
+        method:
+          type: string
+          example: mercadopago
+        description:
+          type: string
+          example: Assinatura Premium
+        payer_email:
+          type: string
+          format: email
+          example: cliente@example.com
+        payment_method_id:
+          type: string
+          enum: [pix, credit_card]
+          example: credit_card
+        token:
+          type: string
+          description: Obrigatório se payment_method_id for credit_card.
+          example: 'e3e4e2f2a3b1e4e2f2a3b1e4e2f2a3b1'
+        installments:
+          type: integer
+          description: Obrigatório se payment_method_id for credit_card.
+          example: 1
+        issuer_id:
+          type: string
+          description: Obrigatório se payment_method_id for credit_card.
+          example: '24'
+        payer:
+          type: object
+          description: Obrigatório se payment_method_id for credit_card.
+          properties:
+            first_name:
+              type: string
+              example: João
+            last_name:
+              type: string
+              example: Silva
+            identification:
+              type: object
+              properties:
+                type:
+                  type: string
+                  example: CPF
+                number:
+                  type: string
+                  example: '12345678909'
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        external_id:
+          type: string
+          example: '1342016429'
+        gateway:
+          type: string
+          example: mercadopago
+        amount:
+          type: string
+          example: '199.90'
+        status:
+          type: string
+          example: approved
+        description:
+          type: string
+          example: Assinatura Premium
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Pagamento processado com sucesso.
+        data:
+          $ref: '#/components/schemas/Transaction'
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Falha ao processar pagamento.
+        errors:
+          type: object
+
+    MercadoPagoWebhook:
+      type: object
+      properties:
+        action:
+          type: string
+          example: payment.updated
+        api_version:
+          type: string
+          example: v1
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              example: '1342016429'
+        type:
+          type: string
+          example: payment
