@@ -9,11 +9,11 @@
 
 namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
-use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use UendelSilveira\PaymentModuleManager\Models\PaymentSetting;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
+use UendelSilveira\PaymentModuleManager\Models\PaymentSetting;
+use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class SettingsControllerTest extends TestCase
 {

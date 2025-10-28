@@ -11,10 +11,10 @@ namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
-use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
+use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
 class SettingsController extends Controller
 {
@@ -98,7 +98,7 @@ class SettingsController extends Controller
             return redirect('/')->with('status', 'Conta do Mercado Pago conectada com sucesso!');
 
         } catch (\Exception $e) {
-            return response('Falha ao obter o token de acesso: ' . $e->getMessage(), 500);
+            return response('Falha ao obter o token de acesso: '.$e->getMessage(), 500);
         }
     }
 }
