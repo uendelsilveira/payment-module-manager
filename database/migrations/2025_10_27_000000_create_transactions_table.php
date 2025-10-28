@@ -1,5 +1,12 @@
 <?php
 
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created: 28/10/2025 20:43:21
+*/
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

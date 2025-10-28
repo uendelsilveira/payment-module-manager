@@ -1,5 +1,12 @@
 <?php
 
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created: 28/10/2025 20:43:22
+*/
+
 namespace Us\PaymentModuleManager\Contracts;
 
 interface MercadoPagoClientInterface

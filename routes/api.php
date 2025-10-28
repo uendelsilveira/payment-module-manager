@@ -1,5 +1,12 @@
 <?php
 
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created: 28/10/2025 20:43:21
+*/
+
 use Illuminate\Support\Facades\Route;
 use Us\PaymentModuleManager\Http\Controllers\MercadoPagoWebhookController;
 use Us\PaymentModuleManager\Http\Controllers\PaymentController;
