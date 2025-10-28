@@ -6,8 +6,8 @@
 openapi: 3.0.3
 info:
   title: Payment Module Manager API
-  description: API para processamento de pagamentos e recebimento de webhooks.
-  version: 2.0.0
+  description: API para processamento de pagamentos e gerenciamento de configurações.
+  version: 1.0.0
   contact:
     name: Uendel Silveira
     email: uendel.silveira@gmail.com
@@ -67,7 +67,66 @@ paths:
         '400':
           description: "Requisição inválida. Exemplo: tipo de notificação não suportado."
         '403':
-          description: "Acesso negado. Exemplo: assinatura inválida."
+          description: "Acesso negado ex: assinatura inválida."
+
+  /settings/mercadopago:
+    get:
+      summary: Obtém as configurações do Mercado Pago
+      description: Retorna as credenciais do Mercado Pago atualmente salvas no banco de dados.
+      tags:
+        - Configurações
+      responses:
+        '200':
+          description: Sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MercadoPagoSettingsResponse'
+    post:
+      summary: Salva as configurações do Mercado Pago
+      description: Salva ou atualiza as credenciais do Mercado Pago no banco de dados.
+      tags:
+        - Configurações
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MercadoPagoSettings'
+      responses:
+        '200':
+          description: Configurações salvas com sucesso.
+
+  /connect/mercadopago:
+    get:
+      summary: Inicia o fluxo de conexão OAuth 2.0 com o Mercado Pago
+      description: Redireciona o usuário para a página de autorização do Mercado Pago.
+      tags:
+        - Conexão
+      responses:
+        '302':
+          description: Redirecionamento para a página de autorização do Mercado Pago.
+
+  /connect/mercadopago/callback:
+    get:
+      summary: Callback do fluxo de conexão OAuth 2.0 do Mercado Pago
+      description: Recebe o código de autorização do Mercado Pago, troca-o por um access_token e public_key, e os salva no banco de dados.
+      tags:
+        - Conexão
+      parameters:
+        - in: query
+          name: code
+          schema:
+            type: string
+          required: true
+          description: Código de autorização fornecido pelo Mercado Pago.
+      responses:
+        '302':
+          description: Redirecionamento para a página de sucesso da aplicação.
+        '400':
+          description: "Erro: Código de autorização não encontrado."
+        '500':
+          description: Falha ao obter o token de acesso.
 
 components:
   schemas:
@@ -129,6 +188,28 @@ components:
                 number:
                   type: string
                   example: '12345678909'
+
+    MercadoPagoSettings:
+      type: object
+      properties:
+        public_key:
+          type: string
+          example: 'APP_USR-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+        access_token:
+          type: string
+          example: 'APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+        webhook_secret:
+          type: string
+          example: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+
+    MercadoPagoSettingsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/MercadoPagoSettings'
 
     Transaction:
       type: object

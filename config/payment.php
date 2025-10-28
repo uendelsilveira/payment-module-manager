@@ -16,9 +16,14 @@ return [
 
     'gateways' => [
         'mercadopago' => [
+            // Credenciais para autenticação direta (legado)
             'public_key' => env('MERCADOPAGO_PUBLIC_KEY', ''),
             'access_token' => env('MERCADOPAGO_ACCESS_TOKEN', ''),
-            'webhook_secret' => env('MERCADOPAGO_WEBHOOK_SECRET', ''), // Adicionado para segurança do webhook
+            'webhook_secret' => env('MERCADOPAGO_WEBHOOK_SECRET', ''),
+
+            // Credenciais para o fluxo OAuth 2.0 (Mercado Pago Connect)
+            'client_id' => env('MERCADOPAGO_CLIENT_ID', ''),
+            'client_secret' => env('MERCADOPAGO_CLIENT_SECRET', ''),
         ],
     ],
 ];

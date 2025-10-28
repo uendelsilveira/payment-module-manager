@@ -8,8 +8,8 @@
 */
 
 use Illuminate\Support\Facades\Route;
-use UendelSilveira\PaymentModuleManager\Http\Controllers\MercadoPagoWebhookController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\PaymentController;
+use UendelSilveira\PaymentModuleManager\Http\Controllers\MercadoPagoWebhookController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\SettingsController;
 
 /*
@@ -31,4 +31,10 @@ Route::post('mercadopago/webhook', [MercadoPagoWebhookController::class, 'handle
 Route::prefix('settings')->group(function () {
     Route::get('mercadopago', [SettingsController::class, 'getMercadoPagoSettings'])->name('settings.mercadopago.get');
     Route::post('mercadopago', [SettingsController::class, 'saveMercadoPagoSettings'])->name('settings.mercadopago.save');
+});
+
+// Rotas para o fluxo de conexão (OAuth 2.0)
+Route::prefix('connect')->group(function () {
+    Route::get('mercadopago', [SettingsController::class, 'redirectToMercadoPago'])->name('connect.mercadopago.redirect');
+    Route::get('mercadopago/callback', [SettingsController::class, 'handleMercadoPagoCallback'])->name('connect.mercadopago.callback');
 });

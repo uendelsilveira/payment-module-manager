@@ -9,9 +9,11 @@
 
 namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
+use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use UendelSilveira\PaymentModuleManager\Models\PaymentSetting;
-use UendelSilveira\PaymentModuleManager\Tests\TestCase;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 
 class SettingsControllerTest extends TestCase
 {
@@ -78,6 +80,48 @@ class SettingsControllerTest extends TestCase
         $this->assertDatabaseMissing('payment_settings', [
             'key' => 'mercadopago_access_token',
             'value' => 'old_token',
+        ]);
+    }
+
+    public function test_it_redirects_to_mercadopago_connect_url()
+    {
+        Config::set('payment.gateways.mercadopago.client_id', 'TEST_CLIENT_ID');
+
+        $response = $this->get(route('connect.mercadopago.redirect'));
+
+        $response->assertStatus(302); // Verifica se é um redirecionamento
+        $this->assertStringContainsString('https://auth.mercadopago.com.br/authorization', $response->headers->get('location'));
+        $this->assertStringContainsString('client_id=TEST_CLIENT_ID', $response->headers->get('location'));
+    }
+
+    public function test_it_handles_mercadopago_callback_and_saves_token()
+    {
+        Config::set('payment.gateways.mercadopago.client_id', 'TEST_CLIENT_ID');
+        Config::set('payment.gateways.mercadopago.client_secret', 'TEST_CLIENT_SECRET');
+
+        // Mock da chamada HTTP para a API do Mercado Pago
+        Http::fake([
+            'https://api.mercadopago.com/oauth/token' => Http::response([
+                'access_token' => 'new_access_token_from_oauth',
+                'public_key' => 'new_public_key_from_oauth',
+                'refresh_token' => 'new_refresh_token',
+                'user_id' => 12345,
+            ], 200),
+        ]);
+
+        $response = $this->get(route('connect.mercadopago.callback', ['code' => 'test_auth_code']));
+
+        // Verifica se o redirecionamento de sucesso ocorreu
+        $response->assertRedirect('/');
+
+        // Verifica se as novas credenciais foram salvas no banco de dados
+        $this->assertDatabaseHas('payment_settings', [
+            'key' => 'mercadopago_access_token',
+            'value' => 'new_access_token_from_oauth',
+        ]);
+        $this->assertDatabaseHas('payment_settings', [
+            'key' => 'mercadopago_public_key',
+            'value' => 'new_public_key_from_oauth',
         ]);
     }
 }
