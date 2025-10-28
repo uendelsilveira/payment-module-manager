@@ -2,12 +2,12 @@
 
 namespace Us\PaymentModuleManager\Tests\Feature;
 
-use Us\PaymentModuleManager\Models\Transaction;
-use Us\PaymentModuleManager\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use MercadoPago\MercadoPagoConfig;
 use Mockery;
+use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use Us\PaymentModuleManager\Models\Transaction;
+use Us\PaymentModuleManager\Tests\TestCase;
 
 class MercadoPagoWebhookTest extends TestCase
 {
@@ -23,14 +23,14 @@ class MercadoPagoWebhookTest extends TestCase
 
         // Mock da interface MercadoPagoClientInterface
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
-            $mock->shouldReceive('getPayment')->andReturn((object)[
+            $mock->shouldReceive('getPayment')->andReturn((object) [
                 'id' => 'mp_payment_id_123',
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
                 'description' => 'Webhook Test Payment',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'accredited',
-                'metadata' => (object)[],
+                'metadata' => (object) [],
             ]);
         }));
     }

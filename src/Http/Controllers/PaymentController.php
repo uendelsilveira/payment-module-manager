@@ -3,11 +3,11 @@
 namespace Us\PaymentModuleManager\Http\Controllers;
 
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 use Us\PaymentModuleManager\Http\Requests\CreatePaymentRequest;
 use Us\PaymentModuleManager\Services\PaymentService;
 use Us\PaymentModuleManager\Traits\ApiResponseTrait;
-use Illuminate\Support\Facades\Log;
-use Throwable;
 
 class PaymentController extends Controller
 {
@@ -23,7 +23,6 @@ class PaymentController extends Controller
     /**
      * Processa um novo pagamento.
      *
-     * @param CreatePaymentRequest $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function process(CreatePaymentRequest $request)
@@ -43,7 +42,7 @@ class PaymentController extends Controller
 
             // Em produção, retorna uma resposta de erro padronizada.
             return $this->errorResponse(
-                'Falha ao processar pagamento: ' . $e->getMessage(),
+                'Falha ao processar pagamento: '.$e->getMessage(),
                 500 // Internal Server Error
             );
         }

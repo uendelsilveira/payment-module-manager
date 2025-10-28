@@ -7,8 +7,8 @@ interface PaymentGatewayInterface
     /**
      * Processa uma cobrança.
      *
-     * @param float $amount
      * @param array $data Dados adicionais (ex: descrição, dados do cliente)
+     *
      * @return array Retorna os dados da transação da API externa
      */
     public function charge(float $amount, array $data): array;

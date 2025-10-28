@@ -2,11 +2,11 @@
 
 namespace Us\PaymentModuleManager\Tests\Unit;
 
+use Mockery;
 use Us\PaymentModuleManager\Enums\PaymentGateway;
 use Us\PaymentModuleManager\Gateways\MercadoPagoStrategy;
-use Us\PaymentModuleManager\Services\GatewayManager;
-use Us\PaymentModuleManager\Tests\TestCase; // Alterado para estender o TestCase do pacote
-use Mockery;
+use Us\PaymentModuleManager\Services\GatewayManager; // Alterado para estender o TestCase do pacote
+use Us\PaymentModuleManager\Tests\TestCase;
 
 class GatewayManagerTest extends TestCase
 {
@@ -23,7 +23,7 @@ class GatewayManagerTest extends TestCase
             $mock->shouldReceive('charge')->andReturn([]); // Mocka o método charge se for chamado
         });
 
-        $this->gatewayManager = new GatewayManager();
+        $this->gatewayManager = new GatewayManager;
     }
 
     protected function tearDown(): void

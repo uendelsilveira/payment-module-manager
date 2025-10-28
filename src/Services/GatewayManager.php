@@ -10,9 +10,6 @@ class GatewayManager
 {
     /**
      * Cria a instância do gateway de pagamento.
-     *
-     * @param string $gateway
-     * @return PaymentGatewayInterface
      */
     public function create(string $gateway): PaymentGatewayInterface
     {

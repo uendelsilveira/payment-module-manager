@@ -2,21 +2,18 @@
 
 namespace Us\PaymentModuleManager\Services;
 
-use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
-use Us\PaymentModuleManager\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use Us\PaymentModuleManager\Models\Transaction;
 
 class PaymentService
 {
     protected GatewayManager $gatewayManager;
+
     protected TransactionRepositoryInterface $transactionRepository;
 
-    /**
-     * @param GatewayManager $gatewayManager
-     * @param TransactionRepositoryInterface $transactionRepository
-     */
     public function __construct(GatewayManager $gatewayManager, TransactionRepositoryInterface $transactionRepository)
     {
         $this->gatewayManager = $gatewayManager;
@@ -27,7 +24,7 @@ class PaymentService
      * Orquestra o processo completo de pagamento.
      *
      * @param array $data Dados validados da requisição (method, amount, description).
-     * @return Transaction
+     *
      * @throws Throwable
      */
     public function processPayment(array $data): Transaction
@@ -72,6 +69,7 @@ class PaymentService
             }
 
             Log::info('[PaymentService] Pagamento processado com sucesso.', ['transaction_id' => $transaction->id]);
+
             return $transaction;
         });
     }

@@ -25,6 +25,7 @@ class TestCase extends OrchestraTestCase
      * Carrega os Service Providers do pacote.
      *
      * @param \Illuminate\Foundation\Application $app
+     *
      * @return array
      */
     protected function getPackageProviders($app)
@@ -44,9 +45,9 @@ class TestCase extends OrchestraTestCase
         // Configura o banco de dados em memória para os testes.
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', [
-            'driver'   => 'sqlite',
+            'driver' => 'sqlite',
             'database' => ':memory:',
-            'prefix'   => '',
+            'prefix' => '',
         ]);
     }
 }

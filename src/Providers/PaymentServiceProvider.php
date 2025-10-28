@@ -4,12 +4,12 @@ namespace Us\PaymentModuleManager\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use Us\PaymentModuleManager\Repositories\TransactionRepository;
 use Us\PaymentModuleManager\Services\GatewayManager;
-use Us\PaymentModuleManager\Services\PaymentService;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use Us\PaymentModuleManager\Services\MercadoPagoClient;
+use Us\PaymentModuleManager\Services\PaymentService;
 
 class PaymentServiceProvider extends ServiceProvider
 {
@@ -29,7 +29,7 @@ class PaymentServiceProvider extends ServiceProvider
 
         // Registra o GatewayManager como um singleton
         $this->app->singleton(GatewayManager::class, function ($app) {
-            return new GatewayManager();
+            return new GatewayManager;
         });
 
         // Registra o PaymentService como um singleton

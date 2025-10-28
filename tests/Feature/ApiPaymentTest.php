@@ -2,11 +2,11 @@
 
 namespace Us\PaymentModuleManager\Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
+use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use Us\PaymentModuleManager\Enums\PaymentGateway;
 use Us\PaymentModuleManager\Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
-use Mockery;
 
 class ApiPaymentTest extends TestCase
 {
@@ -18,16 +18,16 @@ class ApiPaymentTest extends TestCase
 
         // Mock da MercadoPagoClientInterface para evitar chamadas reais à API do Mercado Pago
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
-            $mock->shouldReceive('createPayment')->andReturn((object)[
+            $mock->shouldReceive('createPayment')->andReturn((object) [
                 'id' => 'mp_payment_id_test',
                 'status' => 'approved',
                 'transaction_amount' => 150.75,
                 'description' => 'Teste de pagamento com Mercado Pago',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'accredited',
-                'metadata' => (object)[],
-                'point_of_interaction' => (object)[
-                    'transaction_data' => (object)[
+                'metadata' => (object) [],
+                'point_of_interaction' => (object) [
+                    'transaction_data' => (object) [
                         'qr_code_base64' => 'mocked_qr_code_base64',
                     ],
                 ],

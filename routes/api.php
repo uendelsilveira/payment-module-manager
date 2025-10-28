@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Us\PaymentModuleManager\Http\Controllers\PaymentController;
 use Us\PaymentModuleManager\Http\Controllers\MercadoPagoWebhookController;
+use Us\PaymentModuleManager\Http\Controllers\PaymentController;
 
 /*
 |--------------------------------------------------------------------------

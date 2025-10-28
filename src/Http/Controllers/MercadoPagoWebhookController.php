@@ -4,10 +4,10 @@ namespace Us\PaymentModuleManager\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Us\PaymentModuleManager\Models\Transaction;
-use Us\PaymentModuleManager\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Log;
 use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use Us\PaymentModuleManager\Models\Transaction;
+use Us\PaymentModuleManager\Traits\ApiResponseTrait;
 
 class MercadoPagoWebhookController extends Controller
 {
@@ -23,7 +23,6 @@ class MercadoPagoWebhookController extends Controller
     /**
      * Handle the incoming Mercado Pago webhook request.
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function handle(Request $request)
@@ -48,8 +47,9 @@ class MercadoPagoWebhookController extends Controller
             // 3. Encontrar a transação local pelo external_id
             $transaction = Transaction::where('external_id', $paymentId)->first();
 
-            if (!$transaction) {
-                Log::warning('Transação não encontrada para o external_id: ' . $paymentId);
+            if (! $transaction) {
+                Log::warning('Transação não encontrada para o external_id: '.$paymentId);
+
                 return $this->errorResponse('Transação local não encontrada.', 404);
             }
 
@@ -67,7 +67,8 @@ class MercadoPagoWebhookController extends Controller
             return $this->successResponse(null, 'Webhook processado com sucesso.');
 
         } catch (\Exception $e) {
-            Log::error('Erro inesperado no Mercado Pago Webhook Controller: ' . $e->getMessage());
+            Log::error('Erro inesperado no Mercado Pago Webhook Controller: '.$e->getMessage());
+
             return $this->errorResponse('Erro interno ao processar webhook.', 500);
         }
     }

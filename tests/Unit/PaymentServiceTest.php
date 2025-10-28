@@ -2,10 +2,10 @@
 
 namespace Us\PaymentModuleManager\Tests\Unit;
 
-use Us\PaymentModuleManager\Tests\TestCase;
-use Us\PaymentModuleManager\Services\PaymentService;
-use Us\PaymentModuleManager\Services\GatewayManager;
 use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use Us\PaymentModuleManager\Services\GatewayManager;
+use Us\PaymentModuleManager\Services\PaymentService;
+use Us\PaymentModuleManager\Tests\TestCase;
 
 class PaymentServiceTest extends TestCase
 {
