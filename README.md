@@ -1,6 +1,6 @@
-# 💳 Payment Module Manager (Mercado Pago Only)
+# 💳 Payment Module Manager
 
-Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração com o Mercado Pago. Projetado para ser plugável e fácil de usar em qualquer aplicação Laravel.
+Um pacote Laravel para gerir pagamentos, atualmente focado na integração com o Mercado Pago. Projetado para ser plugável e fácil de usar em qualquer aplicação Laravel.
 
 ---
 
@@ -86,12 +86,12 @@ O pacote expõe um endpoint de API para processar pagamentos.
   "description": "Assinatura Premium",
   "payer_email": "cliente@example.com",
   "payment_method_id": "credit_card",
-  "token": "...", // Token gerado pelo frontend
+  "token": "...",
   "installments": 1,
-  "issuer_id": "...", // ID do emissor do cartão
+  "issuer_id": "...",
   "payer": {
-    "first_name": "João",
-    "last_name": "Silva",
+    "first_name": "Uendel",
+    "last_name": "Silveira",
     "identification": {
       "type": "CPF",
       "number": "..."
