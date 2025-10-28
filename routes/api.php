@@ -25,4 +25,5 @@ Route::post('payment/process', [PaymentController::class, 'process'])
     ->name('payment.process');
 
 Route::post('mercadopago/webhook', [MercadoPagoWebhookController::class, 'handle'])
-    ->name('mercadopago.webhook');
+    ->name('mercadopago.webhook')
+    ->middleware('mercadopago.webhook.signature'); // Aplica o middleware de verificação de assinatura

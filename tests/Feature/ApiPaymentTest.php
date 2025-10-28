@@ -1,5 +1,12 @@
 <?php
 
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created: 28/10/2025 20:57:39
+*/
+
 namespace Us\PaymentModuleManager\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;

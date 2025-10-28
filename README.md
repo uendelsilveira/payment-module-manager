@@ -1,4 +1,4 @@
-# 💳 Payment Module Manager
+# 💳 Payment Module Manager (Mercado Pago Only)
 
 Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração com o Mercado Pago. Projetado para ser plugável e fácil de usar em qualquer aplicação Laravel.
 
@@ -6,11 +6,12 @@ Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração c
 
 ## ✨ Funcionalidades
 
--   **Integração com Mercado Pago:** Processa pagamentos via API do Mercado Pago (atualmente configurado para PIX).
+-   **Integração com Mercado Pago:** Processa pagamentos via API do Mercado Pago (PIX e Cartão de Crédito).
 -   **Estrutura Modular:** Separação clara de responsabilidades usando Service Providers, Controllers, Services, Repositories e Estratégias de Gateway.
 -   **Validação de Requisições:** Validação robusta de dados de entrada para o processamento de pagamentos.
 -   **Persistência de Transações:** Armazena detalhes das transações em um banco de dados.
 -   **Respostas Padronizadas:** Utiliza um `ApiResponseTrait` para respostas JSON consistentes.
+-   **Segurança de Webhooks:** Verificação de assinatura para notificações do Mercado Pago.
 
 ---
 
@@ -22,27 +23,6 @@ Para usar este pacote em seu projeto Laravel, adicione-o via Composer:
 composer require us/payment-module-manager
 ```
 
-Se você estiver a desenvolver o pacote localmente, você deve configurá-lo como um repositório `vcs` no seu `composer.json`:
-
-```json
-
-{
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/uendelsilveira/payment-module-manager.git"
-        }
-    ],
-    "require": {
-        "us/payment-module-manager": "^1.0.0"
-    }
-}
-```
-
-Após adicionar, execute `composer update`.
-
-O Service Provider do pacote será automaticamente descoberto pelo Laravel.
-
 ---
 
 ## ⚙️ Configuração
@@ -50,7 +30,7 @@ O Service Provider do pacote será automaticamente descoberto pelo Laravel.
 Publique o arquivo de configuração do pacote para sua aplicação:
 
 ```bash
-php artisan vendor:publish --provider="Us\\PaymentModuleManager\\Providers\\PaymentServiceProvider" --tag="config"
+php artisan vendor:publish --provider="Us\PaymentModuleManager\Providers\PaymentServiceProvider" --tag="config"
 ```
 
 Isso criará um arquivo `config/payment.php` onde você pode definir suas credenciais do Mercado Pago.
@@ -62,6 +42,7 @@ Adicione as seguintes variáveis ao seu arquivo `.env`:
 ```dotenv
 MERCADOPAGO_PUBLIC_KEY="SEU_PUBLIC_KEY_DE_TESTE_OU_PRODUCAO"
 MERCADOPAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN_DE_TESTE_OU_PRODUCAO"
+MERCADOPAGO_WEBHOOK_SECRET="SEU_WEBHOOK_SECRET_DE_TESTE_OU_PRODUCAO"
 ```
 
 **Importante:** Use sempre credenciais de teste para ambientes de desenvolvimento e teste.
@@ -84,51 +65,37 @@ O pacote expõe um endpoint de API para processar pagamentos.
 
 `POST /api/payment/process`
 
-### Exemplo de Requisição (JSON Body)
+### Exemplo de Requisição (PIX)
 
 ```json
 {
   "amount": 199.90,
   "method": "mercadopago",
   "description": "Assinatura Premium",
-  "payer_email": "cliente@example.com"
+  "payer_email": "cliente@example.com",
+  "payment_method_id": "pix"
 }
 ```
 
-### Exemplo de Resposta de Sucesso (Status 201 Created)
+### Exemplo de Requisição (Cartão de Crédito)
 
 ```json
 {
-  "success": true,
-  "message": "Pagamento processado com sucesso.",
-  "data": {
-    "id": "123456789",
-    "status": "pending",
-    "transaction_amount": 199.90,
-    "description": "Assinatura Premium",
-    "payment_method_id": "pix",
-    "status_detail": "pending_challenge",
-    "external_resource_url": "data:image/png;base64,...",
-    "metadata": [],
-    "gateway": "mercadopago",
-    "amount": "199.90",
-    "currency": "BRL",
-    "created_at": "2023-10-27T10:00:00.000000Z",
-    "updated_at": "2023-10-27T10:00:00.000000Z"
-  }
-}
-```
-
-### Exemplo de Resposta de Erro (Status 422 Unprocessable Entity)
-
-```json
-{
-  "success": false,
-  "message": "Os dados fornecidos são inválidos.",
-  "errors": {
-    "amount": [
-      "O campo amount é obrigatório."
-    ]
+  "amount": 199.90,
+  "method": "mercadopago",
+  "description": "Assinatura Premium",
+  "payer_email": "cliente@example.com",
+  "payment_method_id": "credit_card",
+  "token": "...", // Token gerado pelo frontend
+  "installments": 1,
+  "issuer_id": "...", // ID do emissor do cartão
+  "payer": {
+    "first_name": "João",
+    "last_name": "Silva",
+    "identification": {
+      "type": "CPF",
+      "number": "..."
+    }
   }
 }
 ```
@@ -148,6 +115,7 @@ Para executar os testes unitários e de feature do pacote:
     <!-- phpunit.xml -->
     <php>
         <env name="MERCADOPAGO_ACCESS_TOKEN" value="SEU_ACCESS_TOKEN_DE_TESTE"/>
+        <env name="MERCADOPAGO_WEBHOOK_SECRET" value="SEU_WEBHOOK_SECRET_DE_TESTE"/>
     </php>
     ```
 3.  Execute os testes:
