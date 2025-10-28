@@ -27,6 +27,9 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     public function charge(float $amount, array $data): array
     {
         try {
+            $notificationUrl = route('mercadopago.webhook', [], true);
+            Log::info('Generated Notification URL:', ['url' => $notificationUrl]); // Adicionado para depuração
+
             $request = [
                 "transaction_amount" => $amount,
                 "description" => $data['description'] ?? 'Pagamento via API',
@@ -34,7 +37,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
                 "payer" => [
                     "email" => $data['payer_email'] ?? 'test_payer@example.com',
                 ],
-                "notification_url" => route('mercadopago.webhook', [], true),
+                "notification_url" => $notificationUrl,
             ];
 
             $payment = $this->mpClient->createPayment($request);
