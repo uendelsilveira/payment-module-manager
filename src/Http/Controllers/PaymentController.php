@@ -6,6 +6,7 @@ use Illuminate\Routing\Controller;
 use Us\PaymentModuleManager\Http\Requests\CreatePaymentRequest;
 use Us\PaymentModuleManager\Services\PaymentService;
 use Us\PaymentModuleManager\Traits\ApiResponseTrait;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PaymentController extends Controller
@@ -27,6 +28,8 @@ class PaymentController extends Controller
      */
     public function process(CreatePaymentRequest $request)
     {
+        Log::info('[PaymentController] Requisição para processar pagamento recebida.', ['payload' => $request->validated()]);
+
         try {
             $transaction = $this->paymentService->processPayment($request->validated());
 
@@ -36,6 +39,8 @@ class PaymentController extends Controller
                 201 // Created
             );
         } catch (Throwable $e) {
+            Log::error('[PaymentController] Erro ao processar pagamento.', ['exception' => $e->getMessage()]);
+
             // Em produção, retorna uma resposta de erro padronizada.
             return $this->errorResponse(
                 'Falha ao processar pagamento: ' . $e->getMessage(),

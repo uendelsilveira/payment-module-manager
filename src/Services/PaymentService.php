@@ -5,6 +5,7 @@ namespace Us\PaymentModuleManager\Services;
 use Us\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use Us\PaymentModuleManager\Models\Transaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class PaymentService
@@ -31,6 +32,8 @@ class PaymentService
      */
     public function processPayment(array $data): Transaction
     {
+        Log::info('[PaymentService] Iniciando processamento de pagamento.', ['data' => $data]);
+
         // O GatewayManager seleciona a estratégia correta com base no 'method' escolhido pelo usuário.
         $gatewayStrategy = $this->gatewayManager->create($data['method']);
 
@@ -48,7 +51,7 @@ class PaymentService
                 // 2. Executa a cobrança usando a API externa do gateway.
                 $gatewayResponse = $gatewayStrategy->charge($data['amount'], [
                     'description' => $data['description'],
-                    // Outros dados relevantes podem ser passados aqui (ex: dados do cliente)
+                    'payer_email' => $data['payer_email'] ?? null,
                 ]);
 
                 // 3. Atualiza a transação com a resposta bem-sucedida do gateway.
@@ -62,10 +65,13 @@ class PaymentService
                 $transaction->status = 'failed';
                 $transaction->save();
 
+                Log::error('[PaymentService] Falha ao processar pagamento com gateway.', ['exception' => $e->getMessage()]);
+
                 // Relança a exceção para que o controller possa capturá-la e retornar um erro apropriado.
                 throw $e;
             }
 
+            Log::info('[PaymentService] Pagamento processado com sucesso.', ['transaction_id' => $transaction->id]);
             return $transaction;
         });
     }

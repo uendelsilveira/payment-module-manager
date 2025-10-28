@@ -2,9 +2,9 @@
 
 namespace Us\PaymentModuleManager\Gateways;
 
-use Illuminate\Support\Facades\Log;
-use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use Us\PaymentModuleManager\Contracts\PaymentGatewayInterface;
+use Us\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use Illuminate\Support\Facades\Log;
 
 class MercadoPagoStrategy implements PaymentGatewayInterface
 {
@@ -18,27 +18,32 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     /**
      * Processa uma cobrança usando a API real do Mercado Pago.
      *
-     *
+     * @param float $amount
+     * @param array $data
+     * @return array
      * @throws \Exception
      */
     public function charge(float $amount, array $data): array
     {
+        Log::info('[MercadoPagoStrategy] Iniciando cobrança.', ['amount' => $amount, 'data' => $data]);
+
         try {
-            $notificationUrl = rtrim(config('app.url'), '/').'/api/mercadopago/webhook';
-            Log::info('Generated Notification URL:', ['url' => $notificationUrl]);
+            // Garante que a URL seja construída a partir do APP_URL do .env, sem depender do helper route()
+            $notificationUrl = rtrim(config('app.url'), '/') . '/api/mercadopago/webhook';
 
             $request = [
-                'transaction_amount' => $amount,
-                'description' => $data['description'] ?? 'Pagamento via API',
-                'payment_method_id' => 'pix',
-                'payer' => [
-                    'email' => $data['payer_email'] ?? 'test_payer@example.com',
+                "transaction_amount" => $amount,
+                "description" => $data['description'] ?? 'Pagamento via API',
+                "payment_method_id" => "pix", // Exemplo: assumindo PIX para simplificar
+                "payer" => [
+                    "email" => $data['payer_email'] ?? 'test_payer@example.com',
                 ],
-                'notification_url' => $notificationUrl,
+                "notification_url" => $notificationUrl,
             ];
 
             $payment = $this->mpClient->createPayment($request);
 
+            // Retorna os dados relevantes da resposta do Mercado Pago
             return [
                 'id' => $payment->id,
                 'status' => $payment->status,
@@ -49,10 +54,10 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
                 'external_resource_url' => $payment->point_of_interaction->transaction_data->qr_code_base64 ?? null,
                 'metadata' => (array) $payment->metadata,
             ];
-        } catch (\Exception $e) {
-            Log::error('Erro ao processar pagamento com Mercado Pago: '.$e->getMessage());
 
-            throw new \Exception('Erro ao processar pagamento: '.$e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('[MercadoPagoStrategy] Erro ao processar pagamento com Mercado Pago.', ['exception' => $e->getMessage()]);
+            throw new \Exception('Erro ao processar pagamento: ' . $e->getMessage());
         }
     }
 }
