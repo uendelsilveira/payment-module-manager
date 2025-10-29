@@ -7,7 +7,7 @@ openapi: 3.0.3
 info:
   title: Payment Module Manager API
   description: API para processamento de pagamentos e gerenciamento de configurações.
-  version: 1.0.3
+  version: 1.0.4
   contact:
     name: Uendel Silveira
     email: uendel.silveira@gmail.com
@@ -262,6 +262,15 @@ components:
         updated_at:
           type: string
           format: date-time
+        retries_count:
+          type: integer
+          example: 0
+          description: Número de tentativas de reprocessamento.
+        last_attempt_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Data e hora da última tentativa de reprocessamento.
 
     SuccessResponse:
       type: object

@@ -4,44 +4,33 @@
  By Uendel Silveira
  Developer Web
  IDE: PhpStorm
- Created: 28/10/2025 20:43:22
+ Created: 28/10/2025 20:43:21
 */
 
 namespace UendelSilveira\PaymentModuleManager\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = 'transactions';
+    use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
-        'external_id',
         'gateway',
         'amount',
         'currency',
         'status',
         'description',
+        'external_id',
         'metadata',
+        'retries_count',
+        'last_attempt_at',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount' => 'float',
         'metadata' => 'array',
+        'last_attempt_at' => 'datetime',
     ];
 }

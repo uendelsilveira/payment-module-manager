@@ -11,6 +11,7 @@ namespace UendelSilveira\PaymentModuleManager\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use UendelSilveira\PaymentModuleManager\Console\Commands\ReprocessFailedPayments;
 use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
@@ -38,8 +39,16 @@ class PaymentServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Registra o alias do middleware
         $router = $this->app->make('router');
         $router->aliasMiddleware('mercadopago.webhook.signature', VerifyMercadoPagoSignature::class);
+
+        // Registra os comandos Artisan
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                ReprocessFailedPayments::class,
+            ]);
+        }
 
         Route::prefix('api')
             ->middleware('api')

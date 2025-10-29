@@ -9,6 +9,7 @@ Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração c
 -   **Integração com Mercado Pago:** Processa pagamentos via API do Mercado Pago (PIX, Cartão de Crédito com parcelamento e Boleto Bancário).
 -   **Gerenciamento de Credenciais via API:** Permite que as credenciais do gateway sejam salvas e gerenciadas através de endpoints de API, armazenando-as no banco de dados.
 -   **Conexão OAuth 2.0 (Mercado Pago Connect):** Facilita a conexão da conta do Mercado Pago do usuário final através de um fluxo de autorização seguro.
+-   **Reprocessamento de Transações Falhas:** Comando Artisan para tentar reprocessar pagamentos que falharam, com limite de tentativas.
 -   **Estrutura Modular:** Separação clara de responsabilidades usando Service Providers, Controllers, Services, Repositórios e Estratégias de Gateway.
 -   **Validação de Requisições:** Validação robusta de dados de entrada para o processamento de pagamentos.
 -   **Persistência de Transações:** Armazena detalhes das transações em um banco de dados.
@@ -178,6 +179,12 @@ Redireciona o usuário para a página de autorização do Mercado Pago. Após a 
 `GET /api/connect/mercadopago/callback`
 
 Endpoint de callback que recebe o código de autorização do Mercado Pago, troca-o por um `access_token` e `public_key` e os salva no banco de dados.
+
+### Comandos Artisan
+
+`php artisan payment:reprocess-failed`
+
+Este comando tenta reprocessar pagamentos que falharam, com um limite de 3 tentativas e um intervalo de 5 minutos entre as tentativas.
 
 ---
 

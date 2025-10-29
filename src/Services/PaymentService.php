@@ -9,6 +9,7 @@
 
 namespace UendelSilveira\PaymentModuleManager\Services;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -27,6 +28,9 @@ class PaymentService
         $this->transactionRepository = $transactionRepository;
     }
 
+    /**
+     * Processa um pagamento novo.
+     */
     public function processPayment(array $data): Transaction
     {
         Log::info('[PaymentService] Iniciando processamento de pagamento.', ['data' => $data]);
@@ -42,15 +46,13 @@ class PaymentService
             ]);
 
             try {
-                // Passa todos os dados validados para a estratégia
-                // Certifica-se de que payment_method_id está presente para a estratégia
                 $gatewayResponse = $gatewayStrategy->charge($data['amount'], array_merge($data, [
                     'payment_method_id' => $data['payment_method_id'] ?? 'pix',
                 ]));
 
                 $transaction->external_id = $gatewayResponse['id'];
                 $transaction->status = $gatewayResponse['status'];
-                $transaction->metadata = $gatewayResponse; // Armazena a resposta completa para referência
+                $transaction->metadata = $gatewayResponse;
                 $transaction->save();
 
             } catch (Throwable $e) {
@@ -63,6 +65,54 @@ class PaymentService
             }
 
             Log::info('[PaymentService] Pagamento processado com sucesso.', ['transaction_id' => $transaction->id]);
+
+            return $transaction;
+        });
+    }
+
+    /**
+     * Retorna as transações falhas que podem ser reprocessadas.
+     */
+    public function getFailedTransactions()
+    {
+        return Transaction::where('status', 'failed')
+            ->where(function ($query) {
+                $query->whereNull('last_attempt_at')
+                    ->orWhere('last_attempt_at', '<', Carbon::now()->subMinutes(5));
+            })
+            ->where('retries_count', '<', 3)
+            ->get();
+    }
+
+    /**
+     * Reprocessa uma transação falha existente.
+     */
+    public function reprocess(Transaction $transaction): Transaction
+    {
+        Log::info('[PaymentService] Reprocessando transação.', ['transaction_id' => $transaction->id]);
+
+        $gatewayStrategy = $this->gatewayManager->create($transaction->gateway);
+
+        return DB::transaction(function () use ($transaction, $gatewayStrategy) {
+            try {
+                $gatewayResponse = $gatewayStrategy->charge($transaction->amount, array_merge((array) $transaction->metadata, [
+                    'payment_method_id' => $transaction->metadata['payment_method_id'] ?? 'pix',
+                ]));
+
+                $transaction->status = $gatewayResponse['status'];
+                $transaction->external_id = $gatewayResponse['id'];
+                $transaction->metadata = $gatewayResponse;
+                $transaction->retries_count += 1;
+                $transaction->last_attempt_at = now();
+                $transaction->save();
+
+            } catch (Throwable $e) {
+                $transaction->retries_count += 1;
+                $transaction->last_attempt_at = now();
+                $transaction->save();
+
+                Log::error('[PaymentService] Falha ao reprocessar pagamento.', ['transaction_id' => $transaction->id, 'exception' => $e->getMessage()]);
+            }
 
             return $transaction;
         });
