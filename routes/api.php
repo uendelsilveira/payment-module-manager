@@ -10,8 +10,8 @@
 use Illuminate\Support\Facades\Route;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\MercadoPagoWebhookController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\PaymentController;
-use UendelSilveira\PaymentModuleManager\Http\Controllers\SettingsController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\ReportController;
+use UendelSilveira\PaymentModuleManager\Http\Controllers\SettingsController;
 
 /*
 |--------------------------------------------------------------------------

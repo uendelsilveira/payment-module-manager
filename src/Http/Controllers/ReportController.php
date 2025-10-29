@@ -4,8 +4,8 @@ namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use UendelSilveira\PaymentModuleManager\Services\ReportService;
 use UendelSilveira\PaymentModuleManager\Http\Requests\TransactionSummaryRequest;
+use UendelSilveira\PaymentModuleManager\Services\ReportService;
 
 class ReportController extends Controller
 {
