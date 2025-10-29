@@ -17,7 +17,7 @@ class TransactionFactory extends Factory
 
         return [
             'gateway' => PaymentGateway::MERCADOPAGO,
-            'external_id' => 'mp_' . $this->faker->unique()->lexify('????????????'),
+            'external_id' => 'mp_'.$this->faker->unique()->lexify('????????????'),
             'amount' => $this->faker->randomFloat(2, 10, 500),
             'description' => $description,
             'status' => 'pending',

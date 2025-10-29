@@ -12,6 +12,7 @@ use UendelSilveira\PaymentModuleManager\Models\Transaction;
 class PaymentService
 {
     protected GatewayManager $gatewayManager;
+
     protected TransactionRepositoryInterface $transactionRepository;
 
     public function __construct(GatewayManager $gatewayManager, TransactionRepositoryInterface $transactionRepository)
@@ -47,10 +48,12 @@ class PaymentService
                 $transaction->metadata = $data;
                 $transaction->save();
                 Log::error('[PaymentService] Falha ao processar pagamento com gateway.', ['exception' => $e->getMessage()]);
+
                 throw $e;
             }
 
             Log::info('[PaymentService] Pagamento processado com sucesso.', ['transaction_id' => $transaction->id]);
+
             return $transaction;
         });
     }
@@ -58,8 +61,10 @@ class PaymentService
     public function getPaymentDetails(Transaction $transaction): Transaction
     {
         Log::info('[PaymentService] Buscando detalhes da transação.', ['transaction_id' => $transaction->id]);
+
         if (empty($transaction->external_id)) {
             Log::warning('[PaymentService] Transação não possui ID externo para consulta.', ['transaction_id' => $transaction->id]);
+
             return $transaction;
         }
 

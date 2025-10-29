@@ -26,7 +26,7 @@ class ReprocessCommandTest extends TestCase
             'status' => 'failed',
             'gateway' => 'mercadopago',
             'retries_count' => 0,
-            'metadata' => ['payment_method_id' => 'pix']
+            'metadata' => ['payment_method_id' => 'pix'],
         ]);
 
         $mockStrategy = Mockery::mock(PaymentGatewayInterface::class);
@@ -41,7 +41,7 @@ class ReprocessCommandTest extends TestCase
 
         // Substitui o GatewayManager ANTES de resolver o PaymentService
         $this->app->instance(GatewayManager::class, $mockGatewayManager);
-        
+
         // Force a re-resolução do PaymentService com o novo GatewayManager
         $this->app->forgetInstance(\UendelSilveira\PaymentModuleManager\Services\PaymentService::class);
 
@@ -69,7 +69,7 @@ class ReprocessCommandTest extends TestCase
             'status' => 'failed',
             'gateway' => 'mercadopago',
             'retries_count' => 0,
-            'metadata' => ['payment_method_id' => 'pix']
+            'metadata' => ['payment_method_id' => 'pix'],
         ]);
 
         $mockStrategy = Mockery::mock(PaymentGatewayInterface::class);
@@ -77,7 +77,7 @@ class ReprocessCommandTest extends TestCase
             ->once()
             ->with($transaction->amount, Mockery::type('array'))
             ->andReturn([
-                'id' => 'new_mp_id', 
+                'id' => 'new_mp_id',
                 'status' => 'approved',
                 'payment_method_id' => 'pix',
                 'transaction_amount' => $transaction->amount,
@@ -91,7 +91,7 @@ class ReprocessCommandTest extends TestCase
 
         // Substitui o GatewayManager ANTES de resolver o PaymentService
         $this->app->instance(GatewayManager::class, $mockGatewayManager);
-        
+
         // Force a re-resolução do PaymentService com o novo GatewayManager
         $this->app->forgetInstance(\UendelSilveira\PaymentModuleManager\Services\PaymentService::class);
 
