@@ -39,8 +39,12 @@ jobs:
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+        env:
+          COMPOSER_ALLOW_SUPERUSER: 1
 
       - name: Run PHPUnit tests
+        env:
+          MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
         run: vendor/bin/phpunit --testdox --coverage-clover=coverage.xml
 
       - name: Upload coverage to Codecov
