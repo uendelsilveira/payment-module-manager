@@ -1,16 +1,8 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 28/10/2025 20:43:21
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use MercadoPago\MercadoPagoConfig;
 use Mockery;
 use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
@@ -19,14 +11,6 @@ use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 class MercadoPagoWebhookTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // Configura o access token para o SDK do MP, mesmo que seja um mock.
-        MercadoPagoConfig::setAccessToken('TEST_ACCESS_TOKEN');
-    }
 
     protected function tearDown(): void
     {
