@@ -3,25 +3,27 @@
 namespace UendelSilveira\PaymentModuleManager\Services;
 
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
+use Illuminate\Support\Facades\DB;
 
 class ReportService
 {
     public function getTransactionSummary(?string $startDate, ?string $endDate): array
     {
-        $query = Transaction::query();
+        $baseQuery = Transaction::query();
 
         if ($startDate) {
-            $query->whereDate('created_at', '>=', $startDate);
+            $baseQuery->whereDate('created_at', '>=', $startDate);
         }
 
         if ($endDate) {
-            $query->whereDate('created_at', '<=', $endDate);
+            $baseQuery->whereDate('created_at', '<=', $endDate);
         }
 
-        $totalTransactions = $query->count();
-        $totalAmount = (float) $query->sum('amount');
-        $successfulTransactions = $query->where('status', 'approved')->count();
-        $failedTransactions = $totalTransactions - $successfulTransactions;
+        $totalTransactions = $baseQuery->count();
+        $totalAmount = (float) $baseQuery->sum('amount');
+        
+        $successfulTransactions = (clone $baseQuery)->where('status', 'approved')->count();
+        $failedTransactions = (clone $baseQuery)->where('status', 'failed')->count();
 
         return [
             'total_transactions' => $totalTransactions,
@@ -43,8 +45,13 @@ class ReportService
             $query->whereDate('created_at', '<=', $endDate);
         }
 
-        $transactionsByMethod = $query->selectRaw('payment_method_id, count(*) as total_transactions, sum(amount) as total_amount')
-            ->groupBy('payment_method_id')
+        // Usar a sintaxe de acesso a JSON do Laravel para select e group by
+        $transactionsByMethod = $query->select(
+                'metadata->payment_method_id as payment_method_id',
+                DB::raw('count(*) as total_transactions'),
+                DB::raw('sum(amount) as total_amount')
+            )
+            ->groupBy('metadata->payment_method_id')
             ->get()
             ->toArray();
 
