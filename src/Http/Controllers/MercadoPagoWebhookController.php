@@ -4,17 +4,17 @@
  By Uendel Silveira
  Developer Web
  IDE: PhpStorm
- Created: 28/10/2025 20:43:22
+ Created: 28/10/2025 20:43:21
 */
 
 namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Log;
-use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
+use Illuminate\Support\Facades\Log;
+use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 
 class MercadoPagoWebhookController extends Controller
 {
@@ -30,52 +30,84 @@ class MercadoPagoWebhookController extends Controller
     /**
      * Handle the incoming Mercado Pago webhook request.
      *
+     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function handle(Request $request)
     {
-        Log::info('Mercado Pago Webhook Received', $request->all());
+        $webhookId = $request->input('id');
+        $webhookType = $request->input('type');
+        $webhookAction = $request->input('action');
+        $paymentId = $request->input('data.id');
 
-        // Validação básica: verificar se é uma notificação de pagamento
-        if ($request->input('type') !== 'payment') {
+        Log::info('[MercadoPagoWebhookController] Webhook recebido.', [
+            'id' => $webhookId,
+            'type' => $webhookType,
+            'action' => $webhookAction,
+            'payment_id' => $paymentId,
+            'payload' => $request->all(),
+        ]);
+
+        // Apenas processamos notificações do tipo 'payment'
+        if ($webhookType !== 'payment') {
+            Log::warning('[MercadoPagoWebhookController] Tipo de notificação não suportado.', ['type' => $webhookType]);
             return $this->errorResponse('Tipo de notificação não suportado.', 400);
         }
 
-        $paymentId = $request->input('data.id');
-
         if (empty($paymentId)) {
+            Log::error('[MercadoPagoWebhookController] ID do pagamento não encontrado na notificação.', ['payload' => $request->all()]);
             return $this->errorResponse('ID do pagamento não encontrado na notificação.', 400);
         }
 
         try {
-            // 2. Consultar a API do Mercado Pago para obter o status atual do pagamento
+            // Consultar a API do Mercado Pago para obter o status atual e canônico do pagamento
             $mpPayment = $this->mpClient->getPayment($paymentId);
 
-            // 3. Encontrar a transação local pelo external_id
+            // Encontrar a transação local pelo external_id
             $transaction = Transaction::where('external_id', $paymentId)->first();
 
-            if (! $transaction) {
-                Log::warning('Transação não encontrada para o external_id: '.$paymentId);
-
+            if (!$transaction) {
+                Log::warning('[MercadoPagoWebhookController] Transação local não encontrada para o external_id.', ['external_id' => $paymentId]);
                 return $this->errorResponse('Transação local não encontrada.', 404);
             }
 
-            // 4. Atualizar o status da transação local
-            $transaction->status = $mpPayment->status; // Atualiza com o status real do MP
-            $transaction->metadata = (array) $mpPayment; // Opcional: atualizar metadata completa
-            $transaction->save();
+            // Mapeamento de status do Mercado Pago para status internos (exemplo)
+            $newStatus = match ($mpPayment->status) {
+                'approved', 'authorized', 'in_process' => 'approved',
+                'pending' => 'pending',
+                'rejected', 'cancelled' => 'rejected',
+                'refunded' => 'refunded',
+                'charged_back' => 'charged_back',
+                default => 'unknown',
+            };
 
-            Log::info('Transação atualizada via webhook', [
-                'transaction_id' => $transaction->id,
-                'external_id' => $paymentId,
-                'new_status' => $mpPayment->status,
-            ]);
+            // Atualizar o status da transação local
+            if ($transaction->status !== $newStatus) {
+                $transaction->status = $newStatus;
+                $transaction->metadata = (array) $mpPayment; // Opcional: atualizar metadata completa
+                $transaction->save();
+                Log::info('[MercadoPagoWebhookController] Status da transação atualizado.', [
+                    'transaction_id' => $transaction->id,
+                    'external_id' => $paymentId,
+                    'old_status' => $transaction->getOriginal('status'),
+                    'new_status' => $newStatus,
+                    'mp_status' => $mpPayment->status,
+                    'action' => $webhookAction,
+                ]);
+            } else {
+                Log::info('[MercadoPagoWebhookController] Status da transação já atualizado ou inalterado.', [
+                    'transaction_id' => $transaction->id,
+                    'external_id' => $paymentId,
+                    'current_status' => $newStatus,
+                    'mp_status' => $mpPayment->status,
+                    'action' => $webhookAction,
+                ]);
+            }
 
             return $this->successResponse(null, 'Webhook processado com sucesso.');
 
         } catch (\Exception $e) {
-            Log::error('Erro inesperado no Mercado Pago Webhook Controller: '.$e->getMessage());
-
+            Log::error('[MercadoPagoWebhookController] Erro ao processar webhook.', ['exception' => $e->getMessage(), 'payment_id' => $paymentId]);
             return $this->errorResponse('Erro interno ao processar webhook.', 500);
         }
     }

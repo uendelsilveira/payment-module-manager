@@ -1,7 +1,5 @@
 # 💳 Payment Module Manager
 
-# 💳 Payment Module Manager (Mercado Pago Only)
-
 Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração com o Mercado Pago. Projetado para ser plugável e fácil de usar em qualquer aplicação Laravel.
 
 ---
@@ -15,7 +13,7 @@ Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração c
 -   **Validação de Requisições:** Validação robusta de dados de entrada para o processamento de pagamentos.
 -   **Persistência de Transações:** Armazena detalhes das transações em um banco de dados.
 -   **Respostas Padronizadas:** Utiliza um `ApiResponseTrait` para respostas JSON consistentes.
--   **Segurança de Webhooks:** Verificação de assinatura para notificações do Mercado Pago.
+-   **Segurança e Tratamento Aprimorado de Webhooks:** Verificação de assinatura e lógica robusta para processar diferentes eventos e status de notificações do Mercado Pago.
 
 ---
 
@@ -74,22 +72,15 @@ Execute as migrações para criar as tabelas `transactions` e `payment_settings`
 php artisan migrate
 ```
 
-Tabelas criadas:
-- `transactions`
-- `payment_settings`
-
 ---
 
 ## 🚀 Uso
 
 ### Documentação da API (OpenAPI/Swagger)
 
-A documentação completa dos endpoints está disponível em formato OpenAPI.  
-Você pode visualizá-la no [Swagger Editor](https://editor.swagger.io/):
+Uma documentação detalhada da API, incluindo todos os endpoints, parâmetros e exemplos de resposta, está disponível no formato OpenAPI. Você pode visualizar este arquivo usando qualquer ferramenta compatível com OpenAPI, como o [Swagger Editor](https://editor.swagger.io/).
 
-📄 [**Abrir documentação (openapi.yaml)**](./docs/openapi.yaml)
-
----
+[**Ver a Documentação da API (openapi.yaml)**](./docs/openapi.yaml)
 
 ### Endpoints de Pagamento
 
@@ -116,9 +107,9 @@ Você pode visualizá-la no [Swagger Editor](https://editor.swagger.io/):
   "description": "Assinatura Premium",
   "payer_email": "cliente@example.com",
   "payment_method_id": "credit_card",
-  "token": "...",
+  "token": "...", // Token gerado pelo frontend
   "installments": 1,
-  "issuer_id": "...",
+  "issuer_id": "...", // ID do emissor do cartão
   "payer": {
     "first_name": "João",
     "last_name": "Silva",
@@ -212,24 +203,6 @@ Para executar os testes unitários e de feature do pacote:
     ```bash
     composer test
     ```
-
----
-
-## 🗺️ Roadmap
-
-### Próximos gateways planejados
-- [ ] **Pagar.me**
-- [ ] **Stripe**
-- [ ] **PayPal**
-- [ ] **Pix via diferentes provedores**
-- [ ] **Adyen** (corporativo)
-
-### Próximas funcionalidades
-- [ ] **Emissão de Nota Fiscal** integrada com provedores nacionais.
-- [ ] **Painel administrativo Filament** para visualizar transações e credenciais.
-- [ ] **Suporte multi-tenant nativo**.
-- [ ] **Webhook universal** para múltiplos gateways.
-- [ ] **Sistema de notificações** em tempo real (WebSockets / Pusher).
 
 ---
 
