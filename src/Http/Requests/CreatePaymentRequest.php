@@ -4,14 +4,13 @@
  By Uendel Silveira
  Developer Web
  IDE: PhpStorm
- Created: 28/10/2025 20:43:22
+ Created: 28/10/2025 20:43:21
 */
 
 namespace UendelSilveira\PaymentModuleManager\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\In;
-use UendelSilveira\PaymentModuleManager\Enums\PaymentGateway;
+use Illuminate\Validation\Rule;
 
 class CreatePaymentRequest extends FormRequest
 {
@@ -22,11 +21,39 @@ class CreatePaymentRequest extends FormRequest
 
     public function rules(): array
     {
+        // Define os métodos de pagamento aceitos
+        $paymentMethods = ['pix', 'credit_card', 'boleto']; // Adicionado 'boleto'
+
         return [
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'method' => ['required', 'string', new In([PaymentGateway::MERCADOPAGO])],
+            'method' => ['required', 'string', Rule::in(['mercadopago'])], // Gateway principal
             'description' => ['required', 'string', 'max:255'],
-            'payer_email' => ['required', 'email', 'max:255'], // Adicionado para o Mercado Pago
+            'payer_email' => ['required', 'email', 'max:255'],
+
+            // Método de pagamento específico (PIX, Cartão, Boleto, etc.)
+            'payment_method_id' => ['required', 'string', Rule::in($paymentMethods)],
+
+            // Campos específicos para Cartão de Crédito
+            'token' => ['required_if:payment_method_id,credit_card', 'string'],
+            'installments' => ['required_if:payment_method_id,credit_card', 'integer', 'min:1'],
+            'issuer_id' => ['required_if:payment_method_id,credit_card', 'string'],
+
+            // Dados adicionais do pagador, importantes para cartão de crédito e boleto
+            'payer' => ['sometimes', 'array'],
+            'payer.first_name' => ['required_if:payment_method_id,credit_card', 'string'],
+            'payer.last_name' => ['required_if:payment_method_id,credit_card', 'string'],
+            'payer.identification.type' => ['required_if:payment_method_id,credit_card', 'string'],
+            'payer.identification.number' => ['required_if:payment_method_id,credit_card', 'string'],
+
+            // Campos específicos para Boleto (ex: dados de identificação do pagador)
+            'payer.identification.type' => ['required_if:payment_method_id,boleto', 'string'],
+            'payer.identification.number' => ['required_if:payment_method_id,boleto', 'string'],
+            'payer.address.zip_code' => ['required_if:payment_method_id,boleto', 'string'],
+            'payer.address.street_name' => ['required_if:payment_method_id,boleto', 'string'],
+            'payer.address.street_number' => ['required_if:payment_method_id,boleto', 'string'],
+            'payer.address.neighborhood' => ['required_if:payment_method_id,boleto', 'string'],
+            'payer.address.city' => ['required_if:payment_method_id,boleto', 'string'],
+            'payer.address.federal_unit' => ['required_if:payment_method_id,boleto', 'string'],
         ];
     }
 }
