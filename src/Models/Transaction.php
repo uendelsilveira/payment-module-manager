@@ -1,16 +1,11 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 28/10/2025 20:43:21
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Models;
 
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory;
 
 class Transaction extends Model
 {
@@ -33,4 +28,12 @@ class Transaction extends Model
         'metadata' => 'array',
         'last_attempt_at' => 'datetime',
     ];
+
+    /**
+     * Cria uma nova instância da factory para o modelo.
+     */
+    protected static function newFactory(): Factory
+    {
+        return TransactionFactory::new();
+    }
 }

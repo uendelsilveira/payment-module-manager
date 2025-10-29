@@ -1,12 +1,5 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 28/10/2025 20:43:21
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Providers;
 
 use Illuminate\Support\Facades\Route;
@@ -39,6 +32,11 @@ class PaymentServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Carrega as factories do pacote para que possam ser usadas nos testes.
+        if ($this->app->runningUnitTests()) {
+            $this->loadFactoriesFrom(__DIR__.'/../../database/factories');
+        }
+
         // Registra o alias do middleware
         $router = $this->app->make('router');
         $router->aliasMiddleware('mercadopago.webhook.signature', VerifyMercadoPagoSignature::class);
