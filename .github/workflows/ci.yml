@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        php: [8.2, 8.3]
+        php: [8.2, 8.3, 8.4]
 
     steps:
       - name: Checkout repository
@@ -23,8 +23,9 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: mbstring, pdo, sqlite, pdo_sqlite, bcmath, curl, intl, zip
-          coverage: none
+          coverage: xdebug
           tools: composer:v2
+          ini-file: production
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
@@ -42,10 +43,15 @@ jobs:
         env:
           COMPOSER_ALLOW_SUPERUSER: 1
 
-      - name: Run PHPUnit tests
+      - name: Run tests
         env:
           MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
+        run: vendor/bin/phpunit
+
+      - name: Run Tests with Coverage
+        if: success()
         run: vendor/bin/phpunit --testdox --coverage-clover=coverage.xml
+        continue-on-error: true
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
