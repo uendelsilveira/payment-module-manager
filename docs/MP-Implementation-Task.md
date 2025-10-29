@@ -49,7 +49,7 @@
 
 ---
 
-## Tarefa 4: Documentação Contínua
+## Tarefa 4: Documentação Contínua - **CONCLUÍDA**
 
 **Por que:** A documentação é um componente vital do pacote e deve sempre refletir a implementação atual.
 

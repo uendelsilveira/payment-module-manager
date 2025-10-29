@@ -7,7 +7,7 @@ openapi: 3.0.3
 info:
   title: Payment Module Manager API
   description: API para processamento de pagamentos e gerenciamento de configurações.
-  version: 1.1.0
+  version: 1.2.0
   contact:
     name: Uendel Silveira
     email: uendel.silveira@gmail.com
@@ -182,23 +182,23 @@ components:
           example: cliente@example.com
         payment_method_id:
           type: string
-          enum: [pix, credit_card, boleto]
-          example: boleto
+          description: O ID do método de pagamento. Pode ser genérico (ex: 'credit_card', 'boleto', 'pix') ou um ID específico do gateway (ex: 'visa', 'bolbradesco').
+          example: credit_card
         token:
           type: string
-          description: Obrigatório se payment_method_id for credit_card.
+          description: Obrigatório se payment_method_id for um cartão de crédito.
           example: 'e3e4e2f2a3b1e4e2f2a3b1e4e2f2a3b1'
         installments:
           type: integer
-          description: Número de parcelas (1 a 12). Obrigatório se payment_method_id for credit_card.
+          description: Número de parcelas (1 a 12). Obrigatório se payment_method_id for um cartão de crédito.
           example: 1
         issuer_id:
           type: string
-          description: Obrigatório se payment_method_id for credit_card.
+          description: Obrigatório se payment_method_id for um cartão de crédito.
           example: '24'
         payer:
           type: object
-          description: Dados do pagador. Obrigatório para credit_card e boleto.
+          description: Dados do pagador. Obrigatório para cartões de crédito e boleto.
           properties:
             first_name:
               type: string
