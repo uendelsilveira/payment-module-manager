@@ -113,7 +113,7 @@ Consulta o status e os detalhes de uma transação existente. O sistema busca os
   "method": "mercadopago",
   "description": "Assinatura Premium",
   "payer_email": "cliente@example.com",
-  "payment_method_id": "credit_card",
+  "payment_method_id": "credit_card", // Ex: "visa", "mastercard", "elo" (o ID específico do método de pagamento)
   "token": "...", // Token gerado pelo frontend
   "installments": 1, // Número de parcelas (ex: 1, 2, 3... até 12)
   "issuer_id": "...", // ID do emissor do cartão
@@ -136,7 +136,7 @@ Consulta o status e os detalhes de uma transação existente. O sistema busca os
   "method": "mercadopago",
   "description": "Pagamento de Fatura",
   "payer_email": "cliente@example.com",
-  "payment_method_id": "boleto",
+  "payment_method_id": "boleto", // Ex: "bolbradesco", "bolsantander" (o ID específico do método de pagamento)
   "payer": {
     "first_name": "Maria",
     "last_name": "Souza",

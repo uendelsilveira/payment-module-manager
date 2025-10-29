@@ -82,7 +82,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     private function buildBoletoPayload(array $data): array
     {
         return [
-            'payment_method_id' => 'boleto',
+            'payment_method_id' => data_get($data, 'payment_method_id'),
             'payer' => array_merge(data_get($data, 'payer', []), [
                 'first_name' => data_get($data, 'payer.first_name'),
                 'last_name' => data_get($data, 'payer.last_name'),
@@ -108,7 +108,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
             'token' => $data['token'],
             'installments' => $data['installments'],
             'issuer_id' => $data['issuer_id'],
-            'payment_method_id' => 'credit_card', // Valor fixo para cartão de crédito
+            'payment_method_id' => data_get($data, 'payment_method_id'),
             'payer' => array_merge(data_get($data, 'payer', []), [
                 'first_name' => data_get($data, 'payer.first_name'),
                 'last_name' => data_get($data, 'payer.last_name'),

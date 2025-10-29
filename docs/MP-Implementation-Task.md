@@ -34,7 +34,7 @@
 
 ---
 
-## Tarefa 3: Refatorar a Estratégia do Gateway (Média Prioridade)
+## Tarefa 3: Refatorar a Estratégia do Gateway (Média Prioridade) - **CONCLUÍDA**
 
 **Por que:** O método `charge` na `MercadoPagoStrategy` está se tornando grande e contém valores fixos ("hardcoded"), como `'visa'` e `'bolbradesco'`. Isso limita a flexibilidade e dificulta a manutenção. A refatoração tornará o código mais limpo, flexível e aderente aos princípios de software.
 
