@@ -4,7 +4,7 @@
 
 ---
 
-## Tarefa 1: Implementar Endpoint de Consulta de Pagamento (Alta Prioridade)
+## Tarefa 1: Implementar Endpoint de Consulta de Pagamento (Alta Prioridade) - **CONCLUÍDA**
 
 **Por que:** Atualmente, o status de um pagamento só é atualizado via webhook (assíncrono). É crucial para a aplicação cliente ter um meio de consultar o status de uma transação em tempo real (síncrono), por exemplo, para exibir uma tela de confirmação de compra ou para fins de reconciliação.
 
@@ -22,7 +22,7 @@
 
 ---
 
-## Tarefa 2: Corrigir Falha Silenciosa no Reprocessamento (Média Prioridade)
+## Tarefa 2: Corrigir Falha Silenciosa no Reprocessamento (Média Prioridade) - **CONCLUÍDA**
 
 **Por que:** O comando Artisan `payment:reprocess-failed` não reporta erros corretamente. Se uma tentativa de reprocessamento falhar, o erro é capturado e logado, mas não é relançado. Isso faz com que o comando termine com status de sucesso, dando uma falsa impressão de que todos os pagamentos foram reprocessados com êxito.
 
