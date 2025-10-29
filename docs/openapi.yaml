@@ -7,7 +7,7 @@ openapi: 3.0.3
 info:
   title: Payment Module Manager API
   description: API para processamento de pagamentos e gerenciamento de configurações.
-  version: 1.0.0
+  version: 1.0.1
   contact:
     name: Uendel Silveira
     email: uendel.silveira@gmail.com
@@ -65,9 +65,9 @@ paths:
         '200':
           description: Webhook processado com sucesso.
         '400':
-          description: "Requisição inválida. Exemplo: tipo de notificação não suportado."
+          description: "Requisição inválida (ex: tipo de notificação não suportado)."
         '403':
-          description: "Acesso negado ex: assinatura inválida."
+          description: "Acesso negado (ex: assinatura inválida)."
 
   /settings/mercadopago:
     get:
@@ -105,7 +105,7 @@ paths:
         - Conexão
       responses:
         '302':
-          description: Redirecionamento para a página de autorização do Mercado Pago.
+          description: "Redirecionamento para a página de autorização do Mercado Pago."
 
   /connect/mercadopago/callback:
     get:
@@ -122,11 +122,11 @@ paths:
           description: Código de autorização fornecido pelo Mercado Pago.
       responses:
         '302':
-          description: Redirecionamento para a página de sucesso da aplicação.
+          description: "Redirecionamento para a página de sucesso da aplicação."
         '400':
           description: "Erro: Código de autorização não encontrado."
         '500':
-          description: Falha ao obter o token de acesso.
+          description: "Falha ao obter o token de acesso."
 
 components:
   schemas:
@@ -155,8 +155,8 @@ components:
           example: cliente@example.com
         payment_method_id:
           type: string
-          enum: [pix, credit_card]
-          example: credit_card
+          enum: [pix, credit_card, boleto]
+          example: boleto
         token:
           type: string
           description: Obrigatório se payment_method_id for credit_card.
@@ -171,7 +171,7 @@ components:
           example: '24'
         payer:
           type: object
-          description: Obrigatório se payment_method_id for credit_card.
+          description: Dados do pagador. Obrigatório para credit_card e boleto.
           properties:
             first_name:
               type: string
@@ -188,6 +188,28 @@ components:
                 number:
                   type: string
                   example: '12345678909'
+            address:
+              type: object
+              description: Obrigatório se payment_method_id for boleto.
+              properties:
+                zip_code:
+                  type: string
+                  example: '01000000'
+                street_name:
+                  type: string
+                  example: 'Rua Exemplo'
+                street_number:
+                  type: string
+                  example: '123'
+                neighborhood:
+                  type: string
+                  example: 'Centro'
+                city:
+                  type: string
+                  example: 'São Paulo'
+                federal_unit:
+                  type: string
+                  example: 'SP'
 
     MercadoPagoSettings:
       type: object

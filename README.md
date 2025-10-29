@@ -1,34 +1,36 @@
 # 💳 Payment Module Manager
 
-Pacote **Laravel** para gerenciamento centralizado de pagamentos — atualmente com suporte ao **Mercado Pago**.  
-Projetado para ser **plugável**, **extensível** e **fácil de integrar** em qualquer aplicação Laravel.
+# 💳 Payment Module Manager (Mercado Pago Only)
+
+Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração com o Mercado Pago. Projetado para ser plugável e fácil de usar em qualquer aplicação Laravel.
 
 ---
 
 ## ✨ Funcionalidades
 
-- **Integração com Mercado Pago:** Processa pagamentos via API (PIX e Cartão de Crédito).
-- **Gerenciamento de Credenciais via API:** Permite salvar e atualizar credenciais dos gateways via endpoints de API, com armazenamento seguro no banco de dados.
-- **Conexão OAuth 2.0 (Mercado Pago Connect):** Fluxo seguro de autenticação e autorização para vincular contas do Mercado Pago de usuários finais.
-- **Arquitetura Modular:** Separação clara entre `Providers`, `Controllers`, `Services`, `Repositories` e `Strategies`.
-- **Validação de Requisições:** Validação robusta das entradas antes de processar pagamentos.
-- **Persistência de Transações:** Armazena todos os detalhes das transações.
-- **Respostas Padronizadas:** Uso do `ApiResponseTrait` para respostas JSON consistentes.
-- **Segurança de Webhooks:** Verificação de assinatura em notificações do Mercado Pago.
+-   **Integração com Mercado Pago:** Processa pagamentos via API do Mercado Pago (PIX, Cartão de Crédito e Boleto Bancário).
+-   **Gerenciamento de Credenciais via API:** Permite que as credenciais do gateway sejam salvas e gerenciadas através de endpoints de API, armazenando-as no banco de dados.
+-   **Conexão OAuth 2.0 (Mercado Pago Connect):** Facilita a conexão da conta do Mercado Pago do usuário final através de um fluxo de autorização seguro.
+-   **Estrutura Modular:** Separação clara de responsabilidades usando Service Providers, Controllers, Services, Repositories e Estratégias de Gateway.
+-   **Validação de Requisições:** Validação robusta de dados de entrada para o processamento de pagamentos.
+-   **Persistência de Transações:** Armazena detalhes das transações em um banco de dados.
+-   **Respostas Padronizadas:** Utiliza um `ApiResponseTrait` para respostas JSON consistentes.
+-   **Segurança de Webhooks:** Verificação de assinatura para notificações do Mercado Pago.
 
 ---
 
 ## 📦 Instalação
 
-Instale o pacote via Composer:
+Para usar este pacote em seu projeto Laravel, adicione-o via Composer:
 
 ```bash
 composer require uendelsilveira/payment-module-manager
 ```
 
-> 💡 **Caso o pacote ainda não esteja publicado no [Packagist](https://packagist.org/)**, adicione o repositório GitHub no seu `composer.json` antes de executar o comando acima:
+**Nota:** Se o pacote ainda não estiver publicado no [Packagist](https://packagist.org/), você precisará adicionar o repositório do GitHub ao seu `composer.json` antes de executar o comando acima:
 
 ```json
+// composer.json
 "repositories": [
     {
         "type": "vcs",
@@ -41,39 +43,32 @@ composer require uendelsilveira/payment-module-manager
 
 ## ⚙️ Configuração
 
-### Publicar o arquivo de configuração
+Publique o arquivo de configuração do pacote para sua aplicação:
 
 ```bash
-php artisan vendor:publish --provider="UendelSilveira\\PaymentModuleManager\\Providers\\PaymentServiceProvider" --tag="config"
+php artisan vendor:publish --provider="UendelSilveira\PaymentModuleManager\Providers\PaymentServiceProvider" --tag="config"
 ```
 
-Isso criará o arquivo `config/payment.php`, onde você pode definir as credenciais padrão do Mercado Pago.
-
----
+Isso criará um arquivo `config/payment.php` onde você pode definir suas credenciais do Mercado Pago.
 
 ### Variáveis de Ambiente
 
-Adicione as seguintes variáveis ao seu `.env`:
+Adicione as seguintes variáveis ao seu arquivo `.env`. Estas variáveis funcionarão como um **fallback** se nenhuma configuração for encontrada no banco de dados, e são essenciais para o fluxo de conexão OAuth.
 
 ```dotenv
-MERCADOPAGO_PUBLIC_KEY="SEU_PUBLIC_KEY"
-MERCADOPAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN"
-MERCADOPAGO_WEBHOOK_SECRET="SEU_WEBHOOK_SECRET"
+MERCADOPAGO_PUBLIC_KEY="SEU_PUBLIC_KEY_DE_TESTE_OU_PRODUCAO"
+MERCADOPAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN_DE_TESTE_OU_PRODUCAO"
+MERCADOPAGO_WEBHOOK_SECRET="SEU_WEBHOOK_SECRET_DE_TESTE_OU_PRODUCAO"
 
-MERCADOPAGO_CLIENT_ID="SEU_CLIENT_ID"
-MERCADOPAGO_CLIENT_SECRET="SEU_CLIENT_SECRET"
+MERCADOPAGO_CLIENT_ID="SEU_CLIENT_ID_DA_APLICACAO"
+MERCADOPAGO_CLIENT_SECRET="SEU_CLIENT_SECRET_DA_APLICACAO"
 ```
 
-> ⚠️ **Importante:**
-> - Use credenciais de **teste** em ambientes de desenvolvimento.
-> - As variáveis `CLIENT_ID` e `CLIENT_SECRET` pertencem à **sua aplicação**, e não ao usuário final.
-> - Essas credenciais são usadas como **fallback** se nenhuma configuração for encontrada no banco de dados.
-
----
+**Importante:** Use sempre credenciais de teste para ambientes de desenvolvimento e teste. As credenciais `CLIENT_ID` e `CLIENT_SECRET` são da **sua aplicação**, não do usuário final.
 
 ### Migrações
 
-Execute as migrações para criar as tabelas necessárias:
+Execute as migrações para criar as tabelas `transactions` e `payment_settings`:
 
 ```bash
 php artisan migrate
@@ -87,7 +82,7 @@ Tabelas criadas:
 
 ## 🚀 Uso
 
-### 📘 Documentação da API (OpenAPI/Swagger)
+### Documentação da API (OpenAPI/Swagger)
 
 A documentação completa dos endpoints está disponível em formato OpenAPI.  
 Você pode visualizá-la no [Swagger Editor](https://editor.swagger.io/):
@@ -98,9 +93,9 @@ Você pode visualizá-la no [Swagger Editor](https://editor.swagger.io/):
 
 ### Endpoints de Pagamento
 
-#### `POST /api/payment/process`
+`POST /api/payment/process`
 
-##### Exemplo (PIX)
+#### Exemplo de Requisição (PIX)
 
 ```json
 {
@@ -112,7 +107,7 @@ Você pode visualizá-la no [Swagger Editor](https://editor.swagger.io/):
 }
 ```
 
-##### Exemplo (Cartão de Crédito)
+#### Exemplo de Requisição (Cartão de Crédito)
 
 ```json
 {
@@ -135,17 +130,46 @@ Você pode visualizá-la no [Swagger Editor](https://editor.swagger.io/):
 }
 ```
 
----
+#### Exemplo de Requisição (Boleto Bancário)
+
+```json
+{
+  "amount": 100.00,
+  "method": "mercadopago",
+  "description": "Pagamento de Fatura",
+  "payer_email": "cliente@example.com",
+  "payment_method_id": "boleto",
+  "payer": {
+    "first_name": "Maria",
+    "last_name": "Souza",
+    "identification": {
+      "type": "CPF",
+      "number": "11122233344"
+    },
+    "address": {
+      "zip_code": "01000000",
+      "street_name": "Rua Exemplo",
+      "street_number": "123",
+      "neighborhood": "Centro",
+      "city": "São Paulo",
+      "federal_unit": "SP"
+    }
+  }
+}
+```
 
 ### Endpoints de Configuração
 
-#### `GET /api/settings/mercadopago`
-Retorna as credenciais salvas do Mercado Pago.
+`GET /api/settings/mercadopago`
 
-#### `POST /api/settings/mercadopago`
-Salva ou atualiza as credenciais no banco de dados.
+Retorna as credenciais do Mercado Pago atualmente salvas no banco de dados.
 
-##### Exemplo:
+`POST /api/settings/mercadopago`
+
+Salva ou atualiza as credenciais do Mercado Pago no banco de dados.
+
+#### Exemplo de Requisição
+
 ```json
 {
   "public_key": "APP_USR-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
@@ -154,27 +178,29 @@ Salva ou atualiza as credenciais no banco de dados.
 }
 ```
 
----
-
 ### Endpoints de Conexão (OAuth 2.0)
 
-#### `GET /api/connect/mercadopago`
-Redireciona o usuário para a tela de autorização do Mercado Pago.
+`GET /api/connect/mercadopago`
 
-#### `GET /api/connect/mercadopago/callback`
-Recebe o código de autorização, troca por `access_token` e `public_key`, e armazena no banco de dados.
+Redireciona o usuário para a página de autorização do Mercado Pago. Após a autorização, o Mercado Pago redirecionará para o endpoint de callback.
+
+`GET /api/connect/mercadopago/callback`
+
+Endpoint de callback que recebe o código de autorização do Mercado Pago, troca-o por um `access_token` e `public_key` e os salva no banco de dados.
 
 ---
 
 ## 🧪 Testes
 
-1. Instale as dependências de desenvolvimento:
+Para executar os testes unitários e de feature do pacote:
+
+1.  Certifique-se de ter as dependências de desenvolvimento instaladas:
     ```bash
     composer update
     ```
-
-2. Configure credenciais de teste no `phpunit.xml`:
+2.  Configure suas credenciais de teste do Mercado Pago **no arquivo `phpunit.xml`** (na raiz do pacote) para o ambiente de teste:
     ```xml
+    <!-- phpunit.xml -->
     <php>
         <env name="MERCADOPAGO_ACCESS_TOKEN" value="SEU_ACCESS_TOKEN_DE_TESTE"/>
         <env name="MERCADOPAGO_WEBHOOK_SECRET" value="SEU_WEBHOOK_SECRET_DE_TESTE"/>
@@ -182,8 +208,7 @@ Recebe o código de autorização, troca por `access_token` e `public_key`, e ar
         <env name="MERCADOPAGO_CLIENT_SECRET" value="SEU_CLIENT_SECRET_DE_TESTE"/>
     </php>
     ```
-
-3. Execute os testes:
+3.  Execute os testes:
     ```bash
     composer test
     ```
@@ -210,5 +235,6 @@ Recebe o código de autorização, troca por `access_token` e `public_key`, e ar
 
 ## 📄 Licença
 
-Licenciado sob a [MIT License](LICENSE).  
-© 2025 **Uendel Silveira** — Full Laravel Developer
+Este projeto está licenciado sob a Licença MIT.
+
+© 2025 Uendel Silveira - Full Laravel Developer
