@@ -30,6 +30,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-php-
 
+      - name: Update composer.json
+        run: composer update
+
       - name: Validate composer.json
         run: composer validate --strict
 
