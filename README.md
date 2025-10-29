@@ -77,6 +77,31 @@ php artisan migrate
 
 ## 🚀 Uso
 
+### Quickstart
+
+Para começar a usar o módulo de pagamentos rapidamente, siga estes passos:
+
+1.  **Configure suas credenciais:** Edite o arquivo `.env` com suas chaves do Mercado Pago (ou outras credenciais de gateway).
+2.  **Execute as migrações:** `php artisan migrate`
+3.  **Processar um pagamento (PIX):**
+    ```bash
+    curl -X POST "http://localhost/api/payment/process" \
+         -H "Content-Type: application/json" \
+         -d '{ "amount": 199.90, "method": "mercadopago", "description": "Assinatura Premium", "payer_email": "cliente@example.com", "payment_method_id": "pix" }'
+    ```
+
+4.  **Consultar um pagamento:** (Substitua `{transaction_id}` pelo ID da transação retornado no passo anterior)
+    ```bash
+    curl -X GET "http://localhost/api/payments/{transaction_id}"
+    ```
+
+5.  **Obter resumo de transações:**
+    ```bash
+    curl -X GET "http://localhost/api/reports/transactions/summary?start_date=2025-01-01&end_date=2025-01-31"
+    ```
+
+---
+
 ### Documentação da API (OpenAPI/Swagger)
 
 Uma documentação detalhada da API, incluindo todos os endpoints, parâmetros e exemplos de resposta, está disponível no formato OpenAPI. Você pode visualizar este arquivo usando qualquer ferramenta compatível com OpenAPI, como o [Swagger Editor](https://editor.swagger.io/).
@@ -89,71 +114,38 @@ Uma documentação detalhada da API, incluindo todos os endpoints, parâmetros e
 
 Cria e processa um novo pagamento.
 
-`GET /api/payments/{transaction_id}`
-
-Consulta o status e os detalhes de uma transação existente. O sistema busca os dados mais recentes no gateway e atualiza o status local se necessário.
-
 #### Exemplo de Requisição (PIX)
 
-```json
-{
-  "amount": 199.90,
-  "method": "mercadopago",
-  "description": "Assinatura Premium",
-  "payer_email": "cliente@example.com",
-  "payment_method_id": "pix"
-}
+```bash
+curl -X POST "http://localhost/api/payment/process" \
+     -H "Content-Type: application/json" \
+     -d '{ "amount": 199.90, "method": "mercadopago", "description": "Assinatura Premium", "payer_email": "cliente@example.com", "payment_method_id": "pix" }'
 ```
 
 #### Exemplo de Requisição (Cartão de Crédito)
 
-```json
-{
-  "amount": 199.90,
-  "method": "mercadopago",
-  "description": "Assinatura Premium",
-  "payer_email": "cliente@example.com",
-  "payment_method_id": "credit_card", // Ex: "visa", "mastercard", "elo" (o ID específico do método de pagamento)
-  "token": "...", // Token gerado pelo frontend
-  "installments": 1, // Número de parcelas (ex: 1, 2, 3... até 12)
-  "issuer_id": "...", // ID do emissor do cartão
-  "payer": {
-    "first_name": "João",
-    "last_name": "Silva",
-    "identification": {
-      "type": "CPF",
-      "number": "..."
-    }
-  }
-}
+```bash
+curl -X POST "http://localhost/api/payment/process" \
+     -H "Content-Type: application/json" \
+     -d '{ "amount": 199.90, "method": "mercadopago", "description": "Assinatura Premium", "payer_email": "cliente@example.com", "payment_method_id": "credit_card", "token": "...", "installments": 1, "issuer_id": "...", "payer": { "first_name": "João", "last_name": "Silva", "identification": { "type": "CPF", "number": "..." } } }'
 ```
 
 #### Exemplo de Requisição (Boleto Bancário)
 
-```json
-{
-  "amount": 100.00,
-  "method": "mercadopago",
-  "description": "Pagamento de Fatura",
-  "payer_email": "cliente@example.com",
-  "payment_method_id": "boleto", // Ex: "bolbradesco", "bolsantander" (o ID específico do método de pagamento)
-  "payer": {
-    "first_name": "Maria",
-    "last_name": "Souza",
-    "identification": {
-      "type": "CPF",
-      "number": "11122233344"
-    },
-    "address": {
-      "zip_code": "01000000",
-      "street_name": "Rua Exemplo",
-      "street_number": "123",
-      "neighborhood": "Centro",
-      "city": "São Paulo",
-      "federal_unit": "SP"
-    }
-  }
-}
+```bash
+curl -X POST "http://localhost/api/payment/process" \
+     -H "Content-Type: application/json" \
+     -d '{ "amount": 100.00, "method": "mercadopago", "description": "Pagamento de Fatura", "payer_email": "cliente@example.com", "payment_method_id": "boleto", "payer": { "first_name": "Maria", "last_name": "Souza", "identification": { "type": "CPF", "number": "11122233344" }, "address": { "zip_code": "01000000", "street_name": "Rua Exemplo", "street_number": "123", "neighborhood": "Centro", "city": "São Paulo", "federal_unit": "SP" } } }'
+```
+
+`GET /api/payments/{transaction_id}`
+
+Consulta o status e os detalhes de uma transação existente. O sistema busca os dados mais recentes no gateway e atualiza o status local se necessário.
+
+#### Exemplo de Requisição
+
+```bash
+curl -X GET "http://localhost/api/payments/{transaction_id}"
 ```
 
 ### Endpoints de Relatórios
@@ -164,8 +156,8 @@ Retorna um resumo das transações, incluindo o total de transações, valor tot
 
 #### Exemplo de Requisição
 
-```
-GET /api/reports/transactions/summary?start_date=2025-01-01&end_date=2025-01-31
+```bash
+curl -X GET "http://localhost/api/reports/transactions/summary?start_date=2025-01-01&end_date=2025-01-31"
 ```
 
 `GET /api/reports/transactions/methods`
@@ -174,8 +166,8 @@ Retorna a contagem e o valor total das transações agrupadas por método de pag
 
 #### Exemplo de Requisição
 
-```
-GET /api/reports/transactions/methods?start_date=2025-01-01&end_date=2025-01-31
+```bash
+curl -X GET "http://localhost/api/reports/transactions/methods?start_date=2025-01-01&end_date=2025-01-31"
 ```
 
 ### Endpoints de Configuração
@@ -190,12 +182,10 @@ Salva ou atualiza as credenciais do Mercado Pago no banco de dados.
 
 #### Exemplo de Requisição
 
-```json
-{
-  "public_key": "APP_USR-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "access_token": "APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "webhook_secret": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-}
+```bash
+curl -X POST "http://localhost/api/settings/mercadopago" \
+     -H "Content-Type: application/json" \
+     -d '{ "public_key": "APP_USR-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "access_token": "APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "webhook_secret": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }'
 ```
 
 ### Endpoints de Conexão (OAuth 2.0)

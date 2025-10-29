@@ -16,7 +16,6 @@
 
 # Arquivos de ambiente
 .env
-.env.*
 .env.backup
 *.local
 
