@@ -7,7 +7,7 @@ openapi: 3.0.3
 info:
   title: Payment Module Manager API
   description: API para processamento de pagamentos e gerenciamento de configurações.
-  version: 1.0.2
+  version: 1.0.3
   contact:
     name: Uendel Silveira
     email: uendel.silveira@gmail.com
@@ -165,7 +165,7 @@ components:
           example: 'e3e4e2f2a3b1e4e2f2a3b1e4e2f2a3b1'
         installments:
           type: integer
-          description: Obrigatório se payment_method_id for credit_card.
+          description: Número de parcelas (1 a 12). Obrigatório se payment_method_id for credit_card.
           example: 1
         issuer_id:
           type: string

@@ -22,7 +22,7 @@ class CreatePaymentRequest extends FormRequest
     public function rules(): array
     {
         // Define os métodos de pagamento aceitos
-        $paymentMethods = ['pix', 'credit_card', 'boleto']; // Adicionado 'boleto'
+        $paymentMethods = ['pix', 'credit_card', 'boleto'];
 
         return [
             'amount' => ['required', 'numeric', 'min:0.01'],
@@ -35,7 +35,8 @@ class CreatePaymentRequest extends FormRequest
 
             // Campos específicos para Cartão de Crédito
             'token' => ['required_if:payment_method_id,credit_card', 'string'],
-            'installments' => ['required_if:payment_method_id,credit_card', 'integer', 'min:1'],
+            // Parcelamento: min:1 já está ok, mas podemos adicionar um max se o MP tiver limite
+            'installments' => ['required_if:payment_method_id,credit_card', 'integer', 'min:1', 'max:12'], // Adicionado max:12 como exemplo
             'issuer_id' => ['required_if:payment_method_id,credit_card', 'string'],
 
             // Dados adicionais do pagador, importantes para cartão de crédito e boleto

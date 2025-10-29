@@ -127,6 +127,61 @@ class ApiPaymentTest extends TestCase
         ]);
     }
 
+    public function test_it_can_process_a_credit_card_payment_with_installments_successfully()
+    {
+        // Mock da MercadoPagoClientInterface para Cartão de Crédito com parcelamento
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+            $mock->shouldReceive('createPayment')->andReturn((object) [
+                'id' => 'mp_payment_id_cc_installments',
+                'status' => 'approved',
+                'transaction_amount' => 300.00,
+                'description' => 'Teste de pagamento com Cartão Parcelado',
+                'payment_method_id' => 'visa',
+                'installments' => 3,
+                'status_detail' => 'accredited',
+                'metadata' => (object) [],
+            ]);
+        }));
+
+        $payload = [
+            'amount' => 300.00,
+            'method' => PaymentGateway::MERCADOPAGO,
+            'description' => 'Teste de pagamento com Cartão Parcelado',
+            'payer_email' => 'test@example.com',
+            'payment_method_id' => 'credit_card',
+            'token' => 'mock_card_token',
+            'installments' => 3,
+            'issuer_id' => 'mock_issuer_id',
+            'payer' => [
+                'first_name' => 'Test',
+                'last_name' => 'User',
+                'identification' => [
+                    'type' => 'CPF',
+                    'number' => '12345678909',
+                ],
+            ],
+        ];
+
+        $response = $this->postJson(route('payment.process'), $payload);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Pagamento processado com sucesso.',
+                'data' => [
+                    'gateway' => 'mercadopago',
+                    'amount' => '300.00',
+                    'status' => 'approved',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('transactions', [
+            'gateway' => 'mercadopago',
+            'amount' => 300.00,
+            'status' => 'approved',
+        ]);
+    }
+
     public function test_it_can_process_a_boleto_payment_successfully()
     {
         // Mock da MercadoPagoClientInterface para Boleto

@@ -11,10 +11,10 @@ namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use UendelSilveira\PaymentModuleManager\Models\Transaction;
-use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Log;
 use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use UendelSilveira\PaymentModuleManager\Models\Transaction;
+use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
 class MercadoPagoWebhookController extends Controller
 {
@@ -30,7 +30,6 @@ class MercadoPagoWebhookController extends Controller
     /**
      * Handle the incoming Mercado Pago webhook request.
      *
-     * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function handle(Request $request)
@@ -51,11 +50,13 @@ class MercadoPagoWebhookController extends Controller
         // Apenas processamos notificações do tipo 'payment'
         if ($webhookType !== 'payment') {
             Log::warning('[MercadoPagoWebhookController] Tipo de notificação não suportado.', ['type' => $webhookType]);
+
             return $this->errorResponse('Tipo de notificação não suportado.', 400);
         }
 
         if (empty($paymentId)) {
             Log::error('[MercadoPagoWebhookController] ID do pagamento não encontrado na notificação.', ['payload' => $request->all()]);
+
             return $this->errorResponse('ID do pagamento não encontrado na notificação.', 400);
         }
 
@@ -66,8 +67,9 @@ class MercadoPagoWebhookController extends Controller
             // Encontrar a transação local pelo external_id
             $transaction = Transaction::where('external_id', $paymentId)->first();
 
-            if (!$transaction) {
+            if (! $transaction) {
                 Log::warning('[MercadoPagoWebhookController] Transação local não encontrada para o external_id.', ['external_id' => $paymentId]);
+
                 return $this->errorResponse('Transação local não encontrada.', 404);
             }
 
@@ -108,6 +110,7 @@ class MercadoPagoWebhookController extends Controller
 
         } catch (\Exception $e) {
             Log::error('[MercadoPagoWebhookController] Erro ao processar webhook.', ['exception' => $e->getMessage(), 'payment_id' => $paymentId]);
+
             return $this->errorResponse('Erro interno ao processar webhook.', 500);
         }
     }
