@@ -82,29 +82,51 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
             $payment = $this->mpClient->createPayment($request);
 
             // Retorna os dados relevantes da resposta do Mercado Pago
-            $response = [
-                'id' => $payment->id,
-                'status' => $payment->status,
-                'transaction_amount' => $payment->transaction_amount,
-                'description' => $payment->description,
-                'payment_method_id' => $payment->payment_method_id,
-                'status_detail' => $payment->status_detail,
-                'metadata' => (array) $payment->metadata,
-            ];
-
-            // Adiciona dados específicos para PIX ou Boleto
-            if ($data['payment_method_id'] === 'pix') {
-                $response['external_resource_url'] = $payment->point_of_interaction->transaction_data->qr_code_base64 ?? null;
-            } elseif ($data['payment_method_id'] === 'boleto') {
-                $response['external_resource_url'] = $payment->point_of_interaction->transaction_data->ticket_url ?? null;
-            }
-
-            return $response;
+            return $this->formatPaymentResponse($payment);
 
         } catch (\Exception $e) {
             Log::error('[MercadoPagoStrategy] Erro ao processar pagamento com Mercado Pago.', ['exception' => $e->getMessage()]);
 
             throw new \Exception('Erro ao processar pagamento: '.$e->getMessage());
         }
+    }
+
+    public function getPayment(string $externalPaymentId): array
+    {
+        Log::info('[MercadoPagoStrategy] Buscando pagamento.', ['external_id' => $externalPaymentId]);
+
+        try {
+            $payment = $this->mpClient->getPayment($externalPaymentId);
+
+            return $this->formatPaymentResponse($payment);
+        } catch (\Exception $e) {
+            Log::error('[MercadoPagoStrategy] Erro ao buscar pagamento no Mercado Pago.', ['exception' => $e->getMessage()]);
+
+            throw new \Exception('Erro ao buscar pagamento: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Padroniza a resposta da API do Mercado Pago para a aplicação.
+     */
+    private function formatPaymentResponse(object $payment): array
+    {
+        $response = [
+            'id' => $payment->id,
+            'status' => $payment->status,
+            'transaction_amount' => $payment->transaction_amount,
+            'description' => $payment->description,
+            'payment_method_id' => $payment->payment_method_id,
+            'status_detail' => $payment->status_detail,
+            'metadata' => (array) $payment->metadata,
+        ];
+
+        if ($payment->payment_method_id === 'pix') {
+            $response['external_resource_url'] = $payment->point_of_interaction->transaction_data->qr_code_base64 ?? null;
+        } elseif ($payment->payment_method_id === 'boleto') {
+            $response['external_resource_url'] = $payment->point_of_interaction->transaction_data->ticket_url ?? null;
+        }
+
+        return $response;
     }
 }

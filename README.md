@@ -6,7 +6,7 @@ Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração c
 
 ## ✨ Funcionalidades
 
--   **Integração com Mercado Pago:** Processa pagamentos via API do Mercado Pago (PIX, Cartão de Crédito com parcelamento e Boleto Bancário).
+-   **Integração com Mercado Pago:** Processa e consulta pagamentos via API do Mercado Pago (PIX, Cartão de Crédito com parcelamento e Boleto Bancário).
 -   **Gerenciamento de Credenciais via API:** Permite que as credenciais do gateway sejam salvas e gerenciadas através de endpoints de API, armazenando-as no banco de dados.
 -   **Conexão OAuth 2.0 (Mercado Pago Connect):** Facilita a conexão da conta do Mercado Pago do usuário final através de um fluxo de autorização seguro.
 -   **Reprocessamento de Transações Falhas:** Comando Artisan para tentar reprocessar pagamentos que falharam, com limite de tentativas.
@@ -86,6 +86,12 @@ Uma documentação detalhada da API, incluindo todos os endpoints, parâmetros e
 ### Endpoints de Pagamento
 
 `POST /api/payment/process`
+
+Cria e processa um novo pagamento.
+
+`GET /api/payments/{transaction_id}`
+
+Consulta o status e os detalhes de uma transação existente. O sistema busca os dados mais recentes no gateway e atualiza o status local se necessário.
 
 #### Exemplo de Requisição (PIX)
 

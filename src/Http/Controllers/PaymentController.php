@@ -13,6 +13,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use UendelSilveira\PaymentModuleManager\Http\Requests\CreatePaymentRequest;
+use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
@@ -50,6 +51,32 @@ class PaymentController extends Controller
             // Em produção, retorna uma resposta de erro padronizada.
             return $this->errorResponse(
                 'Falha ao processar pagamento: '.$e->getMessage(),
+                500 // Internal Server Error
+            );
+        }
+    }
+
+    /**
+     * Exibe os detalhes de uma transação específica.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function show(Transaction $transaction)
+    {
+        Log::info('[PaymentController] Requisição para obter detalhes da transação.', ['transaction_id' => $transaction->id]);
+
+        try {
+            $updatedTransaction = $this->paymentService->getPaymentDetails($transaction);
+
+            return $this->successResponse(
+                $updatedTransaction->toArray(),
+                'Detalhes da transação obtidos com sucesso.'
+            );
+        } catch (Throwable $e) {
+            Log::error('[PaymentController] Erro ao obter detalhes da transação.', ['transaction_id' => $transaction->id, 'exception' => $e->getMessage()]);
+
+            return $this->errorResponse(
+                'Falha ao obter detalhes da transação: '.$e->getMessage(),
                 500 // Internal Server Error
             );
         }

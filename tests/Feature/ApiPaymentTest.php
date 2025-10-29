@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use UendelSilveira\PaymentModuleManager\Enums\PaymentGateway;
+use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class ApiPaymentTest extends TestCase
@@ -23,6 +24,53 @@ class ApiPaymentTest extends TestCase
     {
         Mockery::close();
         parent::tearDown();
+    }
+
+    public function test_it_can_show_a_payment_and_update_status()
+    {
+        // 1. Criar uma transação local com status pendente
+        $transaction = Transaction::create([
+            'gateway' => PaymentGateway::MERCADOPAGO,
+            'external_id' => 'mp_payment_to_show',
+            'amount' => 150.00,
+            'description' => 'Transaction to be updated',
+            'status' => 'pending',
+            'metadata' => ['payment_method_id' => 'pix'],
+        ]);
+
+        // 2. Mock do cliente do Mercado Pago para retornar um status diferente
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+            $mock->shouldReceive('getPayment')
+                ->with('mp_payment_to_show')
+                ->andReturn((object) [
+                    'id' => 'mp_payment_to_show',
+                    'status' => 'approved', // O gateway agora diz que foi aprovado
+                    'transaction_amount' => 150.00,
+                    'description' => 'Transaction to be updated',
+                    'payment_method_id' => 'pix',
+                    'status_detail' => 'accredited',
+                    'metadata' => (object) [],
+                ]);
+        }));
+
+        // 3. Chamar o endpoint de consulta
+        $response = $this->getJson(route('payment.show', ['transaction' => $transaction->id]));
+
+        // 4. Verificar a resposta da API
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'id' => $transaction->id,
+                    'status' => 'approved', // A resposta deve refletir o novo status
+                ],
+            ]);
+
+        // 5. Verificar se o banco de dados foi atualizado
+        $this->assertDatabaseHas('transactions', [
+            'id' => $transaction->id,
+            'status' => 'approved',
+        ]);
     }
 
     public function test_it_can_process_a_pix_payment_successfully()

@@ -71,6 +71,38 @@ class PaymentService
     }
 
     /**
+     * Busca os detalhes de um pagamento no gateway e atualiza a transação local.
+     */
+    public function getPaymentDetails(Transaction $transaction): Transaction
+    {
+        Log::info('[PaymentService] Buscando detalhes da transação.', ['transaction_id' => $transaction->id]);
+
+        if (empty($transaction->external_id)) {
+            Log::warning('[PaymentService] Transação não possui ID externo para consulta.', ['transaction_id' => $transaction->id]);
+            // Retorna a transação como está, pois não pode ser consultada no gateway.
+            return $transaction;
+        }
+
+        $gatewayStrategy = $this->gatewayManager->create($transaction->gateway);
+        $gatewayResponse = $gatewayStrategy->getPayment($transaction->external_id);
+
+        // Compara o status e atualiza se necessário
+        if ($gatewayResponse['status'] !== $transaction->status) {
+            Log::info('[PaymentService] Status da transação alterado no gateway. Atualizando localmente.', [
+                'transaction_id' => $transaction->id,
+                'old_status' => $transaction->status,
+                'new_status' => $gatewayResponse['status'],
+            ]);
+
+            $transaction->status = $gatewayResponse['status'];
+            $transaction->metadata = array_merge((array) $transaction->metadata, $gatewayResponse);
+            $transaction->save();
+        }
+
+        return $transaction;
+    }
+
+    /**
      * Retorna as transações falhas que podem ser reprocessadas.
      */
     public function getFailedTransactions()

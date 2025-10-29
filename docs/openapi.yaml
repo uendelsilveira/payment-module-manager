@@ -7,7 +7,7 @@ openapi: 3.0.3
 info:
   title: Payment Module Manager API
   description: API para processamento de pagamentos e gerenciamento de configurações.
-  version: 1.0.4
+  version: 1.1.0
   contact:
     name: Uendel Silveira
     email: uendel.silveira@gmail.com
@@ -48,6 +48,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /payments/{transaction}:
+    get:
+      summary: Consulta os detalhes de um pagamento
+      description: Obtém o status e os detalhes mais recentes de uma transação específica, consultando o gateway de pagamento se necessário.
+      tags:
+        - Pagamentos
+      parameters:
+        - in: path
+          name: transaction
+          schema:
+            type: integer
+          required: true
+          description: O ID da transação local.
+      responses:
+        '200':
+          description: Detalhes da transação obtidos com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Transação não encontrada.
+        '500':
+          description: Erro interno do servidor.
 
   /mercadopago/webhook:
     post:

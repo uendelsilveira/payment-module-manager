@@ -22,6 +22,9 @@ use UendelSilveira\PaymentModuleManager\Http\Controllers\SettingsController;
 Route::post('payment/process', [PaymentController::class, 'process'])
     ->name('payment.process');
 
+Route::get('payments/{transaction}', [PaymentController::class, 'show'])
+    ->name('payment.show');
+
 // Rotas de Webhook
 Route::post('mercadopago/webhook', [MercadoPagoWebhookController::class, 'handle'])
     ->name('mercadopago.webhook')
