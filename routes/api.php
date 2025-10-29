@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\MercadoPagoWebhookController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\PaymentController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\SettingsController;
+use UendelSilveira\PaymentModuleManager\Http\Controllers\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,4 +41,12 @@ Route::prefix('settings')->group(function () {
 Route::prefix('connect')->group(function () {
     Route::get('mercadopago', [SettingsController::class, 'redirectToMercadoPago'])->name('connect.mercadopago.redirect');
     Route::get('mercadopago/callback', [SettingsController::class, 'handleMercadoPagoCallback'])->name('connect.mercadopago.callback');
+});
+
+// Rotas de Relatórios
+Route::prefix('reports')->group(function () {
+    Route::get('transactions/summary', [ReportController::class, 'transactionSummary'])
+        ->name('reports.transactions.summary');
+    Route::get('transactions/methods', [ReportController::class, 'transactionsByMethod'])
+        ->name('reports.transactions.methods');
 });

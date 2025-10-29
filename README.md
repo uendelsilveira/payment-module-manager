@@ -60,7 +60,7 @@ MERCADOPAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN_DE_TESTE_OU_PRODUCAO"
 MERCADOPAGO_WEBHOOK_SECRET="SEU_WEBHOOK_SECRET_DE_TESTE_OU_PRODUCAO"
 
 MERCADOPAGO_CLIENT_ID="SEU_CLIENT_ID_DA_APLICACAO"
-MERCADOPAGO_CLIENT_SECRET="SEU_CLIENT_SECRET_DA_APLICACAO"
+MERCADOPAGO_CLIENT_SECRET="SEU_CLIENT_SECRET_DE_APLICACAO"
 ```
 
 **Importante:** Use sempre credenciais de teste para ambientes de desenvolvimento e teste. As credenciais `CLIENT_ID` e `CLIENT_SECRET` são da **sua aplicação**, não do usuário final.
@@ -154,6 +154,28 @@ Consulta o status e os detalhes de uma transação existente. O sistema busca os
     }
   }
 }
+```
+
+### Endpoints de Relatórios
+
+`GET /api/reports/transactions/summary`
+
+Retorna um resumo das transações, incluindo o total de transações, valor total, transações bem-sucedidas e transações falhas. Aceita `start_date` e `end_date` como parâmetros de query opcionais para filtrar o período.
+
+#### Exemplo de Requisição
+
+```
+GET /api/reports/transactions/summary?start_date=2025-01-01&end_date=2025-01-31
+```
+
+`GET /api/reports/transactions/methods`
+
+Retorna a contagem e o valor total das transações agrupadas por método de pagamento. Aceita `start_date` e `end_date` como parâmetros de query opcionais para filtrar o período.
+
+#### Exemplo de Requisição
+
+```
+GET /api/reports/transactions/methods?start_date=2025-01-01&end_date=2025-01-31
 ```
 
 ### Endpoints de Configuração

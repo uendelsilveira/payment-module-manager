@@ -155,6 +155,88 @@ paths:
         '500':
           description: "Falha ao obter o token de acesso."
 
+  /reports/transactions/summary:
+    get:
+      summary: Obtém um resumo das transações
+      description: Retorna um resumo das transações, incluindo o total de transações, valor total, transações bem-sucedidas e transações falhas, para um período opcional.
+      tags:
+        - Relatórios
+      parameters:
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+          required: false
+          description: Data de início para filtrar as transações (formato YYYY-MM-DD).
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+          required: false
+          description: Data de fim para filtrar as transações (formato YYYY-MM-DD).
+      responses:
+        '200':
+          description: Resumo das transações obtido com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionSummaryResponse'
+        '422':
+          description: Erro de validação.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reports/transactions/methods:
+    get:
+      summary: Obtém transações agrupadas por método de pagamento
+      description: Retorna a contagem e o valor total das transações agrupadas por método de pagamento, para um período opcional.
+      tags:
+        - Relatórios
+      parameters:
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+          required: false
+          description: Data de início para filtrar as transações (formato YYYY-MM-DD).
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+          required: false
+          description: Data de fim para filtrar as transações (formato YYYY-MM-DD).
+      responses:
+        '200':
+          description: Transações por método de pagamento obtidas com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionsByMethodResponse'
+        '422':
+          description: Erro de validação.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     CreatePaymentRequest:
@@ -339,3 +421,54 @@ components:
         type:
           type: string
           example: payment
+
+    TransactionSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Resumo de transações obtido com sucesso.
+        data:
+          type: object
+          properties:
+            total_transactions:
+              type: integer
+              example: 100
+            total_amount:
+              type: number
+              format: float
+              example: 15000.50
+            successful_transactions:
+              type: integer
+              example: 90
+            failed_transactions:
+              type: integer
+              example: 10
+
+    TransactionsByMethodResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Transações por método de pagamento obtidas com sucesso.
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              payment_method_id:
+                type: string
+                example: credit_card
+              total_transactions:
+                type: integer
+                example: 50
+              total_amount:
+                type: number
+                format: float
+                example: 7500.25
