@@ -18,6 +18,15 @@ Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração c
 
 ---
 
+## 📋 Requisitos
+
+Para utilizar este pacote, certifique-se de que seu ambiente atenda aos seguintes requisitos:
+
+-   **PHP:** ^8.2
+-   **Laravel:** ^11.0
+
+---
+
 ## 📦 Instalação
 
 Para usar este pacote em seu projeto Laravel, adicione-o via Composer:
