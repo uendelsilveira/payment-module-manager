@@ -11,4 +11,3 @@ class WebhookSignatureException extends HttpException
         parent::__construct($statusCode, $message);
     }
 }
-

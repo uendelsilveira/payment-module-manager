@@ -17,4 +17,3 @@ class PaymentGatewayException extends PaymentModuleException
         return $this->statusCode;
     }
 }
-

@@ -2,7 +2,4 @@
 
 namespace UendelSilveira\PaymentModuleManager\Exceptions;
 
-class ExternalServiceException extends PaymentModuleException
-{
-}
-
+class ExternalServiceException extends PaymentModuleException {}

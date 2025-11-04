@@ -10,7 +10,7 @@ use UendelSilveira\PaymentModuleManager\Exceptions\PaymentAuthorizationException
 
 /**
  * Middleware para autorização de ações de pagamento.
- * 
+ *
  * Verifica se o usuário autenticado tem permissão para executar a ação solicitada.
  */
 class AuthorizePaymentAction
@@ -18,9 +18,6 @@ class AuthorizePaymentAction
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @param  string  $permission
      * @return mixed
      */
     public function handle(Request $request, Closure $next, string $permission)
@@ -30,10 +27,10 @@ class AuthorizePaymentAction
         switch ($authorizationStrategy) {
             case 'callback':
                 return $this->authorizeViaCallback($request, $next, $permission);
-            
+
             case 'laravel_gate':
                 return $this->authorizeViaGate($request, $next, $permission);
-            
+
             case 'none':
             default:
                 // Sem autorização - útil para desenvolvimento
@@ -74,4 +71,3 @@ class AuthorizePaymentAction
         return $next($request);
     }
 }
-

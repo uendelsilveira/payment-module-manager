@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Middleware para rate limiting de requisições de pagamento.
- * 
+ *
  * Protege contra abuso limitando o número de requisições por IP/usuário.
  */
 class RateLimitPaymentRequests
@@ -25,9 +25,6 @@ class RateLimitPaymentRequests
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @param  string  $limitType
      * @return mixed
      */
     public function handle(Request $request, Closure $next, string $limitType = 'default')
@@ -61,7 +58,7 @@ class RateLimitPaymentRequests
     protected function resolveRequestSignature(Request $request, string $limitType): string
     {
         $user = $request->user();
-        
+
         if ($user) {
             return sprintf(
                 'payment_rate_limit:%s:%s:%s',
@@ -140,4 +137,3 @@ class RateLimitPaymentRequests
         return $response;
     }
 }
-

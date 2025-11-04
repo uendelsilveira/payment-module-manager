@@ -11,4 +11,3 @@ class PaymentAuthorizationException extends HttpException
         parent::__construct($statusCode, $message);
     }
 }
-

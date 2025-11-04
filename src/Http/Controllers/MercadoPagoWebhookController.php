@@ -12,15 +12,12 @@ namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
-use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
 class MercadoPagoWebhookController extends Controller
 {
     use ApiResponseTrait;
-
-
 
     /**
      * Handle the incoming Mercado Pago webhook request.

@@ -10,7 +10,7 @@ use UendelSilveira\PaymentModuleManager\Exceptions\PaymentAuthenticationExceptio
 
 /**
  * Middleware para autenticação de requisições de pagamento.
- * 
+ *
  * Este middleware pode ser configurado para usar diferentes estratégias:
  * - API Token: Valida um token fixo configurado
  * - Laravel Auth: Usa o sistema de autenticação do Laravel (Sanctum, Passport, etc.)
@@ -21,9 +21,6 @@ class AuthenticatePaymentRequest
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @param  string|null  $guard
      * @return mixed
      */
     public function handle(Request $request, Closure $next, ?string $guard = null)
@@ -33,13 +30,13 @@ class AuthenticatePaymentRequest
         switch ($authStrategy) {
             case 'api_token':
                 return $this->validateApiToken($request, $next);
-            
+
             case 'laravel_auth':
                 return $this->validateLaravelAuth($request, $next, $guard);
-            
+
             case 'custom':
                 return $this->validateCustom($request, $next);
-            
+
             case 'none':
             default:
                 // Sem autenticação - útil para desenvolvimento
@@ -98,4 +95,3 @@ class AuthenticatePaymentRequest
         return $next($request);
     }
 }
-

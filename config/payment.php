@@ -111,4 +111,48 @@ return [
         // Máximo de requisições por minuto para configurações
         'settings' => env('PAYMENT_RATE_LIMIT_SETTINGS', 20),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Retry Strategy
+    |--------------------------------------------------------------------------
+    |
+    | Configurações para tentativas automáticas de reprocessamento de pagamentos.
+    |
+    */
+
+    'retry' => [
+        // Habilitar sistema de retry automático
+        'enabled' => env('PAYMENT_RETRY_ENABLED', true),
+
+        // Número máximo de tentativas
+        'max_attempts' => env('PAYMENT_RETRY_MAX_ATTEMPTS', 3),
+
+        // Estratégia de backoff: 'fixed', 'exponential'
+        'backoff_strategy' => env('PAYMENT_RETRY_BACKOFF_STRATEGY', 'exponential'),
+
+        // Delay inicial entre tentativas (em segundos)
+        'initial_delay' => env('PAYMENT_RETRY_INITIAL_DELAY', 60),
+
+        // Multiplicador para backoff exponencial (se backoff_strategy = 'exponential')
+        // Delay = initial_delay * (multiplier ^ attempt)
+        'backoff_multiplier' => env('PAYMENT_RETRY_BACKOFF_MULTIPLIER', 2),
+
+        // Delay máximo entre tentativas (em segundos)
+        'max_delay' => env('PAYMENT_RETRY_MAX_DELAY', 3600),
+
+        // Condições para retry baseadas no status da transação
+        'retryable_statuses' => [
+            'pending',
+            'failed',
+            'error',
+        ],
+
+        // Condições para retry baseadas em códigos de erro do gateway
+        'retryable_error_codes' => [
+            'timeout',
+            'connection_error',
+            'service_unavailable',
+        ],
+    ],
 ];

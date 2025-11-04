@@ -8,6 +8,7 @@
 */
 
 use Illuminate\Support\Facades\Route;
+use UendelSilveira\PaymentModuleManager\Http\Controllers\HealthCheckController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\MercadoPagoWebhookController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\PaymentController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\ReportController;
@@ -22,6 +23,10 @@ use UendelSilveira\PaymentModuleManager\Http\Controllers\SettingsController;
 | middlewares abaixo e configure em config/payment.php
 |
 */
+
+// Health Check
+Route::get('health', [HealthCheckController::class, 'check'])
+    ->name('health.check');
 
 // Rotas de Pagamento
 Route::post('payment/process', [PaymentController::class, 'process'])
