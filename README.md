@@ -1,9 +1,10 @@
 # 💳 Payment Module Manager
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/uendelsilveira/payment-module-manager/ci.yml?branch=main&style=for-the-badge)](https://github.com/uendelsilveira/payment-module-manager/actions)
-[![Code Coverage](https://img.shields.io/codecov/c/github/uendelsilveira/payment-module-manager?style=for-the-badge)](https://codecov.io/gh/uendelsilveira/payment-module-manager)
-[![Latest Version](https://img.shields.io/packagist/v/uendelsilveira/payment-module-manager?style=for-the-badge)](https://packagist.org/packages/uendelsilveira/payment-module-manager)
-[![License](https://img.shields.io/github/license/uendelsilveira/payment-module-manager?style=for-the-badge)](https://github.com/uendelsilveira/payment-module-manager/blob/main/LICENSE)
+[![Code Coverage](https://img.shields.io/codecov/c/github/uendelsilveira/payment-module-manager?style=for-the-badge&token=<SEU_TOKEN_AQUI>)](https://codecov.io/gh/uendelsilveira/payment-module-manager)
+[![Latest Version](https://img.shields.io/packagist/v/uendelsilveira/payment-module-manager?style=for-the-badge&label=stable)](https://packagist.org/packages/uendelsilveira/payment-module-manager)
+[![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](https://github.com/uendelsilveira/payment-module-manager/blob/main/LICENSE)
+
 
 
 **Versão:** 1.0.3
