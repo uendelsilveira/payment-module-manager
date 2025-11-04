@@ -202,4 +202,57 @@ return [
             'max' => env('PAYMENT_GLOBAL_MAX_AMOUNT', 10000000), // R$ 100,000.00
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Multi-Currency Support
+    |--------------------------------------------------------------------------
+    |
+    | Configure supported currencies and conversion settings.
+    |
+    */
+
+    'currencies' => [
+        // Default currency
+        'default' => env('PAYMENT_DEFAULT_CURRENCY', 'BRL'),
+
+        // Supported currencies
+        'supported' => [
+            'BRL' => [
+                'name' => 'Brazilian Real',
+                'symbol' => 'R$',
+                'decimal_places' => 2,
+            ],
+            'USD' => [
+                'name' => 'US Dollar',
+                'symbol' => '$',
+                'decimal_places' => 2,
+            ],
+            'EUR' => [
+                'name' => 'Euro',
+                'symbol' => '€',
+                'decimal_places' => 2,
+            ],
+            'ARS' => [
+                'name' => 'Argentine Peso',
+                'symbol' => '$',
+                'decimal_places' => 2,
+            ],
+        ],
+
+        // Currency conversion (if needed for multi-currency transactions)
+        'conversion' => [
+            // Enable automatic conversion
+            'enabled' => env('PAYMENT_CURRENCY_CONVERSION', false),
+
+            // API provider for exchange rates (e.g., 'exchangerate-api', 'fixer', 'custom')
+            'provider' => env('PAYMENT_CURRENCY_PROVIDER', 'exchangerate-api'),
+
+            // API key for currency conversion service
+            'api_key' => env('PAYMENT_CURRENCY_API_KEY', ''),
+
+            // Cache exchange rates (in minutes)
+            'cache_ttl' => env('PAYMENT_CURRENCY_CACHE_TTL', 60),
+        ],
+    ],
 ];

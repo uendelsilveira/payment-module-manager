@@ -11,6 +11,7 @@ namespace UendelSilveira\PaymentModuleManager\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use UendelSilveira\PaymentModuleManager\Services\CurrencyService;
 use UendelSilveira\PaymentModuleManager\Services\MonetaryLimitsValidator;
 
 class CreatePaymentRequest extends FormRequest
@@ -42,6 +43,18 @@ class CreatePaymentRequest extends FormRequest
                 },
             ],
             'method' => ['required', 'string', Rule::in(['mercadopago'])], // Gateway principal
+            'currency' => [
+                'sometimes',
+                'string',
+                'size:3',
+                function ($attribute, $value, $fail) {
+                    $currencyService = app(CurrencyService::class);
+                    if (!$currencyService->isSupported($value)) {
+                        $supported = implode(', ', array_keys($currencyService->getSupportedCurrencies()));
+                        $fail("Currency {$value} is not supported. Supported: {$supported}");
+                    }
+                },
+            ],
             'description' => ['required', 'string', 'max:255'],
             'payer_email' => ['required', 'email', 'max:255'],
 
