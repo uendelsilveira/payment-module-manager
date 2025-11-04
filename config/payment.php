@@ -84,6 +84,12 @@ return [
 
         // Idade máxima permitida para webhooks (em segundos) - proteção contra replay attacks
         'max_age_seconds' => env('PAYMENT_WEBHOOK_MAX_AGE', 300),
+
+        // Enable asynchronous webhook processing via queues
+        'async_processing' => env('PAYMENT_WEBHOOK_ASYNC', true),
+
+        // Queue name for webhook processing
+        'queue_name' => env('PAYMENT_WEBHOOK_QUEUE', 'webhooks'),
     ],
 
     /*

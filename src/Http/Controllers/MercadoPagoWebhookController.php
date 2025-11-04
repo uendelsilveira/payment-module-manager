@@ -12,6 +12,7 @@ namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
+use UendelSilveira\PaymentModuleManager\Jobs\ProcessWebhookJob;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Support\LogContext;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
@@ -46,6 +47,9 @@ class MercadoPagoWebhookController extends Controller
 
         Log::channel('webhook')->info('Webhook received', $context->toArray());
 
+        // Check if async processing is enabled
+        $asyncEnabled = config('payment.webhook.async_processing', true);
+
         // Apenas processamos notificações do tipo 'payment'
         if ($webhookType !== 'payment') {
             $context->with('reason', 'unsupported_type');
@@ -62,6 +66,22 @@ class MercadoPagoWebhookController extends Controller
         }
 
         $context->withExternalId($paymentId);
+
+        // Dispatch to queue if async is enabled
+        if ($asyncEnabled) {
+            ProcessWebhookJob::dispatch(
+                'mercadopago',
+                $request->all()
+            )->onQueue(config('payment.webhook.queue_name', 'webhooks'));
+
+            Log::channel('webhook')->info('Webhook dispatched to queue for async processing', $context->toArray());
+
+            return $this->successResponse(
+                ['queued' => true],
+                'Webhook recebido e enfileirado para processamento',
+                202
+            );
+        }
 
         try {
             // Consultar a API do Mercado Pago para obter o status atual e canônico do pagamento
