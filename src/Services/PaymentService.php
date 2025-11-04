@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
+use UendelSilveira\PaymentModuleManager\Support\LogContext;
 
 class PaymentService
 {
@@ -23,10 +24,22 @@ class PaymentService
 
     public function processPayment(array $data): Transaction
     {
-        Log::info('[PaymentService] Iniciando processamento de pagamento.', ['data' => $data]);
+        $startTime = microtime(true);
+        $correlationId = LogContext::create()->withCorrelationId()->toArray()['correlation_id'];
+
+        $context = LogContext::create()
+            ->withCorrelationId($correlationId)
+            ->withGateway($data['method'])
+            ->withAmount($data['amount'])
+            ->withPaymentMethod($data['payment_method_id'] ?? 'unknown')
+            ->withRequestId()
+            ->maskSensitiveData();
+
+        Log::channel('payment')->info('Starting payment processing', $context->toArray());
+
         $gatewayStrategy = $this->gatewayManager->create($data['method']);
 
-        return DB::transaction(function () use ($data, $gatewayStrategy) {
+        return DB::transaction(function () use ($data, $gatewayStrategy, $startTime, $context) {
             $transaction = $this->transactionRepository->create([
                 'gateway' => $data['method'],
                 'amount' => $data['amount'],
@@ -34,25 +47,35 @@ class PaymentService
                 'status' => 'pending',
             ]);
 
+            $context->withTransactionId($transaction->id);
+
+            Log::channel('transaction')->info('Transaction created', $context->toArray());
+
             try {
                 $gatewayResponse = $gatewayStrategy->charge($data['amount'], $data);
 
                 $transaction->external_id = $gatewayResponse['id'];
                 $transaction->status = $gatewayResponse['status'];
-                // FIX: Mescla os dados da requisição original com a resposta para garantir que os dados para reprocessamento sejam mantidos.
                 $transaction->metadata = array_merge($data, $gatewayResponse);
                 $transaction->save();
+
+                $context->withTransaction($transaction)->withDuration($startTime);
+
+                Log::channel('payment')->info('Payment processed successfully', $context->toArray());
+
             } catch (Throwable $e) {
                 $transaction->status = 'failed';
-                // Salva os dados da requisição mesmo em caso de falha para permitir o reprocessamento.
                 $transaction->metadata = $data;
                 $transaction->save();
-                Log::error('[PaymentService] Falha ao processar pagamento com gateway.', ['exception' => $e->getMessage()]);
+
+                $context->withTransaction($transaction)
+                    ->withError($e)
+                    ->withDuration($startTime);
+
+                Log::channel('payment')->error('Payment processing failed', $context->toArray());
 
                 throw $e;
             }
-
-            Log::info('[PaymentService] Pagamento processado com sucesso.', ['transaction_id' => $transaction->id]);
 
             return $transaction;
         });
@@ -60,10 +83,17 @@ class PaymentService
 
     public function getPaymentDetails(Transaction $transaction): Transaction
     {
-        Log::info('[PaymentService] Buscando detalhes da transação.', ['transaction_id' => $transaction->id]);
+        $startTime = microtime(true);
+
+        $context = LogContext::create()
+            ->withCorrelationId()
+            ->withTransaction($transaction)
+            ->withRequestId();
+
+        Log::channel('payment')->info('Fetching payment details', $context->toArray());
 
         if (empty($transaction->external_id)) {
-            Log::warning('[PaymentService] Transação não possui ID externo para consulta.', ['transaction_id' => $transaction->id]);
+            Log::channel('payment')->warning('Transaction has no external_id for query', $context->toArray());
 
             return $transaction;
         }
@@ -72,15 +102,18 @@ class PaymentService
         $gatewayResponse = $gatewayStrategy->getPayment($transaction->external_id);
 
         if ($gatewayResponse['status'] !== $transaction->status) {
-            Log::info('[PaymentService] Status da transação alterado no gateway. Atualizando localmente.', [
-                'transaction_id' => $transaction->id,
-                'old_status' => $transaction->status,
-                'new_status' => $gatewayResponse['status'],
-            ]);
+            $context->with('old_status', $transaction->status)
+                ->with('new_status', $gatewayResponse['status']);
+
+            Log::channel('transaction')->info('Transaction status changed in gateway', $context->toArray());
+
             $transaction->status = $gatewayResponse['status'];
             $transaction->metadata = array_merge((array) $transaction->metadata, $gatewayResponse);
             $transaction->save();
         }
+
+        $context->withDuration($startTime);
+        Log::channel('payment')->info('Payment details fetched successfully', $context->toArray());
 
         return $transaction;
     }
@@ -98,33 +131,48 @@ class PaymentService
 
     public function reprocess(Transaction $transaction): Transaction
     {
-        Log::info('[PaymentService] Reprocessando transação.', ['transaction_id' => $transaction->id]);
-        $gatewayStrategy = $this->gatewayManager->create($transaction->gateway);
+        $startTime = microtime(true);
+        $maxAttempts = config('payment.retry.max_attempts', 3);
 
-        // Garante que os dados para a cobrança sejam um array.
+        $context = LogContext::create()
+            ->withCorrelationId()
+            ->withTransaction($transaction)
+            ->withRetry($transaction->retries_count + 1, $maxAttempts)
+            ->withRequestId();
+
+        Log::channel('payment')->info('Reprocessing transaction', $context->toArray());
+
+        $gatewayStrategy = $this->gatewayManager->create($transaction->gateway);
         $chargeData = (array) $transaction->metadata;
 
         try {
             $gatewayResponse = $gatewayStrategy->charge($transaction->amount, $chargeData);
 
-            // Sucesso: atualiza os dados e salva.
             $transaction->status = $gatewayResponse['status'];
             $transaction->external_id = $gatewayResponse['id'];
-            // Mescla os dados da requisição com a nova resposta para manter a consistência.
             $transaction->metadata = array_merge($chargeData, $gatewayResponse);
             $transaction->retries_count++;
             $transaction->last_attempt_at = now();
             $transaction->save();
 
+            $context->withTransaction($transaction)
+                ->withDuration($startTime)
+                ->with('success', true);
+
+            Log::channel('payment')->info('Transaction reprocessed successfully', $context->toArray());
+
         } catch (Throwable $e) {
-            // Falha: apenas atualiza os contadores e salva.
             $transaction->retries_count++;
             $transaction->last_attempt_at = now();
             $transaction->save();
 
-            Log::error('[PaymentService] Falha ao reprocessar pagamento.', ['transaction_id' => $transaction->id, 'exception' => $e->getMessage()]);
+            $context->withTransaction($transaction)
+                ->withError($e)
+                ->withDuration($startTime)
+                ->with('success', false);
 
-            // Relança a exceção original para que o comando saiba da falha.
+            Log::channel('payment')->error('Transaction reprocessing failed', $context->toArray());
+
             throw $e;
         }
 
