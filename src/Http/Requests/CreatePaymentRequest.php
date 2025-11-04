@@ -11,6 +11,7 @@ namespace UendelSilveira\PaymentModuleManager\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use UendelSilveira\PaymentModuleManager\Services\MonetaryLimitsValidator;
 
 class CreatePaymentRequest extends FormRequest
 {
@@ -25,7 +26,21 @@ class CreatePaymentRequest extends FormRequest
         $paymentMethods = ['pix', 'credit_card', 'boleto'];
 
         return [
-            'amount' => ['required', 'numeric', 'min:0.01'],
+            'amount' => [
+                'required',
+                'numeric',
+                'min:0.01',
+                function ($attribute, $value, $fail) {
+                    $validator = app(MonetaryLimitsValidator::class);
+                    $gateway = $this->input('method');
+                    $paymentMethod = $this->input('payment_method_id');
+
+                    $error = $validator->getValidationError($value, $gateway, $paymentMethod);
+                    if ($error) {
+                        $fail($error);
+                    }
+                },
+            ],
             'method' => ['required', 'string', Rule::in(['mercadopago'])], // Gateway principal
             'description' => ['required', 'string', 'max:255'],
             'payer_email' => ['required', 'email', 'max:255'],

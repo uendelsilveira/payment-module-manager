@@ -155,4 +155,45 @@ return [
             'service_unavailable',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Monetary Limits
+    |--------------------------------------------------------------------------
+    |
+    | Define minimum and maximum transaction amounts per payment method and gateway.
+    | Amounts are in the smallest currency unit (e.g., cents for BRL).
+    |
+    */
+
+    'monetary_limits' => [
+        'mercadopago' => [
+            'pix' => [
+                'min' => env('PAYMENT_PIX_MIN_AMOUNT', 1), // R$ 0.01
+                'max' => env('PAYMENT_PIX_MAX_AMOUNT', 1000000), // R$ 10,000.00
+            ],
+            'credit_card' => [
+                'min' => env('PAYMENT_CREDIT_CARD_MIN_AMOUNT', 500), // R$ 5.00
+                'max' => env('PAYMENT_CREDIT_CARD_MAX_AMOUNT', 5000000), // R$ 50,000.00
+            ],
+            'debit_card' => [
+                'min' => env('PAYMENT_DEBIT_CARD_MIN_AMOUNT', 500), // R$ 5.00
+                'max' => env('PAYMENT_DEBIT_CARD_MAX_AMOUNT', 1000000), // R$ 10,000.00
+            ],
+            'boleto' => [
+                'min' => env('PAYMENT_BOLETO_MIN_AMOUNT', 500), // R$ 5.00
+                'max' => env('PAYMENT_BOLETO_MAX_AMOUNT', 10000000), // R$ 100,000.00
+            ],
+            'default' => [
+                'min' => env('PAYMENT_DEFAULT_MIN_AMOUNT', 100), // R$ 1.00
+                'max' => env('PAYMENT_DEFAULT_MAX_AMOUNT', 10000000), // R$ 100,000.00
+            ],
+        ],
+
+        // Global fallback limits
+        'global' => [
+            'min' => env('PAYMENT_GLOBAL_MIN_AMOUNT', 100), // R$ 1.00
+            'max' => env('PAYMENT_GLOBAL_MAX_AMOUNT', 10000000), // R$ 100,000.00
+        ],
+    ],
 ];
