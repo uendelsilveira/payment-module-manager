@@ -4,8 +4,12 @@
          bootstrap="vendor/autoload.php"
          colors="true">
     <php>
-        <!-- O token real será injetado pelo GitHub Actions -->
+        <!-- Mercado Pago Test Credentials - Set these in your environment or create phpunit.xml -->
         <env name="MERCADOPAGO_ACCESS_TOKEN" value=""/>
+        <env name="MERCADOPAGO_PUBLIC_KEY" value=""/>
+        <env name="MERCADOPAGO_WEBHOOK_SECRET" value=""/>
+        <env name="MERCADOPAGO_CLIENT_ID" value=""/>
+        <env name="MERCADOPAGO_CLIENT_SECRET" value=""/>
     </php>
     <testsuites>
         <testsuite name="Unit">

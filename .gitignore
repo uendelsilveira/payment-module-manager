@@ -24,7 +24,6 @@
 .vscode/
 .phpstorm.meta.php
 *.iml
-*.xml
 .DS_Store
 Thumbs.db
 
@@ -33,6 +32,7 @@ Thumbs.db
 coverage/
 clover.xml
 *.coverage
+phpunit.xml
 
 # Build / Distribuição
 /build/

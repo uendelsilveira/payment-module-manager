@@ -8,6 +8,9 @@ use UendelSilveira\PaymentModuleManager\Console\Commands\ReprocessFailedPayments
 use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Http\Middleware\AuthenticatePaymentRequest;
+use UendelSilveira\PaymentModuleManager\Http\Middleware\AuthorizePaymentAction;
+use UendelSilveira\PaymentModuleManager\Http\Middleware\RateLimitPaymentRequests;
 use UendelSilveira\PaymentModuleManager\Http\Middleware\VerifyMercadoPagoSignature;
 use UendelSilveira\PaymentModuleManager\Repositories\SettingsRepository;
 use UendelSilveira\PaymentModuleManager\Repositories\TransactionRepository;
@@ -37,9 +40,12 @@ class PaymentServiceProvider extends ServiceProvider
             $this->loadFactoriesFrom(__DIR__.'/../../database/factories');
         }
 
-        // Registra o alias do middleware
+        // Registra os aliases dos middlewares
         $router = $this->app->make('router');
         $router->aliasMiddleware('mercadopago.webhook.signature', VerifyMercadoPagoSignature::class);
+        $router->aliasMiddleware('payment.auth', AuthenticatePaymentRequest::class);
+        $router->aliasMiddleware('payment.authorize', AuthorizePaymentAction::class);
+        $router->aliasMiddleware('payment.rate_limit', RateLimitPaymentRequests::class);
 
         // Registra os comandos Artisan
         if ($this->app->runningInConsole()) {

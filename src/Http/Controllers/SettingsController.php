@@ -29,13 +29,38 @@ class SettingsController extends Controller
 
     public function getMercadoPagoSettings()
     {
+        $publicKey = $this->settingsRepository->get('mercadopago_public_key');
+        $accessToken = $this->settingsRepository->get('mercadopago_access_token');
+        $webhookSecret = $this->settingsRepository->get('mercadopago_webhook_secret');
+
         $settings = [
-            'public_key' => $this->settingsRepository->get('mercadopago_public_key'),
-            'access_token' => $this->settingsRepository->get('mercadopago_access_token'),
-            'webhook_secret' => $this->settingsRepository->get('mercadopago_webhook_secret'),
+            'public_key' => $publicKey ? $this->maskCredential($publicKey) : null,
+            'access_token' => $accessToken ? $this->maskCredential($accessToken) : null,
+            'webhook_secret' => $webhookSecret ? $this->maskCredential($webhookSecret) : null,
+            'public_key_configured' => ! empty($publicKey),
+            'access_token_configured' => ! empty($accessToken),
+            'webhook_secret_configured' => ! empty($webhookSecret),
         ];
 
         return $this->successResponse($settings);
+    }
+
+    /**
+     * Mascara uma credencial mostrando apenas os primeiros e últimos caracteres.
+     */
+    protected function maskCredential(string $credential, int $visibleChars = 4): string
+    {
+        $length = strlen($credential);
+
+        if ($length <= $visibleChars * 2) {
+            return str_repeat('*', $length);
+        }
+
+        $start = substr($credential, 0, $visibleChars);
+        $end = substr($credential, -$visibleChars);
+        $masked = str_repeat('*', $length - ($visibleChars * 2));
+
+        return $start.$masked.$end;
     }
 
     public function saveMercadoPagoSettings(Request $request)

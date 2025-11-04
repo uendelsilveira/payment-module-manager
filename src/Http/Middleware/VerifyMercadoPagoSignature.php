@@ -11,10 +11,24 @@ class VerifyMercadoPagoSignature
     public function handle(Request $request, Closure $next)
     {
         $secret = Config::get('payment.gateways.mercadopago.webhook_secret');
+        $requireSignature = Config::get('payment.webhook.require_signature', true);
+        $isProduction = app()->environment('production');
 
-        // Se não houver secret configurado, pula a verificação (não recomendado para produção)
-        if (empty($secret)) {
+        // Em produção, sempre exige o secret configurado
+        if ($isProduction && empty($secret)) {
+            abort(500, 'Webhook secret não configurado. Configure MERCADOPAGO_WEBHOOK_SECRET no ambiente de produção.');
+        }
+
+        // Se não houver secret configurado e não for obrigatório (apenas desenvolvimento)
+        if (empty($secret) && ! $requireSignature) {
+            \Log::warning('[VerifyMercadoPagoSignature] Webhook recebido sem validação de assinatura. Isso não é recomendado!');
+
             return $next($request);
+        }
+
+        // Se chegou aqui, temos secret e devemos validar
+        if (empty($secret)) {
+            abort(403, 'Webhook signature validation is required but secret is not configured.');
         }
 
         $signatureHeader = $request->header('x-signature');
@@ -30,6 +44,20 @@ class VerifyMercadoPagoSignature
 
         if (! $ts || ! $hash) {
             abort(403, 'Invalid Mercado Pago signature format.');
+        }
+
+        // Validação de timestamp para prevenir replay attacks
+        $maxAge = Config::get('payment.webhook.max_age_seconds', 300); // 5 minutos por padrão
+        $currentTime = time();
+        $timestampAge = $currentTime - (int) $ts;
+
+        if ($timestampAge > $maxAge) {
+            abort(403, 'Webhook signature expired. Request is too old.');
+        }
+
+        if ($timestampAge < -60) {
+            // Timestamp no futuro (tolerância de 1 minuto para diferenças de relógio)
+            abort(403, 'Webhook signature timestamp is in the future.');
         }
 
         // Cria a string base para o HMAC

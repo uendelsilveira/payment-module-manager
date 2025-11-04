@@ -17,36 +17,60 @@ use UendelSilveira\PaymentModuleManager\Http\Controllers\SettingsController;
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
+|
+| IMPORTANTE: Para habilitar autenticação e autorização, descomente os
+| middlewares abaixo e configure em config/payment.php
+|
 */
 
 // Rotas de Pagamento
 Route::post('payment/process', [PaymentController::class, 'process'])
+    ->middleware(['payment.rate_limit:payment_process'])
+    // ->middleware(['payment.auth', 'payment.authorize:process-payment'])
     ->name('payment.process');
 
 Route::get('payments/{transaction}', [PaymentController::class, 'show'])
+    ->middleware(['payment.rate_limit:payment_query'])
+    // ->middleware(['payment.auth', 'payment.authorize:view-payment'])
     ->name('payment.show');
 
 // Rotas de Webhook
 Route::post('mercadopago/webhook', [MercadoPagoWebhookController::class, 'handle'])
-    ->name('mercadopago.webhook')
-    ->middleware('mercadopago.webhook.signature');
+    ->middleware(['mercadopago.webhook.signature', 'payment.rate_limit:webhook'])
+    ->name('mercadopago.webhook');
 
-// Rotas de Configuração
+// Rotas de Configuração (SENSÍVEIS - Recomenda-se habilitar autenticação)
 Route::prefix('settings')->group(function () {
-    Route::get('mercadopago', [SettingsController::class, 'getMercadoPagoSettings'])->name('settings.mercadopago.get');
-    Route::post('mercadopago', [SettingsController::class, 'saveMercadoPagoSettings'])->name('settings.mercadopago.save');
+    Route::get('mercadopago', [SettingsController::class, 'getMercadoPagoSettings'])
+        ->middleware(['payment.rate_limit:settings'])
+        // ->middleware(['payment.auth', 'payment.authorize:view-settings'])
+        ->name('settings.mercadopago.get');
+
+    Route::post('mercadopago', [SettingsController::class, 'saveMercadoPagoSettings'])
+        ->middleware(['payment.rate_limit:settings'])
+        // ->middleware(['payment.auth', 'payment.authorize:manage-settings'])
+        ->name('settings.mercadopago.save');
 });
 
 // Rotas para o fluxo de conexão (OAuth 2.0)
 Route::prefix('connect')->group(function () {
-    Route::get('mercadopago', [SettingsController::class, 'redirectToMercadoPago'])->name('connect.mercadopago.redirect');
-    Route::get('mercadopago/callback', [SettingsController::class, 'handleMercadoPagoCallback'])->name('connect.mercadopago.callback');
+    Route::get('mercadopago', [SettingsController::class, 'redirectToMercadoPago'])
+        // ->middleware(['payment.auth'])
+        ->name('connect.mercadopago.redirect');
+
+    Route::get('mercadopago/callback', [SettingsController::class, 'handleMercadoPagoCallback'])
+        ->name('connect.mercadopago.callback');
 });
 
 // Rotas de Relatórios
 Route::prefix('reports')->group(function () {
     Route::get('transactions/summary', [ReportController::class, 'transactionSummary'])
+        ->middleware(['payment.rate_limit:payment_query'])
+        // ->middleware(['payment.auth', 'payment.authorize:view-reports'])
         ->name('reports.transactions.summary');
+
     Route::get('transactions/methods', [ReportController::class, 'transactionsByMethod'])
+        ->middleware(['payment.rate_limit:payment_query'])
+        // ->middleware(['payment.auth', 'payment.authorize:view-reports'])
         ->name('reports.transactions.methods');
 });
