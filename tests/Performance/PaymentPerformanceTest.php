@@ -22,8 +22,11 @@ class PaymentPerformanceTest extends TestCase
     use RefreshDatabase;
 
     private const PERFORMANCE_THRESHOLD_MS = 1000; // 1 second max for payment processing
+
     private const BATCH_SIZE = 100;
+
     private const CACHE_THRESHOLD_MS = 50; // 50ms max for cached operations
+
     private const DB_QUERY_THRESHOLD_MS = 100; // 100ms max for simple queries
 
     protected function setUp(): void
@@ -37,7 +40,7 @@ class PaymentPerformanceTest extends TestCase
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
             $mock->shouldReceive('createPayment')
                 ->andReturn((object) [
-                    'id' => 'mp_perf_test_' . uniqid(),
+                    'id' => 'mp_perf_test_'.uniqid(),
                     'status' => 'approved',
                     'transaction_amount' => 100.00,
                     'description' => 'Performance test payment',
@@ -348,6 +351,7 @@ class PaymentPerformanceTest extends TestCase
 
         // Make 10 requests (well under limit)
         $times = [];
+
         for ($i = 0; $i < 10; $i++) {
             $startTime = microtime(true);
             $response = $this->getJson(route('payment.show', ['transaction' => $transaction->id]));
