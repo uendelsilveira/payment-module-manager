@@ -2,6 +2,7 @@
 
 namespace UendelSilveira\PaymentModuleManager\Providers;
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use UendelSilveira\PaymentModuleManager\Console\Commands\ReprocessFailedPayments;
@@ -14,6 +15,12 @@ use UendelSilveira\PaymentModuleManager\Http\Middleware\RateLimitPaymentRequests
 use UendelSilveira\PaymentModuleManager\Http\Middleware\VerifyMercadoPagoSignature;
 use UendelSilveira\PaymentModuleManager\Repositories\SettingsRepository;
 use UendelSilveira\PaymentModuleManager\Repositories\TransactionRepository;
+use UendelSilveira\PaymentModuleManager\Events\PaymentFailed;
+use UendelSilveira\PaymentModuleManager\Events\PaymentProcessed;
+use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
+use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentFailed;
+use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentProcessed;
+use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentStatusChanged;
 use UendelSilveira\PaymentModuleManager\Services\GatewayManager;
 use UendelSilveira\PaymentModuleManager\Services\MercadoPagoClient;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
@@ -35,6 +42,11 @@ class PaymentServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Register event listeners
+        Event::listen(PaymentProcessed::class, LogPaymentProcessed::class);
+        Event::listen(PaymentFailed::class, LogPaymentFailed::class);
+        Event::listen(PaymentStatusChanged::class, LogPaymentStatusChanged::class);
+
         // Carrega as factories do pacote para que possam ser usadas nos testes.
         if ($this->app->runningUnitTests()) {
             $this->loadFactoriesFrom(__DIR__.'/../../database/factories');

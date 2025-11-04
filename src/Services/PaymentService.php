@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Events\PaymentFailed;
+use UendelSilveira\PaymentModuleManager\Events\PaymentProcessed;
+use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Support\LogContext;
 
@@ -63,6 +66,9 @@ class PaymentService
 
                 Log::channel('payment')->info('Payment processed successfully', $context->toArray());
 
+                // Dispatch event
+                PaymentProcessed::dispatch($transaction, $gatewayResponse);
+
             } catch (Throwable $e) {
                 $transaction->status = 'failed';
                 $transaction->metadata = $data;
@@ -73,6 +79,9 @@ class PaymentService
                     ->withDuration($startTime);
 
                 Log::channel('payment')->error('Payment processing failed', $context->toArray());
+
+                // Dispatch event
+                PaymentFailed::dispatch($transaction, $e, $data);
 
                 throw $e;
             }
@@ -102,14 +111,20 @@ class PaymentService
         $gatewayResponse = $gatewayStrategy->getPayment($transaction->external_id);
 
         if ($gatewayResponse['status'] !== $transaction->status) {
-            $context->with('old_status', $transaction->status)
-                ->with('new_status', $gatewayResponse['status']);
+            $oldStatus = $transaction->status;
+            $newStatus = $gatewayResponse['status'];
+
+            $context->with('old_status', $oldStatus)
+                ->with('new_status', $newStatus);
 
             Log::channel('transaction')->info('Transaction status changed in gateway', $context->toArray());
 
-            $transaction->status = $gatewayResponse['status'];
+            $transaction->status = $newStatus;
             $transaction->metadata = array_merge((array) $transaction->metadata, $gatewayResponse);
             $transaction->save();
+
+            // Dispatch event
+            PaymentStatusChanged::dispatch($transaction, $oldStatus, $newStatus);
         }
 
         $context->withDuration($startTime);
