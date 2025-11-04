@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/github/license/uendelsilveira/payment-module-manager?style=for-the-badge)](https://github.com/uendelsilveira/payment-module-manager/blob/main/LICENSE)
 
 
-**Versão:** 1.2.0  
+**Versão:** 1.0.3
 **Status:** ✅ **PRODUÇÃO-READY**
 
 Um pacote Laravel robusto e escalável para gerenciamento de pagamentos, com foco inicial na integração com o Mercado Pago. Projetado para ser seguro, plugável e fácil de usar em qualquer aplicação Laravel.
