@@ -20,6 +20,9 @@ class MercadoPagoWebhookTest extends TestCase
 
     public function test_webhook_updates_transaction_status_to_approved()
     {
+        // Disable async processing for this test
+        config(['payment.webhook.async_processing' => false]);
+
         // Mock do MercadoPagoClientInterface para simular um pagamento aprovado
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
             $mock->shouldReceive('getPayment')->andReturn((object) [
@@ -80,6 +83,9 @@ class MercadoPagoWebhookTest extends TestCase
 
     public function test_webhook_updates_transaction_status_to_refunded()
     {
+        // Disable async processing for this test
+        config(['payment.webhook.async_processing' => false]);
+
         // Mock do MercadoPagoClientInterface para simular um pagamento reembolsado
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
             $mock->shouldReceive('getPayment')->andReturn((object) [

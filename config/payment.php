@@ -179,15 +179,15 @@ return [
                 'max' => env('PAYMENT_PIX_MAX_AMOUNT', 1000000), // R$ 10,000.00
             ],
             'credit_card' => [
-                'min' => env('PAYMENT_CREDIT_CARD_MIN_AMOUNT', 500), // R$ 5.00
+                'min' => env('PAYMENT_CREDIT_CARD_MIN_AMOUNT', 100), // R$ 1.00
                 'max' => env('PAYMENT_CREDIT_CARD_MAX_AMOUNT', 5000000), // R$ 50,000.00
             ],
             'debit_card' => [
-                'min' => env('PAYMENT_DEBIT_CARD_MIN_AMOUNT', 500), // R$ 5.00
+                'min' => env('PAYMENT_DEBIT_CARD_MIN_AMOUNT', 100), // R$ 1.00
                 'max' => env('PAYMENT_DEBIT_CARD_MAX_AMOUNT', 1000000), // R$ 10,000.00
             ],
             'boleto' => [
-                'min' => env('PAYMENT_BOLETO_MIN_AMOUNT', 500), // R$ 5.00
+                'min' => env('PAYMENT_BOLETO_MIN_AMOUNT', 100), // R$ 1.00
                 'max' => env('PAYMENT_BOLETO_MAX_AMOUNT', 10000000), // R$ 100,000.00
             ],
             'default' => [
