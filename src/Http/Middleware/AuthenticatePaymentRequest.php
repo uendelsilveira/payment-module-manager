@@ -5,6 +5,8 @@ namespace UendelSilveira\PaymentModuleManager\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
+use UendelSilveira\PaymentModuleManager\Exceptions\InvalidConfigurationException;
+use UendelSilveira\PaymentModuleManager\Exceptions\PaymentAuthenticationException;
 
 /**
  * Middleware para autenticação de requisições de pagamento.
@@ -54,11 +56,11 @@ class AuthenticatePaymentRequest
         $providedToken = $request->bearerToken() ?? $request->header('X-API-Token');
 
         if (empty($expectedToken)) {
-            abort(500, 'API Token não configurado no sistema.');
+            throw new InvalidConfigurationException('API Token não configurado no sistema.');
         }
 
         if ($providedToken !== $expectedToken) {
-            abort(401, 'Token de autenticação inválido.');
+            throw new PaymentAuthenticationException('Token de autenticação inválido.', 401);
         }
 
         return $next($request);
@@ -70,7 +72,7 @@ class AuthenticatePaymentRequest
     protected function validateLaravelAuth(Request $request, Closure $next, ?string $guard = null)
     {
         if (! auth($guard)->check()) {
-            abort(401, 'Não autenticado.');
+            throw new PaymentAuthenticationException('Não autenticado.', 401);
         }
 
         return $next($request);
@@ -84,13 +86,13 @@ class AuthenticatePaymentRequest
         $callback = Config::get('payment.auth.custom_callback');
 
         if (! is_callable($callback)) {
-            abort(500, 'Callback de autenticação customizado não configurado corretamente.');
+            throw new InvalidConfigurationException('Callback de autenticação customizado não configurado corretamente.');
         }
 
         $result = call_user_func($callback, $request);
 
         if ($result !== true) {
-            abort(401, 'Autenticação falhou.');
+            throw new PaymentAuthenticationException('Autenticação falhou.', 401);
         }
 
         return $next($request);

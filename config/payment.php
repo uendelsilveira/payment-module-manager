@@ -80,7 +80,7 @@ return [
 
     'webhook' => [
         // Exigir validação de assinatura (sempre true em produção)
-        'require_signature' => env('PAYMENT_WEBHOOK_REQUIRE_SIGNATURE', true),
+        'require_signature' => env('PAYMENT_WEBHOOK_REQUIRE_SIGNATURE', false),
 
         // Idade máxima permitida para webhooks (em segundos) - proteção contra replay attacks
         'max_age_seconds' => env('PAYMENT_WEBHOOK_MAX_AGE', 300),

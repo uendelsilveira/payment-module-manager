@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Exceptions\ExternalServiceException;
+use UendelSilveira\PaymentModuleManager\Exceptions\InvalidConfigurationException;
+use UendelSilveira\PaymentModuleManager\Exceptions\PaymentGatewayException;
 
 class MercadoPagoClient implements MercadoPagoClientInterface
 {
@@ -27,7 +30,7 @@ class MercadoPagoClient implements MercadoPagoClientInterface
         );
 
         if (empty($this->accessToken)) {
-            throw new \InvalidArgumentException('Mercado Pago access token não configurado.');
+            throw new InvalidConfigurationException('Mercado Pago access token não configurado.');
         }
 
         $this->httpClient = new Client([
@@ -57,18 +60,18 @@ class MercadoPagoClient implements MercadoPagoClientInterface
                     'request_data' => $requestData,
                 ]);
 
-                throw new \Exception('Erro ao criar pagamento com Mercado Pago: '.($body->message ?? 'Erro desconhecido'));
+                throw new PaymentGatewayException('Erro ao criar pagamento com Mercado Pago: '.($body->message ?? 'Erro desconhecido'), $response->getStatusCode());
             }
 
             return $body;
         } catch (GuzzleException $e) {
             Log::error('Erro de conexão Guzzle ao criar pagamento no Mercado Pago: '.$e->getMessage());
 
-            throw new \Exception('Erro de conexão ao criar pagamento: '.$e->getMessage());
+            throw new ExternalServiceException('Erro de conexão ao criar pagamento: '.$e->getMessage());
         } catch (\Exception $e) {
             Log::error('Erro inesperado ao criar pagamento no Mercado Pago: '.$e->getMessage());
 
-            throw new \Exception('Erro inesperado ao criar pagamento: '.$e->getMessage());
+            throw new PaymentGatewayException('Erro inesperado ao criar pagamento: '.$e->getMessage(), 500);
         }
     }
 
@@ -86,18 +89,18 @@ class MercadoPagoClient implements MercadoPagoClientInterface
                     'payment_id' => $paymentId,
                 ]);
 
-                throw new \Exception('Erro ao obter pagamento com Mercado Pago: '.($body->message ?? 'Erro desconhecido'));
+                throw new PaymentGatewayException('Erro ao obter pagamento com Mercado Pago: '.($body->message ?? 'Erro desconhecido'), $response->getStatusCode());
             }
 
             return $body;
         } catch (GuzzleException $e) {
             Log::error('Erro de conexão Guzzle ao obter pagamento no Mercado Pago: '.$e->getMessage());
 
-            throw new \Exception('Erro de conexão ao obter pagamento: '.$e->getMessage());
+            throw new ExternalServiceException('Erro de conexão ao obter pagamento: '.$e->getMessage());
         } catch (\Exception $e) {
             Log::error('Erro inesperado ao obter pagamento no Mercado Pago: '.$e->getMessage());
 
-            throw new \Exception('Erro inesperado ao obter pagamento: '.$e->getMessage());
+            throw new PaymentGatewayException('Erro inesperado ao obter pagamento: '.$e->getMessage(), 500);
         }
     }
 }

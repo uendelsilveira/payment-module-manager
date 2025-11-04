@@ -25,6 +25,6 @@ class GatewayManager
             return app(MercadoPagoStrategy::class);
         }
 
-        throw new \InvalidArgumentException('O gateway de pagamento selecionado não é suportado.');
+        throw new \UendelSilveira\PaymentModuleManager\Exceptions\InvalidConfigurationException('O gateway de pagamento selecionado não é suportado.');
     }
 }

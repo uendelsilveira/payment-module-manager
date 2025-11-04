@@ -50,7 +50,7 @@ class GatewayManagerTest extends TestCase
 
     public function test_it_throws_exception_for_invalid_gateway()
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(\UendelSilveira\PaymentModuleManager\Exceptions\InvalidConfigurationException::class);
         $this->gatewayManager->create('invalid-gateway');
     }
 }

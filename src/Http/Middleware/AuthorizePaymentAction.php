@@ -5,6 +5,8 @@ namespace UendelSilveira\PaymentModuleManager\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
+use UendelSilveira\PaymentModuleManager\Exceptions\InvalidConfigurationException;
+use UendelSilveira\PaymentModuleManager\Exceptions\PaymentAuthorizationException;
 
 /**
  * Middleware para autorização de ações de pagamento.
@@ -47,14 +49,14 @@ class AuthorizePaymentAction
         $callback = Config::get('payment.authorization.callback');
 
         if (! is_callable($callback)) {
-            abort(500, 'Callback de autorização não configurado corretamente.');
+            throw new InvalidConfigurationException('Callback de autorização não configurado corretamente.');
         }
 
         $user = auth()->user();
         $result = call_user_func($callback, $user, $permission, $request);
 
         if ($result !== true) {
-            abort(403, 'Você não tem permissão para executar esta ação.');
+            throw new PaymentAuthorizationException('Você não tem permissão para executar esta ação.', 403);
         }
 
         return $next($request);
@@ -66,7 +68,7 @@ class AuthorizePaymentAction
     protected function authorizeViaGate(Request $request, Closure $next, string $permission)
     {
         if (! auth()->user() || ! auth()->user()->can($permission)) {
-            abort(403, 'Você não tem permissão para executar esta ação.');
+            throw new PaymentAuthorizationException('Você não tem permissão para executar esta ação.', 403);
         }
 
         return $next($request);

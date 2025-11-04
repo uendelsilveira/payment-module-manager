@@ -5,6 +5,7 @@ namespace UendelSilveira\PaymentModuleManager\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
+use UendelSilveira\PaymentModuleManager\Exceptions\WebhookSignatureException;
 
 class VerifyMercadoPagoSignature
 {
@@ -16,7 +17,7 @@ class VerifyMercadoPagoSignature
 
         // Em produção, sempre exige o secret configurado
         if ($isProduction && empty($secret)) {
-            abort(500, 'Webhook secret não configurado. Configure MERCADOPAGO_WEBHOOK_SECRET no ambiente de produção.');
+            throw new WebhookSignatureException('Webhook secret não configurado. Configure MERCADOPAGO_WEBHOOK_SECRET no ambiente de produção.', 500);
         }
 
         // Se não houver secret configurado e não for obrigatório (apenas desenvolvimento)
@@ -28,13 +29,13 @@ class VerifyMercadoPagoSignature
 
         // Se chegou aqui, temos secret e devemos validar
         if (empty($secret)) {
-            abort(403, 'Webhook signature validation is required but secret is not configured.');
+            throw new WebhookSignatureException('Webhook signature validation is required but secret is not configured.', 403);
         }
 
         $signatureHeader = $request->header('x-signature');
 
         if (! $signatureHeader) {
-            abort(403, 'Mercado Pago signature header not found.');
+            throw new WebhookSignatureException('Mercado Pago signature header not found.', 403);
         }
 
         // Extrai o timestamp (ts) e o hash (v1) do header
@@ -43,7 +44,7 @@ class VerifyMercadoPagoSignature
         $hash = $signatureParts['v1'] ?? null;
 
         if (! $ts || ! $hash) {
-            abort(403, 'Invalid Mercado Pago signature format.');
+            throw new WebhookSignatureException('Invalid Mercado Pago signature format.', 403);
         }
 
         // Validação de timestamp para prevenir replay attacks
@@ -52,12 +53,12 @@ class VerifyMercadoPagoSignature
         $timestampAge = $currentTime - (int) $ts;
 
         if ($timestampAge > $maxAge) {
-            abort(403, 'Webhook signature expired. Request is too old.');
+            throw new WebhookSignatureException('Webhook signature expired. Request is too old.', 403);
         }
 
         if ($timestampAge < -60) {
             // Timestamp no futuro (tolerância de 1 minuto para diferenças de relógio)
-            abort(403, 'Webhook signature timestamp is in the future.');
+            throw new WebhookSignatureException('Webhook signature timestamp is in the future.', 403);
         }
 
         // Cria a string base para o HMAC
@@ -68,7 +69,7 @@ class VerifyMercadoPagoSignature
 
         // Compara as assinaturas
         if (! hash_equals($expectedSignature, $hash)) {
-            abort(403, 'Invalid Mercado Pago signature.');
+            throw new WebhookSignatureException('Invalid Mercado Pago signature.', 403);
         }
 
         return $next($request);

@@ -49,9 +49,9 @@ class SettingsControllerTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'data' => [
-                    'public_key' => 'test_public_key',
-                    'access_token' => 'test_access_token',
-                    'webhook_secret' => 'test_webhook_secret',
+                    'public_key_configured' => true,
+                    'access_token_configured' => true,
+                    'webhook_secret_configured' => true,
                 ],
             ]);
     }

@@ -20,12 +20,7 @@ class MercadoPagoWebhookController extends Controller
 {
     use ApiResponseTrait;
 
-    protected MercadoPagoClientInterface $mpClient;
 
-    public function __construct(MercadoPagoClientInterface $mpClient)
-    {
-        $this->mpClient = $mpClient;
-    }
 
     /**
      * Handle the incoming Mercado Pago webhook request.
@@ -62,7 +57,8 @@ class MercadoPagoWebhookController extends Controller
 
         try {
             // Consultar a API do Mercado Pago para obter o status atual e canônico do pagamento
-            $mpPayment = $this->mpClient->getPayment($paymentId);
+            $mpClient = app(\UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface::class);
+            $mpPayment = $mpClient->getPayment($paymentId);
 
             // Encontrar a transação local pelo external_id
             $transaction = Transaction::where('external_id', $paymentId)->first();
