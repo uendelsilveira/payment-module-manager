@@ -238,6 +238,26 @@ return [
                 'symbol' => '$',
                 'decimal_places' => 2,
             ],
+            'UYU' => [
+                'name' => 'Uruguayan Peso',
+                'symbol' => '$',
+                'decimal_places' => 2,
+            ],
+            'PYG' => [
+                'name' => 'Paraguayan Guarani',
+                'symbol' => '₲',
+                'decimal_places' => 2,
+            ],
+            'CLP' => [
+                'name' => 'Chilean Peso',
+                'symbol' => '$',
+                'decimal_places' => 2,
+            ],
+            'PEN' => [
+                'name' => 'Peruvian Nuevo Sol',
+                'symbol' => 'S/',
+                'decimal_places' => 2,
+            ],
         ],
 
         // Currency conversion (if needed for multi-currency transactions)
