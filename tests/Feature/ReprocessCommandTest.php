@@ -46,7 +46,7 @@ class ReprocessCommandTest extends TestCase
         $this->app->forgetInstance(\UendelSilveira\PaymentModuleManager\Services\PaymentService::class);
 
         $this->artisan('payment:reprocess-failed --force')
-            ->expectsOutput(sprintf("❌ Failed to reprocess transaction #%d: %s", $transaction->id, $errorMessage))
+            ->expectsOutput(sprintf('❌ Failed to reprocess transaction #%d: %s', $transaction->id, $errorMessage))
             ->assertExitCode(Command::FAILURE);
 
         $this->assertDatabaseHas('transactions', [
@@ -95,7 +95,7 @@ class ReprocessCommandTest extends TestCase
         $this->app->forgetInstance(\UendelSilveira\PaymentModuleManager\Services\PaymentService::class);
 
         $this->artisan('payment:reprocess-failed --force')
-            ->expectsOutput(sprintf("✅ Transaction #%d reprocessed - Status: approved", $transaction->id))
+            ->expectsOutput(sprintf('✅ Transaction #%d reprocessed - Status: approved', $transaction->id))
             ->assertExitCode(Command::SUCCESS);
 
         $this->assertDatabaseHas('transactions', [

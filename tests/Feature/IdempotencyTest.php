@@ -33,7 +33,7 @@ class IdempotencyTest extends TestCase
             ]);
         }));
 
-        $idempotencyKey = 'test-idempotency-key-' . uniqid();
+        $idempotencyKey = 'test-idempotency-key-'.uniqid();
 
         $payload = [
             'amount' => 100.00,
@@ -66,7 +66,7 @@ class IdempotencyTest extends TestCase
     {
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
             $mock->shouldReceive('createPayment')->twice()->andReturn((object) [
-                'id' => 'mp_test_' . uniqid(),
+                'id' => 'mp_test_'.uniqid(),
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
                 'description' => 'Test',
@@ -131,7 +131,7 @@ class IdempotencyTest extends TestCase
             ]);
         }));
 
-        $idempotencyKey = 'test-cache-key-' . uniqid();
+        $idempotencyKey = 'test-cache-key-'.uniqid();
 
         $payload = [
             'amount' => 100.00,
@@ -162,7 +162,7 @@ class IdempotencyTest extends TestCase
     {
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
             $mock->shouldReceive('createPayment')->twice()->andReturn((object) [
-                'id' => 'mp_diff_test_' . uniqid(),
+                'id' => 'mp_diff_test_'.uniqid(),
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
                 'description' => 'Different keys test',
@@ -181,14 +181,14 @@ class IdempotencyTest extends TestCase
         ];
 
         // First request with key 1
-        $response1 = $this->withHeaders(['Idempotency-Key' => 'test-key-one-' . uniqid()])
+        $response1 = $this->withHeaders(['Idempotency-Key' => 'test-key-one-'.uniqid()])
             ->postJson(route('payment.process'), $payload);
 
         $response1->assertStatus(201);
         $transactionId1 = $response1->json('data.id');
 
         // Second request with different key
-        $response2 = $this->withHeaders(['Idempotency-Key' => 'test-key-two-' . uniqid()])
+        $response2 = $this->withHeaders(['Idempotency-Key' => 'test-key-two-'.uniqid()])
             ->postJson(route('payment.process'), $payload);
 
         $response2->assertStatus(201);

@@ -41,8 +41,9 @@ class CurrencyService
      */
     public function validate(string $currency): void
     {
-        if (!$this->isSupported($currency)) {
+        if (! $this->isSupported($currency)) {
             $supported = implode(', ', array_keys($this->getSupportedCurrencies()));
+
             throw new InvalidConfigurationException(
                 "Currency {$currency} is not supported. Supported currencies: {$supported}"
             );
@@ -63,12 +64,13 @@ class CurrencyService
     public function format(float $amount, string $currency): string
     {
         $details = $this->getCurrencyDetails($currency);
-        
-        if (!$details) {
+
+        if (! $details) {
             return number_format($amount, 2);
         }
 
         $formatted = number_format($amount, $details['decimal_places']);
+
         return "{$details['symbol']} {$formatted}";
     }
 
@@ -82,7 +84,7 @@ class CurrencyService
             return $amount;
         }
 
-        if (!config('payment.currencies.conversion.enabled', false)) {
+        if (! config('payment.currencies.conversion.enabled', false)) {
             throw new InvalidConfigurationException(
                 'Currency conversion is not enabled. Set PAYMENT_CURRENCY_CONVERSION=true'
             );
@@ -118,7 +120,7 @@ class CurrencyService
             ];
 
             $key = "{$from}_{$to}";
-            
+
             return $rates[$key] ?? 1.0;
         });
     }
@@ -129,6 +131,7 @@ class CurrencyService
     public function getDecimalPlaces(string $currency): int
     {
         $details = $this->getCurrencyDetails($currency);
+
         return $details['decimal_places'] ?? 2;
     }
 }

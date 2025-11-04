@@ -32,7 +32,7 @@ class ReprocessFailedPayments extends Command
     {
         $startTime = microtime(true);
         $dryRun = $this->option('dry-run');
-        
+
         $context = LogContext::create()
             ->withCorrelationId()
             ->with('dry_run', $dryRun);
@@ -56,21 +56,23 @@ class ReprocessFailedPayments extends Command
         $context->with('total_transactions', $transactions->count());
         $this->line('');
         $this->info("📋 Found {$transactions->count()} transaction(s) to reprocess:");
-        
+
         // Display transaction summary
         $this->displayTransactionSummary($transactions);
         $this->line('');
-        
+
         if ($dryRun) {
             $this->info('✅ Dry run completed - no changes were made');
+
             return Command::SUCCESS;
         }
-        
-        if (!$this->option('force') && !$this->confirm('Do you want to proceed with reprocessing?', true)) {
+
+        if (! $this->option('force') && ! $this->confirm('Do you want to proceed with reprocessing?', true)) {
             $this->warn('⚠️  Operation cancelled by user');
+
             return Command::SUCCESS;
         }
-        
+
         $this->line('');
         $this->info('🔄 Starting reprocessing...');
 
@@ -82,12 +84,12 @@ class ReprocessFailedPayments extends Command
             $txContext = clone $context;
             $txContext->withTransaction($transaction);
 
-            $this->line("\n[" . ($index + 1) . "/{$transactions->count()}] Processing transaction #{$transaction->id}...");
+            $this->line("\n[".($index + 1)."/{$transactions->count()}] Processing transaction #{$transaction->id}...");
 
             try {
                 $result = $this->paymentService->reprocess($transaction);
                 $successCount++;
-                
+
                 $statusIcon = $result->status === 'approved' ? '✅' : '⏳';
                 $this->info("{$statusIcon} Transaction #{$transaction->id} reprocessed - Status: {$result->status}");
             } catch (\Throwable $e) {
@@ -126,7 +128,8 @@ class ReprocessFailedPayments extends Command
 
         // Filter by max retries
         $maxRetries = (int) $this->option('max-retries');
-        if (!$this->option('force')) {
+
+        if (! $this->option('force')) {
             $query->where('retries_count', '<', $maxRetries);
             $this->line("🔍 Filtering by retries < {$maxRetries}");
         }
@@ -179,15 +182,15 @@ class ReprocessFailedPayments extends Command
         $total = $successCount + $failureCount;
 
         $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        $this->info("  📊 REPROCESSING SUMMARY");
+        $this->info('  📊 REPROCESSING SUMMARY');
         $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->line("  Total processed:   {$total}");
         $this->line("  ✅ Successful:      {$successCount}");
-        
+
         if ($failureCount > 0) {
             $this->line("  ❌ Failed:          {$failureCount}");
         }
-        
+
         $this->line("  ⏱️  Time elapsed:    {$totalTime}s");
         $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 

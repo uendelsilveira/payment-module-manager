@@ -122,5 +122,4 @@ class PaymentEventsTest extends TestCase
                 && $event->newStatus === 'approved';
         });
     }
-
 }

@@ -83,21 +83,24 @@ class ProcessWebhookJob implements ShouldQueue
 
         if ($notificationType !== 'payment') {
             Log::channel('webhook')->warning('Unsupported notification type', $context->toArray());
+
             return;
         }
 
         $paymentId = $this->webhookData['data']['id'] ?? null;
 
-        if (!$paymentId) {
+        if (! $paymentId) {
             Log::channel('webhook')->error('Payment ID missing from webhook', $context->toArray());
+
             return;
         }
 
         // Find transaction by external_id and update status
         $transaction = \UendelSilveira\PaymentModuleManager\Models\Transaction::where('external_id', $paymentId)->first();
 
-        if (!$transaction) {
+        if (! $transaction) {
             Log::channel('webhook')->warning('Transaction not found for payment ID', $context->with('payment_id', $paymentId)->toArray());
+
             return;
         }
 

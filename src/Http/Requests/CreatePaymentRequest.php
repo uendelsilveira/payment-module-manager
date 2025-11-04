@@ -37,6 +37,7 @@ class CreatePaymentRequest extends FormRequest
                     $paymentMethod = $this->input('payment_method_id');
 
                     $error = $validator->getValidationError($value, $gateway, $paymentMethod);
+
                     if ($error) {
                         $fail($error);
                     }
@@ -49,7 +50,8 @@ class CreatePaymentRequest extends FormRequest
                 'size:3',
                 function ($attribute, $value, $fail) {
                     $currencyService = app(CurrencyService::class);
-                    if (!$currencyService->isSupported($value)) {
+
+                    if (! $currencyService->isSupported($value)) {
                         $supported = implode(', ', array_keys($currencyService->getSupportedCurrencies()));
                         $fail("Currency {$value} is not supported. Supported: {$supported}");
                     }

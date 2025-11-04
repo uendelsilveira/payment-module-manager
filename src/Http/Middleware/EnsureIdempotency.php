@@ -12,7 +12,7 @@ use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
 /**
  * Middleware to ensure idempotent payment processing
- * 
+ *
  * Prevents duplicate payment processing by checking idempotency keys
  */
 class EnsureIdempotency
@@ -25,26 +25,26 @@ class EnsureIdempotency
     public function handle(Request $request, Closure $next)
     {
         // Only apply to payment processing endpoints
-        if (!$request->is('api/payment/process')) {
+        if (! $request->is('api/payment/process')) {
             return $next($request);
         }
 
         $idempotencyKey = $request->header('Idempotency-Key') ?? $request->input('idempotency_key');
 
         // If no idempotency key provided, continue (optional behavior)
-        if (!$idempotencyKey) {
+        if (! $idempotencyKey) {
             $context = LogContext::create()
                 ->withCorrelationId()
                 ->withRequestId()
                 ->with('path', $request->path());
 
             Log::channel('payment')->warning('Payment request without idempotency key', $context->toArray());
-            
+
             return $next($request);
         }
 
         // Validate idempotency key format
-        if (!$this->isValidIdempotencyKey($idempotencyKey)) {
+        if (! $this->isValidIdempotencyKey($idempotencyKey)) {
             return $this->errorResponse(
                 'Invalid idempotency key format. Must be alphanumeric, 16-100 characters.',
                 422
@@ -106,7 +106,7 @@ class EnsureIdempotency
         // Cache successful responses
         if ($response->isSuccessful() && $response->getStatusCode() === 201) {
             $responseData = json_decode($response->getContent(), true);
-            
+
             if (isset($responseData['data']['id'])) {
                 Cache::put($cacheKey, [
                     'response' => $responseData,

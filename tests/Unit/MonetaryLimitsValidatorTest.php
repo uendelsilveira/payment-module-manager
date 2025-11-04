@@ -13,7 +13,7 @@ class MonetaryLimitsValidatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validator = new MonetaryLimitsValidator();
+        $this->validator = new MonetaryLimitsValidator;
     }
 
     public function test_validates_amount_within_limits(): void
@@ -26,7 +26,7 @@ class MonetaryLimitsValidatorTest extends TestCase
     {
         $this->expectException(PaymentGatewayException::class);
         $this->expectExceptionMessageMatches('/below minimum/');
-        
+
         // PIX min is 0.01 (1 cent)
         $this->validator->validate(0.001, 'mercadopago', 'pix');
     }
@@ -35,7 +35,7 @@ class MonetaryLimitsValidatorTest extends TestCase
     {
         $this->expectException(PaymentGatewayException::class);
         $this->expectExceptionMessageMatches('/exceeds maximum/');
-        
+
         // PIX max is R$ 10,000.00, so pass R$ 10,001.00
         $this->validator->validate(1000001.00, 'mercadopago', 'pix');
     }
@@ -43,7 +43,7 @@ class MonetaryLimitsValidatorTest extends TestCase
     public function test_get_limits_for_specific_payment_method(): void
     {
         $limits = $this->validator->getLimits('mercadopago', 'pix');
-        
+
         $this->assertEquals(1, $limits['min']);
         $this->assertEquals(1000000, $limits['max']);
     }
@@ -51,7 +51,7 @@ class MonetaryLimitsValidatorTest extends TestCase
     public function test_falls_back_to_gateway_default_when_method_not_found(): void
     {
         $limits = $this->validator->getLimits('mercadopago', 'unknown_method');
-        
+
         $this->assertEquals(100, $limits['min']);
         $this->assertEquals(10000000, $limits['max']);
     }
@@ -59,7 +59,7 @@ class MonetaryLimitsValidatorTest extends TestCase
     public function test_falls_back_to_global_when_gateway_not_found(): void
     {
         $limits = $this->validator->getLimits('unknown_gateway');
-        
+
         $this->assertEquals(100, $limits['min']);
         $this->assertEquals(10000000, $limits['max']);
     }

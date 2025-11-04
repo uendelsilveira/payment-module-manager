@@ -90,14 +90,15 @@ class SendPaymentStatusNotification
             // Get recipient email from transaction metadata or config
             $recipientEmail = $transaction->metadata['payer_email'] ?? config('payment.notifications.email.default_recipient');
 
-            if (!$recipientEmail) {
+            if (! $recipientEmail) {
                 Log::channel('payment')->warning('Email notification skipped - no recipient', $context->toArray());
+
                 return;
             }
 
             // In production, use Laravel Mail here
             // Mail::to($recipientEmail)->send(new PaymentStatusChangedMail($transaction, $oldStatus, $newStatus));
-            
+
             Log::channel('payment')->info('Email notification would be sent', $context->with('recipient', $recipientEmail)->toArray());
         } catch (\Exception $e) {
             Log::channel('payment')->error('Email notification error', $context->withError($e)->toArray());
@@ -113,8 +114,9 @@ class SendPaymentStatusNotification
             // Get recipient phone from transaction metadata
             $recipientPhone = $transaction->metadata['payer_phone'] ?? null;
 
-            if (!$recipientPhone) {
+            if (! $recipientPhone) {
                 Log::channel('payment')->warning('SMS notification skipped - no phone number', $context->toArray());
+
                 return;
             }
 

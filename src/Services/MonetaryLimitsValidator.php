@@ -74,6 +74,7 @@ class MonetaryLimitsValidator
     {
         try {
             $this->validate($amount, $gateway, $paymentMethod);
+
             return true;
         } catch (PaymentGatewayException $e) {
             return false;
@@ -87,6 +88,7 @@ class MonetaryLimitsValidator
     {
         try {
             $this->validate($amount, $gateway, $paymentMethod);
+
             return null;
         } catch (PaymentGatewayException $e) {
             return $e->getMessage();
