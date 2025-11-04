@@ -45,9 +45,8 @@ class ReprocessCommandTest extends TestCase
         // Force a re-resolução do PaymentService com o novo GatewayManager
         $this->app->forgetInstance(\UendelSilveira\PaymentModuleManager\Services\PaymentService::class);
 
-        $this->artisan('payment:reprocess-failed')
-            ->expectsOutput(sprintf('Reprocessando transação ID: %d...', $transaction->id))
-            ->expectsOutput(sprintf('Falha ao reprocessar transação ID: %d. Erro: %s', $transaction->id, $errorMessage))
+        $this->artisan('payment:reprocess-failed --force')
+            ->expectsOutput(sprintf("❌ Failed to reprocess transaction #%d: %s", $transaction->id, $errorMessage))
             ->assertExitCode(Command::FAILURE);
 
         $this->assertDatabaseHas('transactions', [
@@ -59,7 +58,7 @@ class ReprocessCommandTest extends TestCase
     public function test_command_succeeds_when_no_transactions_to_reprocess(): void
     {
         $this->artisan('payment:reprocess-failed')
-            ->expectsOutput('Nenhuma transação falha para reprocessar encontrada.')
+            ->expectsOutput('✅ No failed transactions found matching the criteria')
             ->assertExitCode(Command::SUCCESS);
     }
 
@@ -95,8 +94,8 @@ class ReprocessCommandTest extends TestCase
         // Force a re-resolução do PaymentService com o novo GatewayManager
         $this->app->forgetInstance(\UendelSilveira\PaymentModuleManager\Services\PaymentService::class);
 
-        $this->artisan('payment:reprocess-failed')
-            ->expectsOutput(sprintf('Transação ID: %d reprocessada com sucesso.', $transaction->id))
+        $this->artisan('payment:reprocess-failed --force')
+            ->expectsOutput(sprintf("✅ Transaction #%d reprocessed - Status: approved", $transaction->id))
             ->assertExitCode(Command::SUCCESS);
 
         $this->assertDatabaseHas('transactions', [
