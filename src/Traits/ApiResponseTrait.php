@@ -14,7 +14,7 @@ use Illuminate\Http\JsonResponse;
 trait ApiResponseTrait
 {
     /**
-     * Retorna uma resposta de sucesso padronizada.
+     * Returns a standardized success response.
      *
      * @param mixed $data
      */
@@ -28,7 +28,7 @@ trait ApiResponseTrait
     }
 
     /**
-     * Retorna uma resposta de erro padronizada.
+     * Returns a standardized error response.
      *
      * @param mixed|null $errors
      */
