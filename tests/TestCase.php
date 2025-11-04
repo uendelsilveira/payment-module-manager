@@ -29,5 +29,27 @@ class TestCase extends OrchestraTestCase
             'database' => ':memory:',
             'prefix' => '',
         ]);
+
+        // Configure logging channels for testing
+        $app['config']->set('logging.channels.payment', [
+            'driver' => 'single',
+            'path' => storage_path('logs/payment-test.log'),
+            'level' => 'debug',
+        ]);
+        $app['config']->set('logging.channels.webhook', [
+            'driver' => 'single',
+            'path' => storage_path('logs/webhook-test.log'),
+            'level' => 'debug',
+        ]);
+        $app['config']->set('logging.channels.gateway', [
+            'driver' => 'single',
+            'path' => storage_path('logs/gateway-test.log'),
+            'level' => 'debug',
+        ]);
+        $app['config']->set('logging.channels.transaction', [
+            'driver' => 'single',
+            'path' => storage_path('logs/transaction-test.log'),
+            'level' => 'debug',
+        ]);
     }
 }

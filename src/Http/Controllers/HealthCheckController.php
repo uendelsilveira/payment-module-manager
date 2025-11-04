@@ -27,11 +27,11 @@ class HealthCheckController
         $allHealthy = collect($checks)->every(fn ($check) => $check['status'] === 'healthy');
         $status = $allHealthy ? 'healthy' : 'degraded';
 
-        return $this->success([
+        return $this->successResponse([
             'status' => $status,
             'timestamp' => now()->toIso8601String(),
             'checks' => $checks,
-        ], $allHealthy ? 200 : 503);
+        ], null, $allHealthy ? 200 : 503);
     }
 
     private function checkDatabase(): array
