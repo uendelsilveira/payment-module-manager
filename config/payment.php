@@ -255,4 +255,42 @@ return [
             'cache_ttl' => env('PAYMENT_CURRENCY_CACHE_TTL', 60),
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notifications
+    |--------------------------------------------------------------------------
+    |
+    | Configure how payment status notifications are sent.
+    |
+    */
+
+    'notifications' => [
+        // Webhook notifications
+        'webhook_url' => env('PAYMENT_NOTIFICATION_WEBHOOK_URL'),
+
+        // Email notifications
+        'email' => [
+            'enabled' => env('PAYMENT_NOTIFICATION_EMAIL_ENABLED', false),
+            'default_recipient' => env('PAYMENT_NOTIFICATION_EMAIL_RECIPIENT'),
+            'from_address' => env('PAYMENT_NOTIFICATION_EMAIL_FROM', 'noreply@example.com'),
+            'from_name' => env('PAYMENT_NOTIFICATION_EMAIL_FROM_NAME', 'Payment System'),
+        ],
+
+        // SMS notifications
+        'sms' => [
+            'enabled' => env('PAYMENT_NOTIFICATION_SMS_ENABLED', false),
+            'provider' => env('PAYMENT_NOTIFICATION_SMS_PROVIDER', 'twilio'),
+            'from_number' => env('PAYMENT_NOTIFICATION_SMS_FROM'),
+            'template' => 'Payment {transaction_id} status: {status}',
+        ],
+
+        // Notification events to trigger
+        'trigger_on' => [
+            'approved' => true,
+            'rejected' => true,
+            'refunded' => true,
+            'failed' => false, // Usually don't notify on failed
+        ],
+    ],
 ];

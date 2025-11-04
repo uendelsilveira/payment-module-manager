@@ -22,6 +22,7 @@ use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
 use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentFailed;
 use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentProcessed;
 use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentStatusChanged;
+use UendelSilveira\PaymentModuleManager\Listeners\SendPaymentStatusNotification;
 use UendelSilveira\PaymentModuleManager\Services\GatewayManager;
 use UendelSilveira\PaymentModuleManager\Services\MercadoPagoClient;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
@@ -47,6 +48,7 @@ class PaymentServiceProvider extends ServiceProvider
         Event::listen(PaymentProcessed::class, LogPaymentProcessed::class);
         Event::listen(PaymentFailed::class, LogPaymentFailed::class);
         Event::listen(PaymentStatusChanged::class, LogPaymentStatusChanged::class);
+        Event::listen(PaymentStatusChanged::class, SendPaymentStatusNotification::class);
 
         // Carrega as factories do pacote para que possam ser usadas nos testes.
         if ($this->app->runningUnitTests()) {
