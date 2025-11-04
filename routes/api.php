@@ -30,7 +30,7 @@ Route::get('health', [HealthCheckController::class, 'check'])
 
 // Rotas de Pagamento
 Route::post('payment/process', [PaymentController::class, 'process'])
-    ->middleware(['payment.rate_limit:payment_process'])
+    ->middleware(['payment.idempotency', 'payment.rate_limit:payment_process'])
     // ->middleware(['payment.auth', 'payment.authorize:process-payment'])
     ->name('payment.process');
 

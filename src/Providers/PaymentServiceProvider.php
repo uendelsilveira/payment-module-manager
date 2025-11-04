@@ -11,6 +11,7 @@ use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Http\Middleware\AuthenticatePaymentRequest;
 use UendelSilveira\PaymentModuleManager\Http\Middleware\AuthorizePaymentAction;
+use UendelSilveira\PaymentModuleManager\Http\Middleware\EnsureIdempotency;
 use UendelSilveira\PaymentModuleManager\Http\Middleware\RateLimitPaymentRequests;
 use UendelSilveira\PaymentModuleManager\Http\Middleware\VerifyMercadoPagoSignature;
 use UendelSilveira\PaymentModuleManager\Repositories\SettingsRepository;
@@ -58,6 +59,7 @@ class PaymentServiceProvider extends ServiceProvider
         $router->aliasMiddleware('payment.auth', AuthenticatePaymentRequest::class);
         $router->aliasMiddleware('payment.authorize', AuthorizePaymentAction::class);
         $router->aliasMiddleware('payment.rate_limit', RateLimitPaymentRequests::class);
+        $router->aliasMiddleware('payment.idempotency', EnsureIdempotency::class);
 
         // Registra os comandos Artisan
         if ($this->app->runningInConsole()) {

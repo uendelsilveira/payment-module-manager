@@ -43,12 +43,19 @@ class PaymentService
         $gatewayStrategy = $this->gatewayManager->create($data['method']);
 
         return DB::transaction(function () use ($data, $gatewayStrategy, $startTime, $context) {
-            $transaction = $this->transactionRepository->create([
+            $transactionData = [
                 'gateway' => $data['method'],
                 'amount' => $data['amount'],
                 'description' => $data['description'],
                 'status' => 'pending',
-            ]);
+            ];
+
+            // Add idempotency key if provided
+            if (isset($data['_idempotency_key'])) {
+                $transactionData['idempotency_key'] = $data['_idempotency_key'];
+            }
+
+            $transaction = $this->transactionRepository->create($transactionData);
 
             $context->withTransactionId($transaction->id);
 

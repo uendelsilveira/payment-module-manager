@@ -19,6 +19,7 @@ class Transaction extends Model
         'status',
         'description',
         'external_id',
+        'idempotency_key',
         'metadata',
         'retries_count',
         'last_attempt_at',
