@@ -29,7 +29,10 @@ Thumbs.db
 
 # Testes e Cobertura
 .phpunit.result.cache
+.phpunit.cache/
 coverage/
+coverage-html/
+coverage.xml
 clover.xml
 *.coverage
 phpunit.xml
