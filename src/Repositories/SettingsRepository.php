@@ -9,16 +9,31 @@
 
 namespace UendelSilveira\PaymentModuleManager\Repositories;
 
+use Illuminate\Support\Facades\Cache;
 use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Models\PaymentSetting;
 
 class SettingsRepository implements SettingsRepositoryInterface
 {
+    /**
+     * Cache TTL em segundos (1 hora por padrão)
+     */
+    protected int $cacheTtl = 3600;
+
+    /**
+     * Prefixo para chaves de cache
+     */
+    protected string $cachePrefix = 'payment_settings:';
+
     public function get(string $key, $default = null): ?string
     {
-        $setting = PaymentSetting::where('key', $key)->first();
+        $cacheKey = $this->getCacheKey($key);
 
-        return $setting ? $setting->value : $default;
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($key, $default) {
+            $setting = PaymentSetting::where('key', $key)->first();
+
+            return $setting ? $setting->value : $default;
+        });
     }
 
     public function set(string $key, ?string $value): void
@@ -27,5 +42,37 @@ class SettingsRepository implements SettingsRepositoryInterface
             ['key' => $key],
             ['value' => $value]
         );
+
+        // Invalidar cache após atualização
+        $this->forgetCache($key);
+    }
+
+    /**
+     * Gera a chave de cache para uma configuração
+     */
+    protected function getCacheKey(string $key): string
+    {
+        return $this->cachePrefix.$key;
+    }
+
+    /**
+     * Remove uma configuração do cache
+     */
+    protected function forgetCache(string $key): void
+    {
+        Cache::forget($this->getCacheKey($key));
+    }
+
+    /**
+     * Limpa todo o cache de configurações
+     */
+    public function clearCache(): void
+    {
+        // Se estiver usando Redis/Memcached, pode usar tags
+        // Cache::tags(['payment_settings'])->flush();
+
+        // Para drivers que não suportam tags, limpar individualmente
+        // ou usar um padrão de chave para limpar em lote
+        Cache::flush();
     }
 }
