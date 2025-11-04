@@ -264,8 +264,47 @@ sequenceDiagram
 
 Este projeto é mantido ativamente. Contribuições são bem-vindas! Antes de contribuir, por favor, leia o arquivo `CONTRIBUTING.md` (a ser criado).
 
-### Versionamento
-Este projeto segue o [Versionamento Semântico 2.0.0](https://semver.org/spec/v2.0.0.html). Para as mudanças detalhadas de cada versão, por favor, consulte o [CHANGELOG.md](CHANGELOG.md).
+### 🔄 Versionamento Automático
+
+Este projeto utiliza **versionamento semântico automático** baseado em [Conventional Commits](https://www.conventionalcommits.org/).
+
+#### Como funciona:
+
+1. **Commits seguem o padrão convencional:**
+   - `feat:` - Nova funcionalidade (incrementa MINOR: 1.0.0 → 1.1.0)
+   - `fix:` - Correção de bug (incrementa PATCH: 1.0.0 → 1.0.1)
+   - `feat!:` ou `BREAKING CHANGE:` - Mudança que quebra compatibilidade (incrementa MAJOR: 1.0.0 → 2.0.0)
+
+2. **Ao fazer push para `main`:**
+   - Testes são executados automaticamente
+   - Versão é calculada baseada nos commits
+   - `README.md` e `composer.json` são atualizados
+   - Changelog é gerado automaticamente
+   - Tag Git e GitHub Release são criados
+
+3. **Exemplo de uso:**
+   ```bash
+   # Feature nova (minor bump)
+   git commit -m "feat(pix): adicionar suporte a QR code dinâmico"
+   
+   # Bug fix (patch bump)
+   git commit -m "fix(webhook): corrigir validação de assinatura"
+   
+   # Breaking change (major bump)
+   git commit -m "feat!: migrar para API v2 do Mercado Pago"
+   ```
+
+📖 **[Ver guia completo de commits convencionais](.github/COMMIT_CONVENTION.md)**
+
+#### Versionamento Semântico
+
+Este projeto segue o [Versionamento Semântico 2.0.0](https://semver.org/spec/v2.0.0.html). 
+
+- **MAJOR** (X.0.0): Mudanças incompatíveis com versões anteriores
+- **MINOR** (0.X.0): Novas funcionalidades mantendo compatibilidade
+- **PATCH** (0.0.X): Correções de bugs mantendo compatibilidade
+
+Para ver as mudanças detalhadas de cada versão, consulte as [GitHub Releases](https://github.com/uendelsilveira/payment-module-manager/releases).
 
 ### Próximos Passos
 - Criação de `CONTRIBUTING.md`.
