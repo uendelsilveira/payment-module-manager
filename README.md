@@ -1,41 +1,62 @@
 # 💳 Payment Module Manager
 
-Um pacote Laravel para gerenciar pagamentos, atualmente focado na integração com o Mercado Pago. Projetado para ser plugável e fácil de usar em qualquer aplicação Laravel.
+[![Build Status](https://img.shields.io/github/actions/workflow/status/uendelsilveira/payment-module-manager/ci.yml?branch=main&style=for-the-badge)](https://github.com/uendelsilveira/payment-module-manager/actions)
+[![Code Coverage](https://img.shields.io/codecov/c/github/uendelsilveira/payment-module-manager?style=for-the-badge)](https://codecov.io/gh/uendelsilveira/payment-module-manager)
+[![Latest Version](https://img.shields.io/packagist/v/uendelsilveira/payment-module-manager?style=for-the-badge)](https://packagist.org/packages/uendelsilveira/payment-module-manager)
+[![License](https://img.shields.io/github/license/uendelsilveira/payment-module-manager?style=for-the-badge)](https://github.com/uendelsilveira/payment-module-manager/blob/main/LICENSE)
+
+
+**Versão:** 1.2.0  
+**Status:** ✅ **PRODUÇÃO-READY**
+
+Um pacote Laravel robusto e escalável para gerenciamento de pagamentos, com foco inicial na integração com o Mercado Pago. Projetado para ser seguro, plugável e fácil de usar em qualquer aplicação Laravel.
 
 ---
 
-## ✨ Funcionalidades
+## ✨ Funcionalidades Principais
 
--   **Integração com Mercado Pago:** Processa e consulta pagamentos via API do Mercado Pago (PIX, Cartão de Crédito com parcelamento e Boleto Bancário).
--   **Gerenciamento de Credenciais via API:** Permite que as credenciais do gateway sejam salvas e gerenciadas através de endpoints de API, armazenando-as no banco de dados.
--   **Conexão OAuth 2.0 (Mercado Pago Connect):** Facilita a conexão da conta do Mercado Pago do usuário final através de um fluxo de autorização seguro.
--   **Reprocessamento de Transações Falhas:** Comando Artisan para tentar reprocessar pagamentos que falharam, com limite de tentativas.
--   **Estrutura Modular:** Separação clara de responsabilidades usando Service Providers, Controllers, Services, Repositórios e Estratégias de Gateway.
--   **Validação de Requisições:** Validação robusta de dados de entrada para o processamento de pagamentos.
--   **Persistência de Transações:** Armazena detalhes das transações em um banco de dados.
--   **Respostas Padronizadas:** Utiliza um `ApiResponseTrait` para respostas JSON consistentes.
--   **Segurança e Tratamento Aprimorado de Webhooks:** Verificação de assinatura e lógica robusta para processar diferentes eventos e status de notificações do Mercado Pago.
+O módulo foi reestruturado com foco em segurança, escalabilidade e manutenibilidade, implementando as melhores práticas de desenvolvimento de software.
+
+### Segurança
+- **Autenticação e Autorização:** Middlewares configuráveis para proteger rotas com estratégias como `api_token`, `laravel_auth` ou `custom`.
+- **Proteção de Credenciais:** As credenciais nunca são expostas via API, sendo sempre mascaradas.
+- **Validação de Webhook:** Assinatura de webhooks do Mercado Pago é validada compulsoriamente em ambiente de produção, incluindo proteção contra *replay attacks*.
+- **Rate Limiting:** Proteção contra abuso e ataques de força bruta com limites de requisição configuráveis por tipo de endpoint.
+- **Validação de Idempotência:** Previne o processamento duplicado de transações através de uma `Idempotency-Key`.
+
+### Arquitetura e Performance
+- **Estrutura Modular:** Separação clara de responsabilidades (Services, Repositories, Gateways).
+- **Processamento Assíncrono:** Webhooks são processados em filas para respostas mais rápidas e maior resiliência.
+- **Cache de Configurações:** As configurações do gateway são cacheadas para minimizar queries ao banco de dados.
+- **Índices Otimizados:** Índices de banco de dados implementados nas colunas mais consultadas para queries de alta performance.
+- **Logging Estruturado:** Logs detalhados com `Correlation ID` para rastreabilidade completa de requisições.
+
+### Funcionalidades do Gateway
+- **Integração com Mercado Pago:** Processa e consulta pagamentos via PIX, Cartão de Crédito (com parcelamento) e Boleto.
+- **Gerenciamento via API:** Credenciais do gateway podem ser gerenciadas através de endpoints da API.
+- **Conexão OAuth 2.0:** Fluxo seguro para conectar contas de usuários do Mercado Pago.
+- **Reprocessamento de Falhas:** Comando Artisan (`payment:reprocess-failed`) para reprocessar transações que falharam, com estratégia de *retry* configurável.
+- **Relatórios e Métricas:** Endpoints para sumarizar transações e analisar dados por método de pagamento.
+- **Health Check:** Endpoint `GET /api/health` para monitorar a saúde da aplicação e suas dependências (banco de dados, cache, API externa).
 
 ---
 
 ## 📋 Requisitos
 
-Para utilizar este pacote, certifique-se de que seu ambiente atenda aos seguintes requisitos:
-
--   **PHP:** ^8.2
--   **Laravel:** ^11.0
+- **PHP:** ^8.2
+- **Laravel:** ^11.0
 
 ---
 
 ## 📦 Instalação
 
-Para usar este pacote em seu projeto Laravel, adicione-o via Composer:
+Adicione o pacote ao seu projeto via Composer:
 
 ```bash
 composer require uendelsilveira/payment-module-manager
 ```
 
-**Nota:** Se o pacote ainda não estiver publicado no [Packagist](https://packagist.org/), você precisará adicionar o repositório do GitHub ao seu `composer.json` antes de executar o comando acima:
+Se o pacote não estiver no Packagist, adicione o repositório ao seu `composer.json`:
 
 ```json
 // composer.json
@@ -51,192 +72,203 @@ composer require uendelsilveira/payment-module-manager
 
 ## ⚙️ Configuração
 
-Publique o arquivo de configuração do pacote para sua aplicação:
+1.  **Publique o Arquivo de Configuração:**
+    ```bash
+    php artisan vendor:publish --provider="UendelSilveira\PaymentModuleManager\Providers\PaymentServiceProvider" --tag="config"
+    ```
+    Isso criará o arquivo `config/payment.php`.
 
-```bash
-php artisan vendor:publish --provider="UendelSilveira\PaymentModuleManager\Providers\PaymentServiceProvider" --tag="config"
-```
+2.  **Execute as Migrações:**
+    ```bash
+    php artisan migrate
+    ```
+    Isso criará as tabelas `transactions` e `payment_settings`, agora com `soft deletes` e índices otimizados.
 
-Isso criará um arquivo `config/payment.php` onde você pode definir suas credenciais do Mercado Pago.
+3.  **Configure as Variáveis de Ambiente (.env):**
+    Estas variáveis servem como fallback se nenhuma configuração for encontrada no banco de dados.
 
-### Variáveis de Ambiente
+    ```dotenv
+    MERCADOPAGO_PUBLIC_KEY="SEU_PUBLIC_KEY"
+    MERCADOPAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN"
+    MERCADOPAGO_WEBHOOK_SECRET="SEU_WEBHOOK_SECRET"
 
-Adicione as seguintes variáveis ao seu arquivo `.env`. Estas variáveis funcionarão como um **fallback** se nenhuma configuração for encontrada no banco de dados, e são essenciais para o fluxo de conexão OAuth.
-
-```dotenv
-MERCADOPAGO_PUBLIC_KEY="SEU_PUBLIC_KEY_DE_TESTE_OU_PRODUCAO"
-MERCADOPAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN_DE_TESTE_OU_PRODUCAO"
-MERCADOPAGO_WEBHOOK_SECRET="SEU_WEBHOOK_SECRET_DE_TESTE_OU_PRODUCAO"
-
-MERCADOPAGO_CLIENT_ID="SEU_CLIENT_ID_DA_APLICACAO"
-MERCADOPAGO_CLIENT_SECRET="SEU_CLIENT_SECRET_DE_APLICACAO"
-```
-
-**Importante:** Use sempre credenciais de teste para ambientes de desenvolvimento e teste. As credenciais `CLIENT_ID` e `CLIENT_SECRET` são da **sua aplicação**, não do usuário final.
-
-### Migrações
-
-Execute as migrações para criar as tabelas `transactions` e `payment_settings`:
-
-```bash
-php artisan migrate
-```
+    MERCADOPAGO_CLIENT_ID="SEU_CLIENT_ID_DA_APLICACAO"
+    MERCADOPAGO_CLIENT_SECRET="SEU_CLIENT_SECRET_DA_APLICACAO"
+    ```
 
 ---
 
-## 🚀 Uso
+## 🚀 Quick Start
 
-### Quickstart
+Para começar a usar o módulo rapidamente, siga estes passos:
 
-Para começar a usar o módulo de pagamentos rapidamente, siga estes passos:
-
-1.  **Configure suas credenciais:** Edite o arquivo `.env` com suas chaves do Mercado Pago (ou outras credenciais de gateway).
-2.  **Execute as migrações:** `php artisan migrate`
-3.  **Processar um pagamento (PIX):**
+1.  **Configure suas credenciais** no arquivo `.env`.
+2.  **Execute as migrações:** `php artisan migrate`.
+3.  **Processe um pagamento (PIX):**
     ```bash
     curl -X POST "http://localhost/api/payment/process" \
          -H "Content-Type: application/json" \
-         -d '{ "amount": 199.90, "method": "mercadopago", "description": "Assinatura Premium", "payer_email": "cliente@example.com", "payment_method_id": "pix" }'
+         -H "Authorization: Bearer SEU_API_TOKEN" \
+         -H "Idempotency-Key: unique-request-id-123" \
+         -d '{
+               "amount": 100.50,
+               "method": "mercadopago",
+               "description": "Produto Exemplo",
+               "payer_email": "comprador@email.com",
+               "payment_method_id": "pix"
+             }'
     ```
-
-4.  **Consultar um pagamento:** (Substitua `{transaction_id}` pelo ID da transação retornado no passo anterior)
+4.  **Consulte o pagamento:** (Substitua `{transaction_id}` pelo ID retornado)
     ```bash
-    curl -X GET "http://localhost/api/payments/{transaction_id}"
-    ```
-
-5.  **Obter resumo de transações:**
-    ```bash
-    curl -X GET "http://localhost/api/reports/transactions/summary?start_date=2025-01-01&end_date=2025-01-31"
+    curl -X GET "http://localhost/api/payments/{transaction_id}" \
+         -H "Authorization: Bearer SEU_API_TOKEN"
     ```
 
 ---
 
-### Documentação da API (OpenAPI/Swagger)
+## 📖 Uso Detalhado
 
-Uma documentação detalhada da API, incluindo todos os endpoints, parâmetros e exemplos de resposta, está disponível no formato OpenAPI. Você pode visualizar este arquivo usando qualquer ferramenta compatível com OpenAPI, como o [Swagger Editor](https://editor.swagger.io/).
+### Documentação da API (OpenAPI)
+
+Uma documentação detalhada da API está disponível no formato OpenAPI. Visualize-a com ferramentas como o [Swagger Editor](https://editor.swagger.io/).
 
 [**Ver a Documentação da API (openapi.yaml)**](./docs/openapi.yaml)
 
-### Endpoints de Pagamento
+### Endpoints e Exemplos
 
-`POST /api/payment/process`
+#### `POST /api/payment/process`
 
 Cria e processa um novo pagamento.
 
-#### Exemplo de Requisição (PIX)
-
+**Exemplo de Requisição (Cartão de Crédito):**
 ```bash
 curl -X POST "http://localhost/api/payment/process" \
      -H "Content-Type: application/json" \
-     -d '{ "amount": 199.90, "method": "mercadopago", "description": "Assinatura Premium", "payer_email": "cliente@example.com", "payment_method_id": "pix" }'
+     -H "Authorization: Bearer SEU_API_TOKEN" \
+     -d '{
+           "amount": 199.90,
+           "method": "mercadopago",
+           "description": "Assinatura Premium",
+           "payer_email": "cliente@example.com",
+           "payment_method_id": "credit_card",
+           "token": "...",
+           "installments": 1,
+           "issuer_id": "...",
+           "payer": { "first_name": "João", "last_name": "Silva", "identification": { "type": "CPF", "number": "..." } }
+         }'
 ```
 
-#### Exemplo de Requisição (Cartão de Crédito)
-
+**Exemplo de Requisição (Boleto):**
 ```bash
 curl -X POST "http://localhost/api/payment/process" \
      -H "Content-Type: application/json" \
-     -d '{ "amount": 199.90, "method": "mercadopago", "description": "Assinatura Premium", "payer_email": "cliente@example.com", "payment_method_id": "credit_card", "token": "...", "installments": 1, "issuer_id": "...", "payer": { "first_name": "João", "last_name": "Silva", "identification": { "type": "CPF", "number": "..." } } }'
+     -H "Authorization: Bearer SEU_API_TOKEN" \
+     -d '{
+           "amount": 100.00,
+           "method": "mercadopago",
+           "description": "Pagamento de Fatura",
+           "payer_email": "cliente@example.com",
+           "payment_method_id": "boleto",
+           "payer": { "first_name": "Maria", "last_name": "Souza", "identification": { "type": "CPF", "number": "11122233344" }, "address": { "zip_code": "01000000", "street_name": "Rua Exemplo", "street_number": "123", "neighborhood": "Centro", "city": "São Paulo", "federal_unit": "SP" } }
+         }'
 ```
 
-#### Exemplo de Requisição (Boleto Bancário)
-
-```bash
-curl -X POST "http://localhost/api/payment/process" \
-     -H "Content-Type: application/json" \
-     -d '{ "amount": 100.00, "method": "mercadopago", "description": "Pagamento de Fatura", "payer_email": "cliente@example.com", "payment_method_id": "boleto", "payer": { "first_name": "Maria", "last_name": "Souza", "identification": { "type": "CPF", "number": "11122233344" }, "address": { "zip_code": "01000000", "street_name": "Rua Exemplo", "street_number": "123", "neighborhood": "Centro", "city": "São Paulo", "federal_unit": "SP" } } }'
+**Exemplo de Resposta (Sucesso - PIX):**
+```json
+{
+    "status": "success",
+    "message": "Payment processed successfully.",
+    "data": {
+        "transaction_id": "d8f2b3a0-6b7a-4b1e-8b0a-1b2c3d4e5f6a",
+        "status": "pending",
+        "pix_qr_code": "...",
+        "pix_qr_code_base64": "..."
+    }
+}
 ```
 
-`GET /api/payments/{transaction_id}`
-
-Consulta o status e os detalhes de uma transação existente. O sistema busca os dados mais recentes no gateway e atualiza o status local se necessário.
-
-#### Exemplo de Requisição
-
-```bash
-curl -X GET "http://localhost/api/payments/{transaction_id}"
+**Exemplo de Resposta (Erro de Validação):**
+```json
+{
+    "message": "The given data was invalid.",
+    "errors": {
+        "amount": [
+            "The amount must be a number."
+        ]
+    }
+}
 ```
-
-### Endpoints de Relatórios
-
-`GET /api/reports/transactions/summary`
-
-Retorna um resumo das transações, incluindo o total de transações, valor total, transações bem-sucedidas e transações falhas. Aceita `start_date` e `end_date` como parâmetros de query opcionais para filtrar o período.
-
-#### Exemplo de Requisição
-
-```bash
-curl -X GET "http://localhost/api/reports/transactions/summary?start_date=2025-01-01&end_date=2025-01-31"
-```
-
-`GET /api/reports/transactions/methods`
-
-Retorna a contagem e o valor total das transações agrupadas por método de pagamento. Aceita `start_date` e `end_date` como parâmetros de query opcionais para filtrar o período.
-
-#### Exemplo de Requisição
-
-```bash
-curl -X GET "http://localhost/api/reports/transactions/methods?start_date=2025-01-01&end_date=2025-01-31"
-```
-
-### Endpoints de Configuração
-
-`GET /api/settings/mercadopago`
-
-Retorna as credenciais do Mercado Pago atualmente salvas no banco de dados.
-
-`POST /api/settings/mercadopago`
-
-Salva ou atualiza as credenciais do Mercado Pago no banco de dados.
-
-#### Exemplo de Requisição
-
-```bash
-curl -X POST "http://localhost/api/settings/mercadopago" \
-     -H "Content-Type: application/json" \
-     -d '{ "public_key": "APP_USR-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "access_token": "APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "webhook_secret": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }'
-```
-
-### Endpoints de Conexão (OAuth 2.0)
-
-`GET /api/connect/mercadopago`
-
-Redireciona o usuário para a página de autorização do Mercado Pago. Após a autorização, o Mercado Pago redirecionará para o endpoint de callback.
-
-`GET /api/connect/mercadopago/callback`
-
-Endpoint de callback que recebe o código de autorização do Mercado Pago, troca-o por um `access_token` e `public_key` e os salva no banco de dados.
 
 ### Comandos Artisan
 
-`php artisan payment:reprocess-failed`
-
-Este comando tenta reprocessar pagamentos que falharam, com um limite de 3 tentativas e um intervalo de 5 minutos entre as tentativas.
+-   **Reprocessar Pagamentos Falhos:**
+    ```bash
+    php artisan payment:reprocess-failed --limit=10 --max-retries=3 --dry-run
+    ```
 
 ---
 
-## 🧪 Testes
+## 🛡️ Segurança
 
-Para executar os testes unitários e de feature do pacote:
+### Configurando a Autenticação
 
-1.  Certifique-se de ter as dependências de desenvolvimento instaladas:
-    ```bash
-    composer update
-    ```
-2.  Configure suas credenciais de teste do Mercado Pago **no arquivo `phpunit.xml`** (na raiz do pacote) para o ambiente de teste:
-    ```xml
-    <!-- phpunit.xml -->
-    <php>
-        <env name="MERCADOPAGO_ACCESS_TOKEN" value="SEU_ACCESS_TOKEN_DE_TESTE"/>
-        <env name="MERCADOPAGO_WEBHOOK_SECRET" value="SEU_WEBHOOK_SECRET_DE_TESTE"/>
-        <env name="MERCADOPAGO_CLIENT_ID" value="SEU_CLIENT_ID_DE_TESTE"/>
-        <env name="MERCADOPAGO_CLIENT_SECRET" value="SEU_CLIENT_SECRET_DE_TESTE"/>
-    </php>
-    ```
-3.  Execute os testes:
-    ```bash
-    composer test
-    ```
+A autenticação é configurada no arquivo `config/payment.php`. Você pode escolher uma das seguintes estratégias:
+
+-   `none`: Nenhuma autenticação (use apenas em desenvolvimento).
+-   `api_token`: Um token de API fixo, definido no arquivo de configuração.
+-   `laravel_auth`: Usa o sistema de autenticação padrão do Laravel (ex: Sanctum).
+-   `custom`: Permite que você defina um callback customizado para sua própria lógica de autenticação.
+
+---
+
+##  diagrams
+
+### Fluxo de Pagamento
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Your Application
+    participant Payment Module
+    participant Mercado Pago
+
+    Client->>Your Application: 1. Request Payment (e.g., PIX)
+    Your Application->>Payment Module: 2. Process Payment
+    Payment Module->>Mercado Pago: 3. Create Payment
+    Mercado Pago-->>Payment Module: 4. Return PIX Code
+    Payment Module-->>Your Application: 5. Return Transaction ID & PIX Code
+    Your Application-->>Client: 6. Display PIX Code
+    Client->>Mercado Pago: 7. Pays PIX
+    Mercado Pago->>Payment Module: 8. Webhook Notification (payment approved)
+    Payment Module->>Your Application: 9. Dispatch Event (PaymentProcessed)
+```
+
+---
+
+## 🤔 Troubleshooting (Problemas Comuns)
+
+-   **Erro `InvalidConfigurationException`:**
+    -   **Causa:** As credenciais do Mercado Pago não foram configuradas corretamente.
+    -   **Solução:** Verifique se as variáveis `MERCADOPAGO_*` estão definidas no seu arquivo `.env` ou se foram salvas via API.
+
+-   **Pagamentos falham com `401 Unauthorized`:**
+    -   **Causa:** O middleware de autenticação está bloqueando a requisição.
+    -   **Solução:** Certifique-se de que a estratégia de autenticação em `config/payment.php` está correta e que você está enviando o token de autorização no cabeçalho da requisição (`Authorization: Bearer SEU_TOKEN`).
+
+---
+
+## 🗺️ Roadmap e Contribuições
+
+Este projeto é mantido ativamente. Contribuições são bem-vindas! Antes de contribuir, por favor, leia o arquivo `CONTRIBUTING.md` (a ser criado).
+
+### Versionamento
+Este projeto segue o [Versionamento Semântico 2.0.0](https://semver.org/spec/v2.0.0.html). Para as mudanças detalhadas de cada versão, por favor, consulte o [CHANGELOG.md](CHANGELOG.md).
+
+### Próximos Passos
+- Criação de `CONTRIBUTING.md`.
+- Integração com Codecov e GitHub Actions para relatórios de cobertura e build status.
+- Configuração de análise estática com PHPStan/Psalm.
+- Suporte a Docker para um ambiente de desenvolvimento padronizado.
 
 ---
 
@@ -244,4 +276,4 @@ Para executar os testes unitários e de feature do pacote:
 
 Este projeto está licenciado sob a Licença MIT.
 
-© 2025 Uendel Silveira - Full Laravel Developer
+© 2025 Uendel Silveira - Full Stack Developer
