@@ -1,0 +1,16 @@
+#includes:
+   # - ./vendor/larastan/larastan/extension.neon
+   # - ./vendor/nesbot/carbon/extension.neon
+
+
+parameters:
+
+    ignoreErrors:
+        - '#Call to method PHPUnit\\Framework\\Assert::assertIsArray\(\) with array will always evaluate to true#'
+        - '#Call to method PHPUnit\\Framework\\Assert::assertTrue\(\) with true will always evaluate to true#'
+    paths:
+        - src
+        - tests
+    level: 8
+    bootstrapFiles:
+        - tests/TestCase.php
