@@ -149,14 +149,14 @@ class LogContext
     /**
      * Add error context
      */
-    public function withError(\Throwable $exception): self
+    public function withError(\Throwable $throwable): self
     {
         $this->context['error'] = [
-            'class' => get_class($exception),
-            'message' => $exception->getMessage(),
-            'code' => $exception->getCode(),
-            'file' => $exception->getFile(),
-            'line' => $exception->getLine(),
+            'class' => $throwable::class,
+            'message' => $throwable->getMessage(),
+            'code' => $throwable->getCode(),
+            'file' => $throwable->getFile(),
+            'line' => $throwable->getLine(),
         ];
 
         return $this;

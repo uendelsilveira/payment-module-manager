@@ -20,14 +20,11 @@ class SettingsController extends Controller
 {
     use ApiResponseTrait;
 
-    protected SettingsRepositoryInterface $settingsRepository;
-
-    public function __construct(SettingsRepositoryInterface $settingsRepository)
+    public function __construct(protected SettingsRepositoryInterface $settingsRepository)
     {
-        $this->settingsRepository = $settingsRepository;
     }
 
-    public function getMercadoPagoSettings()
+    public function getMercadoPagoSettings(): \Illuminate\Http\JsonResponse
     {
         $publicKey = $this->settingsRepository->get('mercadopago_public_key');
         $accessToken = $this->settingsRepository->get('mercadopago_access_token');
@@ -37,9 +34,9 @@ class SettingsController extends Controller
             'public_key' => $publicKey ? $this->maskCredential($publicKey) : null,
             'access_token' => $accessToken ? $this->maskCredential($accessToken) : null,
             'webhook_secret' => $webhookSecret ? $this->maskCredential($webhookSecret) : null,
-            'public_key_configured' => ! empty($publicKey),
-            'access_token_configured' => ! empty($accessToken),
-            'webhook_secret_configured' => ! empty($webhookSecret),
+            'public_key_configured' => !in_array($publicKey, [null, '', '0'], true),
+            'access_token_configured' => !in_array($accessToken, [null, '', '0'], true),
+            'webhook_secret_configured' => !in_array($webhookSecret, [null, '', '0'], true),
         ];
 
         return $this->successResponse($settings);
@@ -63,7 +60,7 @@ class SettingsController extends Controller
         return $start.$masked.$end;
     }
 
-    public function saveMercadoPagoSettings(Request $request)
+    public function saveMercadoPagoSettings(Request $request): \Illuminate\Http\JsonResponse
     {
         $request->validate([
             'public_key' => ['nullable', 'string'],
@@ -83,7 +80,7 @@ class SettingsController extends Controller
         $clientId = Config::get('payment.gateways.mercadopago.client_id');
         $redirectUri = route('connect.mercadopago.callback');
 
-        $url = "https://auth.mercadopago.com.br/authorization?client_id={$clientId}&response_type=code&platform_id=mp&redirect_uri={$redirectUri}";
+        $url = sprintf('https://auth.mercadopago.com.br/authorization?client_id=%s&response_type=code&platform_id=mp&redirect_uri=%s', $clientId, $redirectUri);
 
         return redirect()->away($url);
     }
@@ -122,8 +119,8 @@ class SettingsController extends Controller
             // Redireciona para uma página de sucesso no frontend da aplicação
             return redirect('/')->with('status', 'Conta do Mercado Pago conectada com sucesso!');
 
-        } catch (\Exception $e) {
-            return response('Falha ao obter o token de acesso: '.$e->getMessage(), 500);
+        } catch (\Exception $exception) {
+            return response('Falha ao obter o token de acesso: '.$exception->getMessage(), 500);
         }
     }
 }

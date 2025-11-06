@@ -62,13 +62,8 @@ class MonetaryLimitsValidator
             return $config[$gateway][$paymentMethod];
         }
 
-        // Fall back to gateway default
-        if (isset($config[$gateway]['default'])) {
-            return $config[$gateway]['default'];
-        }
-
         // Fall back to global limits
-        return $config['global'] ?? [
+        return $config[$gateway]['default'] ?? $config['global'] ?? [
             'min' => 100, // R$ 1.00
             'max' => 10000000, // R$ 100,000.00
         ];
@@ -83,7 +78,7 @@ class MonetaryLimitsValidator
             $this->validate($amount, $gateway, $paymentMethod);
 
             return true;
-        } catch (PaymentGatewayException $e) {
+        } catch (PaymentGatewayException) {
             return false;
         }
     }
@@ -97,8 +92,8 @@ class MonetaryLimitsValidator
             $this->validate($amount, $gateway, $paymentMethod);
 
             return null;
-        } catch (PaymentGatewayException $e) {
-            return $e->getMessage();
+        } catch (PaymentGatewayException $paymentGatewayException) {
+            return $paymentGatewayException->getMessage();
         }
     }
 }

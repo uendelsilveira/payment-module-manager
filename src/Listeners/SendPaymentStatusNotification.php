@@ -22,19 +22,19 @@ class SendPaymentStatusNotification
     /**
      * Handle the event.
      */
-    public function handle(PaymentStatusChanged $event): void
+    public function handle(PaymentStatusChanged $paymentStatusChanged): void
     {
-        $transaction = $event->transaction;
-        $oldStatus = $event->oldStatus;
-        $newStatus = $event->newStatus;
+        $transaction = $paymentStatusChanged->transaction;
+        $oldStatus = $paymentStatusChanged->oldStatus;
+        $newStatus = $paymentStatusChanged->newStatus;
 
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
             ->withTransaction($transaction)
             ->with('old_status', $oldStatus)
             ->with('new_status', $newStatus);
 
-        Log::channel('payment')->info('Processing payment status notification', $context->toArray());
+        Log::channel('payment')->info('Processing payment status notification', $logContext->toArray());
 
         // Get notification settings
         $webhookUrl = config('payment.notifications.webhook_url');
@@ -43,24 +43,24 @@ class SendPaymentStatusNotification
 
         // Send webhook notification
         if ($webhookUrl) {
-            $this->sendWebhookNotification($webhookUrl, $transaction, $oldStatus, $newStatus, $context);
+            $this->sendWebhookNotification($webhookUrl, $transaction, $oldStatus, $newStatus, $logContext);
         }
 
         // Send email notification
         if ($emailEnabled) {
-            $this->sendEmailNotification($transaction, $oldStatus, $newStatus, $context);
+            $this->sendEmailNotification($transaction, $logContext);
         }
 
         // Send SMS notification
         if ($smsEnabled) {
-            $this->sendSmsNotification($transaction, $oldStatus, $newStatus, $context);
+            $this->sendSmsNotification($transaction, $newStatus, $logContext);
         }
     }
 
     /**
      * Send webhook notification
      */
-    private function sendWebhookNotification(string $url, $transaction, string $oldStatus, string $newStatus, LogContext $context): void
+    private function sendWebhookNotification(string $url, \UendelSilveira\PaymentModuleManager\Models\Transaction $transaction, string $oldStatus, string $newStatus, LogContext $logContext): void
     {
         try {
             $payload = [
@@ -79,26 +79,26 @@ class SendPaymentStatusNotification
                 ->post($url, $payload);
 
             if ($response->successful()) {
-                Log::channel('payment')->info('Webhook notification sent successfully', $context->with('webhook_url', $url)->toArray());
+                Log::channel('payment')->info('Webhook notification sent successfully', $logContext->with('webhook_url', $url)->toArray());
             } else {
-                Log::channel('payment')->warning('Webhook notification failed', $context->with('status_code', $response->status())->toArray());
+                Log::channel('payment')->warning('Webhook notification failed', $logContext->with('status_code', $response->status())->toArray());
             }
-        } catch (\Exception $e) {
-            Log::channel('payment')->error('Webhook notification error', $context->withError($e)->toArray());
+        } catch (\Exception $exception) {
+            Log::channel('payment')->error('Webhook notification error', $logContext->withError($exception)->toArray());
         }
     }
 
     /**
      * Send email notification
      */
-    private function sendEmailNotification($transaction, string $oldStatus, string $newStatus, LogContext $context): void
+    private function sendEmailNotification(\UendelSilveira\PaymentModuleManager\Models\Transaction $transaction, LogContext $logContext): void
     {
         try {
             // Get recipient email from transaction metadata or config
             $recipientEmail = $transaction->metadata['payer_email'] ?? config('payment.notifications.email.default_recipient');
 
             if (! $recipientEmail) {
-                Log::channel('payment')->warning('Email notification skipped - no recipient', $context->toArray());
+                Log::channel('payment')->warning('Email notification skipped - no recipient', $logContext->toArray());
 
                 return;
             }
@@ -106,23 +106,23 @@ class SendPaymentStatusNotification
             // In production, use Laravel Mail here
             // Mail::to($recipientEmail)->send(new PaymentStatusChangedMail($transaction, $oldStatus, $newStatus));
 
-            Log::channel('payment')->info('Email notification would be sent', $context->with('recipient', $recipientEmail)->toArray());
-        } catch (\Exception $e) {
-            Log::channel('payment')->error('Email notification error', $context->withError($e)->toArray());
+            Log::channel('payment')->info('Email notification would be sent', $logContext->with('recipient', $recipientEmail)->toArray());
+        } catch (\Exception $exception) {
+            Log::channel('payment')->error('Email notification error', $logContext->withError($exception)->toArray());
         }
     }
 
     /**
      * Send SMS notification
      */
-    private function sendSmsNotification($transaction, string $oldStatus, string $newStatus, LogContext $context): void
+    private function sendSmsNotification(\UendelSilveira\PaymentModuleManager\Models\Transaction $transaction, string $newStatus, LogContext $logContext): void
     {
         try {
             // Get recipient phone from transaction metadata
             $recipientPhone = $transaction->metadata['payer_phone'] ?? null;
 
             if (! $recipientPhone) {
-                Log::channel('payment')->warning('SMS notification skipped - no phone number', $context->toArray());
+                Log::channel('payment')->warning('SMS notification skipped - no phone number', $logContext->toArray());
 
                 return;
             }
@@ -134,9 +134,9 @@ class SendPaymentStatusNotification
             // In production, integrate with SMS provider (Twilio, SNS, etc)
             // Example: $this->smsProvider->send($recipientPhone, $message);
 
-            Log::channel('payment')->info('SMS notification would be sent', $context->with('phone', $recipientPhone)->toArray());
-        } catch (\Exception $e) {
-            Log::channel('payment')->error('SMS notification error', $context->withError($e)->toArray());
+            Log::channel('payment')->info('SMS notification would be sent', $logContext->with('phone', $recipientPhone)->toArray());
+        } catch (\Exception $exception) {
+            Log::channel('payment')->error('SMS notification error', $logContext->withError($exception)->toArray());
         }
     }
 }

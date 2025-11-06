@@ -22,14 +22,8 @@ use UendelSilveira\PaymentModuleManager\Support\LogContext;
 
 class PaymentService
 {
-    protected GatewayManager $gatewayManager;
-
-    protected TransactionRepositoryInterface $transactionRepository;
-
-    public function __construct(GatewayManager $gatewayManager, TransactionRepositoryInterface $transactionRepository)
+    public function __construct(protected GatewayManager $gatewayManager, protected TransactionRepositoryInterface $transactionRepository)
     {
-        $this->gatewayManager = $gatewayManager;
-        $this->transactionRepository = $transactionRepository;
     }
 
     public function processPayment(array $data): Transaction
@@ -37,7 +31,7 @@ class PaymentService
         $startTime = microtime(true);
         $correlationId = LogContext::create()->withCorrelationId()->toArray()['correlation_id'];
 
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId($correlationId)
             ->withGateway($data['method'])
             ->withAmount($data['amount'])
@@ -45,11 +39,11 @@ class PaymentService
             ->withRequestId()
             ->maskSensitiveData();
 
-        Log::channel('payment')->info('Starting payment processing', $context->toArray());
+        Log::channel('payment')->info('Starting payment processing', $logContext->toArray());
 
-        $gatewayStrategy = $this->gatewayManager->create($data['method']);
+        $paymentGateway = $this->gatewayManager->create($data['method']);
 
-        return DB::transaction(function () use ($data, $gatewayStrategy, $startTime, $context) {
+        return DB::transaction(function () use ($data, $paymentGateway, $startTime, $logContext): \UendelSilveira\PaymentModuleManager\Models\Transaction {
             $transactionData = [
                 'gateway' => $data['method'],
                 'amount' => $data['amount'],
@@ -64,40 +58,40 @@ class PaymentService
 
             $transaction = $this->transactionRepository->create($transactionData);
 
-            $context->withTransactionId($transaction->id);
+            $logContext->withTransactionId($transaction->id);
 
-            Log::channel('transaction')->info('Transaction created', $context->toArray());
+            Log::channel('transaction')->info('Transaction created', $logContext->toArray());
 
             try {
-                $gatewayResponse = $gatewayStrategy->charge($data['amount'], $data);
+                $gatewayResponse = $paymentGateway->charge($data['amount'], $data);
 
                 $transaction->external_id = $gatewayResponse['id'];
                 $transaction->status = $gatewayResponse['status'];
                 $transaction->metadata = array_merge($data, $gatewayResponse);
                 $transaction->save();
 
-                $context->withTransaction($transaction)->withDuration($startTime);
+                $logContext->withTransaction($transaction)->withDuration($startTime);
 
-                Log::channel('payment')->info('Payment processed successfully', $context->toArray());
+                Log::channel('payment')->info('Payment processed successfully', $logContext->toArray());
 
                 // Dispatch event
                 PaymentProcessed::dispatch($transaction, $gatewayResponse);
 
-            } catch (Throwable $e) {
+            } catch (Throwable $throwable) {
                 $transaction->status = 'failed';
                 $transaction->metadata = $data;
                 $transaction->save();
 
-                $context->withTransaction($transaction)
-                    ->withError($e)
+                $logContext->withTransaction($transaction)
+                    ->withError($throwable)
                     ->withDuration($startTime);
 
-                Log::channel('payment')->error('Payment processing failed', $context->toArray());
+                Log::channel('payment')->error('Payment processing failed', $logContext->toArray());
 
                 // Dispatch event
-                PaymentFailed::dispatch($transaction, $e, $data);
+                PaymentFailed::dispatch($transaction, $throwable, $data);
 
-                throw $e;
+                throw $throwable;
             }
 
             return $transaction;
@@ -108,30 +102,30 @@ class PaymentService
     {
         $startTime = microtime(true);
 
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
             ->withTransaction($transaction)
             ->withRequestId();
 
-        Log::channel('payment')->info('Fetching payment details', $context->toArray());
+        Log::channel('payment')->info('Fetching payment details', $logContext->toArray());
 
         if (empty($transaction->external_id)) {
-            Log::channel('payment')->warning('Transaction has no external_id for query', $context->toArray());
+            Log::channel('payment')->warning('Transaction has no external_id for query', $logContext->toArray());
 
             return $transaction;
         }
 
-        $gatewayStrategy = $this->gatewayManager->create($transaction->gateway);
-        $gatewayResponse = $gatewayStrategy->getPayment($transaction->external_id);
+        $paymentGateway = $this->gatewayManager->create($transaction->gateway);
+        $gatewayResponse = $paymentGateway->getPayment($transaction->external_id);
 
         if ($gatewayResponse['status'] !== $transaction->status) {
             $oldStatus = $transaction->status;
             $newStatus = $gatewayResponse['status'];
 
-            $context->with('old_status', $oldStatus)
+            $logContext->with('old_status', $oldStatus)
                 ->with('new_status', $newStatus);
 
-            Log::channel('transaction')->info('Transaction status changed in gateway', $context->toArray());
+            Log::channel('transaction')->info('Transaction status changed in gateway', $logContext->toArray());
 
             $transaction->status = $newStatus;
             $transaction->metadata = array_merge((array) $transaction->metadata, $gatewayResponse);
@@ -141,8 +135,8 @@ class PaymentService
             PaymentStatusChanged::dispatch($transaction, $oldStatus, $newStatus);
         }
 
-        $context->withDuration($startTime);
-        Log::channel('payment')->info('Payment details fetched successfully', $context->toArray());
+        $logContext->withDuration($startTime);
+        Log::channel('payment')->info('Payment details fetched successfully', $logContext->toArray());
 
         return $transaction;
     }
@@ -150,7 +144,7 @@ class PaymentService
     public function getFailedTransactions()
     {
         return Transaction::where('status', 'failed')
-            ->where(function ($query) {
+            ->where(function ($query): void {
                 $query->whereNull('last_attempt_at')
                     ->orWhere('last_attempt_at', '<', Carbon::now()->subMinutes(5));
             })
@@ -163,19 +157,19 @@ class PaymentService
         $startTime = microtime(true);
         $maxAttempts = config('payment.retry.max_attempts', 3);
 
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
             ->withTransaction($transaction)
             ->withRetry($transaction->retries_count + 1, $maxAttempts)
             ->withRequestId();
 
-        Log::channel('payment')->info('Reprocessing transaction', $context->toArray());
+        Log::channel('payment')->info('Reprocessing transaction', $logContext->toArray());
 
-        $gatewayStrategy = $this->gatewayManager->create($transaction->gateway);
+        $paymentGateway = $this->gatewayManager->create($transaction->gateway);
         $chargeData = (array) $transaction->metadata;
 
         try {
-            $gatewayResponse = $gatewayStrategy->charge($transaction->amount, $chargeData);
+            $gatewayResponse = $paymentGateway->charge($transaction->amount, $chargeData);
 
             $transaction->status = $gatewayResponse['status'];
             $transaction->external_id = $gatewayResponse['id'];
@@ -184,25 +178,25 @@ class PaymentService
             $transaction->last_attempt_at = now();
             $transaction->save();
 
-            $context->withTransaction($transaction)
+            $logContext->withTransaction($transaction)
                 ->withDuration($startTime)
                 ->with('success', true);
 
-            Log::channel('payment')->info('Transaction reprocessed successfully', $context->toArray());
+            Log::channel('payment')->info('Transaction reprocessed successfully', $logContext->toArray());
 
-        } catch (Throwable $e) {
+        } catch (Throwable $throwable) {
             $transaction->retries_count++;
             $transaction->last_attempt_at = now();
             $transaction->save();
 
-            $context->withTransaction($transaction)
-                ->withError($e)
+            $logContext->withTransaction($transaction)
+                ->withError($throwable)
                 ->withDuration($startTime)
                 ->with('success', false);
 
-            Log::channel('payment')->error('Transaction reprocessing failed', $context->toArray());
+            Log::channel('payment')->error('Transaction reprocessing failed', $logContext->toArray());
 
-            throw $e;
+            throw $throwable;
         }
 
         return $transaction;

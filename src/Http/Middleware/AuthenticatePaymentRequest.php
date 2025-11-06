@@ -34,21 +34,13 @@ class AuthenticatePaymentRequest
     {
         $authStrategy = Config::get('payment.auth.strategy', 'none');
 
-        switch ($authStrategy) {
-            case 'api_token':
-                return $this->validateApiToken($request, $next);
-
-            case 'laravel_auth':
-                return $this->validateLaravelAuth($request, $next, $guard);
-
-            case 'custom':
-                return $this->validateCustom($request, $next);
-
-            case 'none':
-            default:
-                // Sem autenticação - útil para desenvolvimento
-                return $next($request);
-        }
+        return match ($authStrategy) {
+            'api_token' => $this->validateApiToken($request, $next),
+            'laravel_auth' => $this->validateLaravelAuth($request, $next, $guard),
+            'custom' => $this->validateCustom($request, $next),
+            // Sem autenticação - útil para desenvolvimento
+            default => $next($request),
+        };
     }
 
     /**

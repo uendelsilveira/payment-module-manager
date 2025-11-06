@@ -18,18 +18,18 @@ use UendelSilveira\PaymentModuleManager\Support\LogContext;
  */
 class LogPaymentFailed
 {
-    public function handle(PaymentFailed $event): void
+    public function handle(PaymentFailed $paymentFailed): void
     {
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
-            ->withTransaction($event->transaction)
-            ->withError($event->exception)
-            ->with('payment_data', $event->paymentData)
+            ->withTransaction($paymentFailed->transaction)
+            ->withError($paymentFailed->exception)
+            ->with('payment_data', $paymentFailed->paymentData)
             ->maskSensitiveData();
 
         Log::channel('payment')->error(
             'Payment processing failed via event',
-            $context->toArray()
+            $logContext->toArray()
         );
     }
 }

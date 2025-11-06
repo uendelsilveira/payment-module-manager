@@ -34,7 +34,7 @@ class PaymentEventsTest extends TestCase
     {
         Event::fake();
 
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')->andReturn((object) [
                 'id' => 'mp_event_test_success',
                 'status' => 'approved',
@@ -54,21 +54,19 @@ class PaymentEventsTest extends TestCase
             'payment_method_id' => 'pix',
         ];
 
-        $response = $this->postJson(route('payment.process'), $payload);
+        $testResponse = $this->postJson(route('payment.process'), $payload);
 
-        $response->assertStatus(201);
+        $testResponse->assertStatus(201);
 
-        Event::assertDispatched(PaymentProcessed::class, function ($event) {
-            return $event->transaction->status === 'approved'
-                && $event->gatewayResponse['id'] === 'mp_event_test_success';
-        });
+        Event::assertDispatched(PaymentProcessed::class, fn($event): bool => $event->transaction->status === 'approved'
+            && $event->gatewayResponse['id'] === 'mp_event_test_success');
     }
 
     public function test_payment_failed_event_is_dispatched_on_failure(): void
     {
         Event::fake();
 
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')
                 ->andThrow(new \Exception('Payment gateway error'));
         }));
@@ -83,14 +81,12 @@ class PaymentEventsTest extends TestCase
 
         try {
             $this->postJson(route('payment.process'), $payload);
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             // Expected to fail
         }
 
-        Event::assertDispatched(PaymentFailed::class, function ($event) {
-            return $event->transaction->status === 'failed'
-                && $event->exception instanceof \Exception;
-        });
+        Event::assertDispatched(PaymentFailed::class, fn($event): bool => $event->transaction->status === 'failed'
+            && $event->exception instanceof \Exception);
     }
 
     public function test_payment_status_changed_event_is_dispatched_on_status_change(): void
@@ -106,7 +102,7 @@ class PaymentEventsTest extends TestCase
             'metadata' => ['payment_method_id' => 'pix'],
         ]);
 
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('getPayment')
                 ->with('mp_status_change_test')
                 ->andReturn((object) [
@@ -120,13 +116,11 @@ class PaymentEventsTest extends TestCase
                 ]);
         }));
 
-        $response = $this->getJson(route('payment.show', ['transaction' => $transaction->id]));
+        $testResponse = $this->getJson(route('payment.show', ['transaction' => $transaction->id]));
 
-        $response->assertStatus(200);
+        $testResponse->assertStatus(200);
 
-        Event::assertDispatched(PaymentStatusChanged::class, function ($event) {
-            return $event->oldStatus === 'pending'
-                && $event->newStatus === 'approved';
-        });
+        Event::assertDispatched(PaymentStatusChanged::class, fn($event): bool => $event->oldStatus === 'pending'
+            && $event->newStatus === 'approved');
     }
 }

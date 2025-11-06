@@ -48,12 +48,12 @@ class TransactionsByMethodReportTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_can_get_transactions_grouped_by_method(): void
     {
-        $response = $this->getJson(route('reports.transactions.methods'));
+        $testResponse = $this->getJson(route('reports.transactions.methods'));
 
-        $response->assertOk()
+        $testResponse->assertOk()
             ->assertJsonStructure([
                 'success',
                 'message',
@@ -84,15 +84,15 @@ class TransactionsByMethodReportTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_can_get_transactions_grouped_by_method_with_date_filters(): void
     {
-        $response = $this->getJson(route('reports.transactions.methods', [
+        $testResponse = $this->getJson(route('reports.transactions.methods', [
             'start_date' => '2025-01-01',
             'end_date' => '2025-01-31',
         ]));
 
-        $response->assertOk()
+        $testResponse->assertOk()
             ->assertJsonCount(3, 'data')
             ->assertJsonFragment([
                 'payment_method_id' => 'credit_card',
@@ -111,15 +111,15 @@ class TransactionsByMethodReportTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_returns_validation_error_for_invalid_dates_in_methods_report(): void
     {
-        $response = $this->getJson(route('reports.transactions.methods', [
+        $testResponse = $this->getJson(route('reports.transactions.methods', [
             'start_date' => '2025-01-31',
             'end_date' => '2025-01-01',
         ]));
 
-        $response->assertStatus(422)
+        $testResponse->assertStatus(422)
             ->assertJsonValidationErrors(['end_date']);
     }
 }

@@ -17,47 +17,47 @@ class LogContextTest extends TestCase
 {
     public function test_can_create_log_context(): void
     {
-        $context = LogContext::create();
+        $logContext = LogContext::create();
 
-        $this->assertInstanceOf(LogContext::class, $context);
-        $this->assertIsArray($context->toArray());
+        $this->assertInstanceOf(LogContext::class, $logContext);
+        $this->assertIsArray($logContext->toArray());
     }
 
     public function test_can_add_correlation_id(): void
     {
-        $context = LogContext::create()->withCorrelationId();
+        $logContext = LogContext::create()->withCorrelationId();
 
-        $this->assertArrayHasKey('correlation_id', $context->toArray());
-        $this->assertNotEmpty($context->toArray()['correlation_id']);
+        $this->assertArrayHasKey('correlation_id', $logContext->toArray());
+        $this->assertNotEmpty($logContext->toArray()['correlation_id']);
     }
 
     public function test_can_add_custom_correlation_id(): void
     {
         $customId = 'custom-correlation-id';
-        $context = LogContext::create()->withCorrelationId($customId);
+        $logContext = LogContext::create()->withCorrelationId($customId);
 
-        $this->assertEquals($customId, $context->toArray()['correlation_id']);
+        $this->assertEquals($customId, $logContext->toArray()['correlation_id']);
     }
 
     public function test_can_add_gateway(): void
     {
-        $context = LogContext::create()->withGateway('mercadopago');
+        $logContext = LogContext::create()->withGateway('mercadopago');
 
-        $this->assertEquals('mercadopago', $context->toArray()['gateway']);
+        $this->assertEquals('mercadopago', $logContext->toArray()['gateway']);
     }
 
     public function test_can_add_amount(): void
     {
-        $context = LogContext::create()->withAmount(100.50);
+        $logContext = LogContext::create()->withAmount(100.50);
 
-        $this->assertEquals(100.50, $context->toArray()['amount']);
+        $this->assertEquals(100.50, $logContext->toArray()['amount']);
     }
 
     public function test_can_add_payment_method(): void
     {
-        $context = LogContext::create()->withPaymentMethod('pix');
+        $logContext = LogContext::create()->withPaymentMethod('pix');
 
-        $this->assertEquals('pix', $context->toArray()['payment_method']);
+        $this->assertEquals('pix', $logContext->toArray()['payment_method']);
     }
 
     public function test_can_add_transaction(): void
@@ -69,8 +69,8 @@ class LogContextTest extends TestCase
             'amount' => 100.00,
         ]);
 
-        $context = LogContext::create()->withTransaction($transaction);
-        $data = $context->toArray();
+        $logContext = LogContext::create()->withTransaction($transaction);
+        $data = $logContext->toArray();
 
         $this->assertArrayHasKey('transaction', $data);
         $this->assertNotNull($data['transaction']['id']);
@@ -82,16 +82,16 @@ class LogContextTest extends TestCase
 
     public function test_can_add_transaction_id(): void
     {
-        $context = LogContext::create()->withTransactionId(123);
+        $logContext = LogContext::create()->withTransactionId(123);
 
-        $this->assertEquals(123, $context->toArray()['transaction_id']);
+        $this->assertEquals(123, $logContext->toArray()['transaction_id']);
     }
 
     public function test_can_add_external_id(): void
     {
-        $context = LogContext::create()->withExternalId('ext-456');
+        $logContext = LogContext::create()->withExternalId('ext-456');
 
-        $this->assertEquals('ext-456', $context->toArray()['external_id']);
+        $this->assertEquals('ext-456', $logContext->toArray()['external_id']);
     }
 
     public function test_can_add_webhook(): void
@@ -102,8 +102,8 @@ class LogContextTest extends TestCase
             'data' => ['id' => '123'],
         ];
 
-        $context = LogContext::create()->withWebhook($webhookData);
-        $data = $context->toArray();
+        $logContext = LogContext::create()->withWebhook($webhookData);
+        $data = $logContext->toArray();
 
         $this->assertArrayHasKey('webhook', $data);
         $this->assertEquals('payment', $data['webhook']['type']);
@@ -113,35 +113,35 @@ class LogContextTest extends TestCase
 
     public function test_can_add_request_id(): void
     {
-        $context = LogContext::create()->withRequestId();
+        $logContext = LogContext::create()->withRequestId();
 
-        $this->assertArrayHasKey('request_id', $context->toArray());
-        $this->assertNotEmpty($context->toArray()['request_id']);
+        $this->assertArrayHasKey('request_id', $logContext->toArray());
+        $this->assertNotEmpty($logContext->toArray()['request_id']);
     }
 
     public function test_can_add_custom_request_id(): void
     {
         $customRequestId = 'custom-request-id';
-        $context = LogContext::create()->withRequestId($customRequestId);
+        $logContext = LogContext::create()->withRequestId($customRequestId);
 
-        $this->assertEquals($customRequestId, $context->toArray()['request_id']);
+        $this->assertEquals($customRequestId, $logContext->toArray()['request_id']);
     }
 
     public function test_can_add_duration(): void
     {
         $startTime = microtime(true);
         usleep(10000); // Sleep 10ms
-        $context = LogContext::create()->withDuration($startTime);
+        $logContext = LogContext::create()->withDuration($startTime);
 
-        $this->assertArrayHasKey('duration_ms', $context->toArray());
-        $this->assertGreaterThan(0, $context->toArray()['duration_ms']);
+        $this->assertArrayHasKey('duration_ms', $logContext->toArray());
+        $this->assertGreaterThan(0, $logContext->toArray()['duration_ms']);
     }
 
     public function test_can_add_error(): void
     {
         $exception = new \Exception('Test error', 500);
-        $context = LogContext::create()->withError($exception);
-        $data = $context->toArray();
+        $logContext = LogContext::create()->withError($exception);
+        $data = $logContext->toArray();
 
         $this->assertArrayHasKey('error', $data);
         $this->assertEquals(\Exception::class, $data['error']['class']);
@@ -153,8 +153,8 @@ class LogContextTest extends TestCase
 
     public function test_can_add_retry(): void
     {
-        $context = LogContext::create()->withRetry(2, 3);
-        $data = $context->toArray();
+        $logContext = LogContext::create()->withRetry(2, 3);
+        $data = $logContext->toArray();
 
         $this->assertArrayHasKey('retry', $data);
         $this->assertEquals(2, $data['retry']['attempt']);
@@ -163,20 +163,20 @@ class LogContextTest extends TestCase
 
     public function test_can_add_custom_field(): void
     {
-        $context = LogContext::create()->with('custom_field', 'custom_value');
+        $logContext = LogContext::create()->with('custom_field', 'custom_value');
 
-        $this->assertEquals('custom_value', $context->toArray()['custom_field']);
+        $this->assertEquals('custom_value', $logContext->toArray()['custom_field']);
     }
 
     public function test_can_add_many_custom_fields(): void
     {
-        $context = LogContext::create()->withMany([
+        $logContext = LogContext::create()->withMany([
             'field1' => 'value1',
             'field2' => 'value2',
             'field3' => 'value3',
         ]);
 
-        $data = $context->toArray();
+        $data = $logContext->toArray();
         $this->assertEquals('value1', $data['field1']);
         $this->assertEquals('value2', $data['field2']);
         $this->assertEquals('value3', $data['field3']);
@@ -184,14 +184,14 @@ class LogContextTest extends TestCase
 
     public function test_can_mask_sensitive_data(): void
     {
-        $context = LogContext::create()->withMany([
+        $logContext = LogContext::create()->withMany([
             'token' => 'secret-token',
             'access_token' => 'secret-access',
             'password' => 'secret-password',
             'public_field' => 'visible',
         ])->maskSensitiveData();
 
-        $data = $context->toArray();
+        $data = $logContext->toArray();
         $this->assertEquals('***MASKED***', $data['token']);
         $this->assertEquals('***MASKED***', $data['access_token']);
         $this->assertEquals('***MASKED***', $data['password']);
@@ -200,7 +200,7 @@ class LogContextTest extends TestCase
 
     public function test_can_mask_nested_sensitive_data(): void
     {
-        $context = LogContext::create()->withMany([
+        $logContext = LogContext::create()->withMany([
             'user' => [
                 'name' => 'John Doe',
                 'password' => 'secret',
@@ -212,7 +212,7 @@ class LogContextTest extends TestCase
             ],
         ])->maskSensitiveData();
 
-        $data = $context->toArray();
+        $data = $logContext->toArray();
         $this->assertEquals('John Doe', $data['user']['name']);
         $this->assertEquals('***MASKED***', $data['user']['password']);
         $this->assertEquals('***MASKED***', $data['user']['token']);
@@ -222,14 +222,14 @@ class LogContextTest extends TestCase
 
     public function test_context_is_chainable(): void
     {
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
             ->withGateway('mercadopago')
             ->withAmount(100.00)
             ->withPaymentMethod('pix')
             ->withRequestId();
 
-        $data = $context->toArray();
+        $data = $logContext->toArray();
         $this->assertArrayHasKey('correlation_id', $data);
         $this->assertArrayHasKey('gateway', $data);
         $this->assertArrayHasKey('amount', $data);

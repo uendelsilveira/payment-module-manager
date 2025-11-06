@@ -59,7 +59,7 @@ class EnsureIdempotency
         }
 
         // Check cache first (faster than DB)
-        $cacheKey = "idempotency:{$idempotencyKey}";
+        $cacheKey = 'idempotency:' . $idempotencyKey;
         $cachedResult = Cache::get($cacheKey);
 
         if ($cachedResult) {
@@ -112,7 +112,7 @@ class EnsureIdempotency
 
         // Cache successful responses
         if ($response->isSuccessful() && $response->getStatusCode() === 201) {
-            $responseData = json_decode($response->getContent(), true);
+            $responseData = json_decode((string) $response->getContent(), true);
 
             if (isset($responseData['data']['id'])) {
                 Cache::put($cacheKey, [

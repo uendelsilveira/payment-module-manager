@@ -24,28 +24,28 @@ class VerifyMercadoPagoSignatureTest extends TestCase
         Config::set('payment.gateways.mercadopago.webhook_secret', 'test_webhook_secret');
     }
 
-    public function test_it_aborts_if_signature_header_is_missing()
+    public function test_it_aborts_if_signature_header_is_missing(): void
     {
-        $response = $this->postJson(route('mercadopago.webhook'), []);
+        $testResponse = $this->postJson(route('mercadopago.webhook'), []);
 
-        $response->assertStatus(403);
+        $testResponse->assertStatus(403);
     }
 
-    public function test_it_aborts_if_signature_is_invalid()
+    public function test_it_aborts_if_signature_is_invalid(): void
     {
         $payload = ['data' => ['id' => '12345']];
 
-        $response = $this->withHeaders([
+        $testResponse = $this->withHeaders([
             'x-signature' => 'ts=12345,v1=invalid_signature',
         ])->postJson(route('mercadopago.webhook'), $payload);
 
-        $response->assertStatus(403);
+        $testResponse->assertStatus(403);
     }
 
-    public function test_it_allows_request_with_valid_signature()
+    public function test_it_allows_request_with_valid_signature(): void
     {
         // Mock da dependência do controller para evitar chamadas reais à API
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             // O método getPayment não será chamado neste teste, mas é bom ter um mock para ele
             $mock->shouldReceive('getPayment')->andReturn((object) []);
         }));
@@ -54,16 +54,16 @@ class VerifyMercadoPagoSignatureTest extends TestCase
         $ts = time();
         $secret = Config::get('payment.gateways.mercadopago.webhook_secret');
 
-        $manifest = "id:{$payload['data']['id']};request-id:{$ts};ts:{$ts};".json_encode($payload);
-        $signature = hash_hmac('sha256', $manifest, $secret);
+        $manifest = sprintf('id:%s;request-id:%d;ts:%d;', $payload['data']['id'], $ts, $ts).json_encode($payload);
+        $signature = hash_hmac('sha256', $manifest, (string) $secret);
 
-        $response = $this->withHeaders([
-            'x-signature' => "ts={$ts},v1={$signature}",
+        $testResponse = $this->withHeaders([
+            'x-signature' => sprintf('ts=%d,v1=%s', $ts, $signature),
         ])->postJson(route('mercadopago.webhook'), $payload);
 
         // Esperamos um erro 400 porque o payload do webhook não é completo,
         // mas um 200 ou 4xx significa que o middleware de assinatura passou.
         // Um 403 significaria que o middleware falhou.
-        $this->assertNotEquals(403, $response->getStatusCode());
+        $this->assertNotEquals(403, $testResponse->getStatusCode());
     }
 }

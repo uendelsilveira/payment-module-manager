@@ -21,36 +21,31 @@ class PaymentController extends Controller
 {
     use ApiResponseTrait;
 
-    protected PaymentService $paymentService;
-
-    public function __construct(PaymentService $paymentService)
+    public function __construct(protected PaymentService $paymentService)
     {
-        $this->paymentService = $paymentService;
     }
 
     /**
      * Processa um novo pagamento.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function process(CreatePaymentRequest $request)
+    public function process(CreatePaymentRequest $createPaymentRequest): \Illuminate\Http\JsonResponse
     {
-        Log::info('[PaymentController] Requisição para processar pagamento recebida.', ['payload' => $request->validated()]);
+        Log::info('[PaymentController] Requisição para processar pagamento recebida.', ['payload' => $createPaymentRequest->validated()]);
 
         try {
-            $transaction = $this->paymentService->processPayment($request->validated());
+            $transaction = $this->paymentService->processPayment($createPaymentRequest->validated());
 
             return $this->successResponse(
                 $transaction->toArray(),
                 'Pagamento processado com sucesso.',
                 201 // Created
             );
-        } catch (Throwable $e) {
-            Log::error('[PaymentController] Erro ao processar pagamento.', ['exception' => $e->getMessage()]);
+        } catch (Throwable $throwable) {
+            Log::error('[PaymentController] Erro ao processar pagamento.', ['exception' => $throwable->getMessage()]);
 
             // Em produção, retorna uma resposta de erro padronizada.
             return $this->errorResponse(
-                'Falha ao processar pagamento: '.$e->getMessage(),
+                'Falha ao processar pagamento: '.$throwable->getMessage(),
                 500 // Internal Server Error
             );
         }
@@ -58,10 +53,8 @@ class PaymentController extends Controller
 
     /**
      * Exibe os detalhes de uma transação específica.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function show(Transaction $transaction)
+    public function show(Transaction $transaction): \Illuminate\Http\JsonResponse
     {
         Log::info('[PaymentController] Requisição para obter detalhes da transação.', ['transaction_id' => $transaction->id]);
 
@@ -72,11 +65,11 @@ class PaymentController extends Controller
                 $updatedTransaction->toArray(),
                 'Detalhes da transação obtidos com sucesso.'
             );
-        } catch (Throwable $e) {
-            Log::error('[PaymentController] Erro ao obter detalhes da transação.', ['transaction_id' => $transaction->id, 'exception' => $e->getMessage()]);
+        } catch (Throwable $throwable) {
+            Log::error('[PaymentController] Erro ao obter detalhes da transação.', ['transaction_id' => $transaction->id, 'exception' => $throwable->getMessage()]);
 
             return $this->errorResponse(
-                'Falha ao obter detalhes da transação: '.$e->getMessage(),
+                'Falha ao obter detalhes da transação: '.$throwable->getMessage(),
                 500 // Internal Server Error
             );
         }

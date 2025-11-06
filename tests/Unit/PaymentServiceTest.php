@@ -16,8 +16,8 @@ use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class PaymentServiceTest extends TestCase
 {
-    /** @test */
-    public function it_can_be_instantiated_and_has_dependencies()
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_can_be_instantiated_and_has_dependencies(): void
     {
         $gatewayManager = $this->createMock(GatewayManager::class);
         $transactionRepository = $this->createMock(TransactionRepositoryInterface::class);

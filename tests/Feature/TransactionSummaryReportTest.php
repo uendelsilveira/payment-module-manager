@@ -48,12 +48,12 @@ class TransactionSummaryReportTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_can_get_a_summary_of_transactions(): void
     {
-        $response = $this->getJson(route('reports.transactions.summary'));
+        $testResponse = $this->getJson(route('reports.transactions.summary'));
 
-        $response->assertOk()
+        $testResponse->assertOk()
             ->assertJsonStructure([
                 'success',
                 'message',
@@ -68,44 +68,44 @@ class TransactionSummaryReportTest extends TestCase
                 'success' => true,
             ]);
 
-        $responseData = $response->json('data');
+        $responseData = $testResponse->json('data');
 
         $this->assertEquals(4, $responseData['total_transactions']);
-        $this->assertEquals(425.00, $responseData['total_amount'], '', 0.001); // Using delta for float comparison
+        $this->assertEquals(425.00, $responseData['total_amount'], ''); // Using delta for float comparison
         $this->assertEquals(2, $responseData['successful_transactions']);
         $this->assertEquals(1, $responseData['failed_transactions']);
     }
 
-    /** @test */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_can_get_a_summary_of_transactions_with_date_filters(): void
     {
-        $response = $this->getJson(route('reports.transactions.summary', [
+        $testResponse = $this->getJson(route('reports.transactions.summary', [
             'start_date' => '2025-01-01',
             'end_date' => '2025-01-31',
         ]));
 
-        $response->assertOk()
+        $testResponse->assertOk()
             ->assertJson([
                 'success' => true,
             ]);
 
-        $responseData = $response->json('data');
+        $responseData = $testResponse->json('data');
 
         $this->assertEquals(3, $responseData['total_transactions']);
-        $this->assertEquals(350.00, $responseData['total_amount'], '', 0.001); // Using delta for float comparison
+        $this->assertEquals(350.00, $responseData['total_amount'], ''); // Using delta for float comparison
         $this->assertEquals(2, $responseData['successful_transactions']);
         $this->assertEquals(0, $responseData['failed_transactions']);
     }
 
-    /** @test */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_returns_validation_error_for_invalid_dates_in_summary_report(): void
     {
-        $response = $this->getJson(route('reports.transactions.summary', [
+        $testResponse = $this->getJson(route('reports.transactions.summary', [
             'start_date' => '2025-01-31',
             'end_date' => '2025-01-01',
         ]));
 
-        $response->assertStatus(422)
+        $testResponse->assertStatus(422)
             ->assertJsonValidationErrors(['end_date']);
     }
 }

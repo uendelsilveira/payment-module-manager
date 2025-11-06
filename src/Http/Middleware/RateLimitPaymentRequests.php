@@ -22,11 +22,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RateLimitPaymentRequests
 {
-    protected RateLimiter $limiter;
-
-    public function __construct(RateLimiter $limiter)
+    public function __construct(protected RateLimiter $limiter)
     {
-        $this->limiter = $limiter;
     }
 
     /**
@@ -41,14 +38,13 @@ class RateLimitPaymentRequests
         }
 
         $key = $this->resolveRequestSignature($request, $limitType);
-        $maxAttempts = $this->getMaxAttempts($limitType);
-        $decayMinutes = 1; // 1 minuto
+        $maxAttempts = $this->getMaxAttempts($limitType); // 1 minuto
 
         if ($this->limiter->tooManyAttempts($key, $maxAttempts)) {
             return $this->buildRateLimitResponse($key, $maxAttempts);
         }
 
-        $this->limiter->hit($key, $decayMinutes * 60);
+        $this->limiter->hit($key, 60);
 
         $response = $next($request);
 
@@ -70,7 +66,7 @@ class RateLimitPaymentRequests
             return sprintf(
                 'payment_rate_limit:%s:%s:%s',
                 $limitType,
-                sha1(get_class($user)),
+                sha1($user::class),
                 $user->getAuthIdentifier()
             );
         }
@@ -78,7 +74,7 @@ class RateLimitPaymentRequests
         return sprintf(
             'payment_rate_limit:%s:%s',
             $limitType,
-            sha1($request->ip())
+            sha1((string) $request->ip())
         );
     }
 

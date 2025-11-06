@@ -28,7 +28,7 @@ class IdempotencyTest extends TestCase
 
     public function test_payment_with_same_idempotency_key_returns_same_transaction(): void
     {
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')->once()->andReturn((object) [
                 'id' => 'mp_idempotency_test',
                 'status' => 'approved',
@@ -51,11 +51,12 @@ class IdempotencyTest extends TestCase
         ];
 
         // First request
-        $response1 = $this->withHeaders(['Idempotency-Key' => $idempotencyKey])
+        $testResponse = $this->withHeaders(['Idempotency-Key' => $idempotencyKey])
             ->postJson(route('payment.process'), $payload);
 
-        $response1->assertStatus(201);
-        $transactionId1 = $response1->json('data.id');
+        $testResponse->assertStatus(201);
+
+        $transactionId1 = $testResponse->json('data.id');
 
         // Second request with same idempotency key should return same transaction
         $response2 = $this->withHeaders(['Idempotency-Key' => $idempotencyKey])
@@ -71,7 +72,7 @@ class IdempotencyTest extends TestCase
 
     public function test_payment_without_idempotency_key_creates_new_transaction(): void
     {
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')->twice()->andReturn((object) [
                 'id' => 'mp_test_'.uniqid(),
                 'status' => 'approved',
@@ -92,8 +93,8 @@ class IdempotencyTest extends TestCase
         ];
 
         // First request without idempotency key
-        $response1 = $this->postJson(route('payment.process'), $payload);
-        $response1->assertStatus(201);
+        $testResponse = $this->postJson(route('payment.process'), $payload);
+        $testResponse->assertStatus(201);
 
         // Second request without idempotency key should create new transaction
         $response2 = $this->postJson(route('payment.process'), $payload);
@@ -114,10 +115,10 @@ class IdempotencyTest extends TestCase
         ];
 
         // Too short (less than 16 characters)
-        $response = $this->withHeaders(['Idempotency-Key' => 'short'])
+        $testResponse = $this->withHeaders(['Idempotency-Key' => 'short'])
             ->postJson(route('payment.process'), $payload);
 
-        $response->assertStatus(422)
+        $testResponse->assertStatus(422)
             ->assertJson([
                 'success' => false,
                 'message' => 'Invalid idempotency key format. Must be alphanumeric, 16-100 characters.',
@@ -126,7 +127,7 @@ class IdempotencyTest extends TestCase
 
     public function test_idempotency_uses_cache_for_subsequent_requests(): void
     {
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')->once()->andReturn((object) [
                 'id' => 'mp_cache_test',
                 'status' => 'approved',
@@ -149,13 +150,13 @@ class IdempotencyTest extends TestCase
         ];
 
         // First request
-        $response1 = $this->withHeaders(['Idempotency-Key' => $idempotencyKey])
+        $testResponse = $this->withHeaders(['Idempotency-Key' => $idempotencyKey])
             ->postJson(route('payment.process'), $payload);
 
-        $response1->assertStatus(201);
+        $testResponse->assertStatus(201);
 
         // Verify cache was set
-        $cacheKey = "idempotency:{$idempotencyKey}";
+        $cacheKey = 'idempotency:' . $idempotencyKey;
         $this->assertTrue(Cache::has($cacheKey));
 
         // Second request should use cache (mock expects only 1 call to createPayment)
@@ -167,7 +168,7 @@ class IdempotencyTest extends TestCase
 
     public function test_different_idempotency_keys_create_different_transactions(): void
     {
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')->twice()->andReturn((object) [
                 'id' => 'mp_diff_test_'.uniqid(),
                 'status' => 'approved',
@@ -188,17 +189,19 @@ class IdempotencyTest extends TestCase
         ];
 
         // First request with key 1
-        $response1 = $this->withHeaders(['Idempotency-Key' => 'test-key-one-'.uniqid()])
+        $testResponse = $this->withHeaders(['Idempotency-Key' => 'test-key-one-'.uniqid()])
             ->postJson(route('payment.process'), $payload);
 
-        $response1->assertStatus(201);
-        $transactionId1 = $response1->json('data.id');
+        $testResponse->assertStatus(201);
+
+        $transactionId1 = $testResponse->json('data.id');
 
         // Second request with different key
         $response2 = $this->withHeaders(['Idempotency-Key' => 'test-key-two-'.uniqid()])
             ->postJson(route('payment.process'), $payload);
 
         $response2->assertStatus(201);
+
         $transactionId2 = $response2->json('data.id');
 
         // Verify different transactions were created

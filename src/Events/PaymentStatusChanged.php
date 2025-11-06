@@ -18,8 +18,8 @@ use UendelSilveira\PaymentModuleManager\Models\Transaction;
  */
 class PaymentStatusChanged
 {
-    use Dispatchable, SerializesModels;
-
+    use Dispatchable;
+    use SerializesModels;
     public function __construct(
         public readonly Transaction $transaction,
         public readonly string $oldStatus,

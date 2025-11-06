@@ -18,17 +18,17 @@ use UendelSilveira\PaymentModuleManager\Support\LogContext;
  */
 class LogPaymentStatusChanged
 {
-    public function handle(PaymentStatusChanged $event): void
+    public function handle(PaymentStatusChanged $paymentStatusChanged): void
     {
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
-            ->withTransaction($event->transaction)
-            ->with('old_status', $event->oldStatus)
-            ->with('new_status', $event->newStatus);
+            ->withTransaction($paymentStatusChanged->transaction)
+            ->with('old_status', $paymentStatusChanged->oldStatus)
+            ->with('new_status', $paymentStatusChanged->newStatus);
 
         Log::channel('transaction')->info(
             'Payment status changed via event',
-            $context->toArray()
+            $logContext->toArray()
         );
     }
 }

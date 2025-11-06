@@ -17,8 +17,8 @@ use UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory;
 
 class Transaction extends Model
 {
-    use HasFactory, SoftDeletes;
-
+    use HasFactory;
+    use SoftDeletes;
     protected $fillable = [
         'gateway',
         'amount',

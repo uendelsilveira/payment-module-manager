@@ -31,12 +31,12 @@ class CreatePaymentRequest extends FormRequest
                 'required',
                 'numeric',
                 'min:0.01',
-                function ($attribute, $value, $fail) {
-                    $validator = app(MonetaryLimitsValidator::class);
+                function ($attribute, float $value, $fail): void {
+                    $monetaryLimitsValidator = app(MonetaryLimitsValidator::class);
                     $gateway = $this->input('method');
                     $paymentMethod = $this->input('payment_method_id');
 
-                    $error = $validator->getValidationError($value, $gateway, $paymentMethod);
+                    $error = $monetaryLimitsValidator->getValidationError($value, $gateway, $paymentMethod);
 
                     if ($error) {
                         $fail($error);
@@ -48,12 +48,12 @@ class CreatePaymentRequest extends FormRequest
                 'sometimes',
                 'string',
                 'size:3',
-                function ($attribute, $value, $fail) {
+                function ($attribute, $value, $fail): void {
                     $currencyService = app(CurrencyService::class);
 
                     if (! $currencyService->isSupported($value)) {
                         $supported = implode(', ', array_keys($currencyService->getSupportedCurrencies()));
-                        $fail("Currency {$value} is not supported. Supported: {$supported}");
+                        $fail(sprintf('Currency %s is not supported. Supported: %s', $value, $supported));
                     }
                 },
             ],
@@ -73,8 +73,6 @@ class CreatePaymentRequest extends FormRequest
             'payer' => ['sometimes', 'array'],
             'payer.first_name' => ['required_if:payment_method_id,credit_card', 'string'],
             'payer.last_name' => ['required_if:payment_method_id,credit_card', 'string'],
-            'payer.identification.type' => ['required_if:payment_method_id,credit_card', 'string'],
-            'payer.identification.number' => ['required_if:payment_method_id,credit_card', 'string'],
 
             // Campos específicos para Boleto (ex: dados de identificação do pagador)
             'payer.identification.type' => ['required_if:payment_method_id,boleto', 'string'],

@@ -27,12 +27,9 @@ class ReprocessFailedPayments extends Command
 
     protected $description = 'Reprocess failed payment transactions with advanced filtering and dry-run support';
 
-    protected PaymentService $paymentService;
-
-    public function __construct(PaymentService $paymentService)
+    public function __construct(protected PaymentService $paymentService)
     {
         parent::__construct();
-        $this->paymentService = $paymentService;
     }
 
     public function handle(): int
@@ -40,12 +37,12 @@ class ReprocessFailedPayments extends Command
         $startTime = microtime(true);
         $dryRun = $this->option('dry-run');
 
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
             ->with('dry_run', $dryRun);
 
         $message = $dryRun ? 'Starting failed payments reprocessing command (DRY RUN)' : 'Starting failed payments reprocessing command';
-        Log::channel('payment')->info($message, $context->toArray());
+        Log::channel('payment')->info($message, $logContext->toArray());
 
         if ($dryRun) {
             $this->warn('🔍 DRY RUN MODE - No transactions will be actually reprocessed');
@@ -55,14 +52,14 @@ class ReprocessFailedPayments extends Command
 
         if ($transactions->isEmpty()) {
             $this->info('✅ No failed transactions found matching the criteria');
-            Log::channel('payment')->info('No failed transactions found for reprocessing', $context->toArray());
+            Log::channel('payment')->info('No failed transactions found for reprocessing', $logContext->toArray());
 
             return Command::SUCCESS;
         }
 
-        $context->with('total_transactions', $transactions->count());
+        $logContext->with('total_transactions', $transactions->count());
         $this->line('');
-        $this->info("📋 Found {$transactions->count()} transaction(s) to reprocess:");
+        $this->info(sprintf('📋 Found %s transaction(s) to reprocess:', $transactions->count()));
 
         // Display transaction summary
         $this->displayTransactionSummary($transactions);
@@ -88,34 +85,34 @@ class ReprocessFailedPayments extends Command
         $failureCount = 0;
 
         foreach ($transactions as $index => $transaction) {
-            $txContext = clone $context;
+            $txContext = clone $logContext;
             $txContext->withTransaction($transaction);
 
-            $this->line("\n[".($index + 1)."/{$transactions->count()}] Processing transaction #{$transaction->id}...");
+            $this->line("\n[".($index + 1).sprintf('/%s] Processing transaction #%s...', $transactions->count(), $transaction->id));
 
             try {
                 $result = $this->paymentService->reprocess($transaction);
                 $successCount++;
 
                 $statusIcon = $result->status === 'approved' ? '✅' : '⏳';
-                $this->info("{$statusIcon} Transaction #{$transaction->id} reprocessed - Status: {$result->status}");
+                $this->info(sprintf('%s Transaction #%s reprocessed - Status: %s', $statusIcon, $transaction->id, $result->status));
             } catch (\Throwable $e) {
                 $hasFailures = true;
                 $failureCount++;
                 $txContext->withError($e);
                 Log::channel('payment')->error('Command reprocessing failed', $txContext->toArray());
-                $this->error("❌ Failed to reprocess transaction #{$transaction->id}: {$e->getMessage()}");
+                $this->error(sprintf('❌ Failed to reprocess transaction #%s: %s', $transaction->id, $e->getMessage()));
             }
         }
 
-        $context->withDuration($startTime)
+        $logContext->withDuration($startTime)
             ->with('success_count', $successCount)
             ->with('failure_count', $failureCount);
 
         $this->line('');
         $this->displaySummary($successCount, $failureCount, $startTime);
 
-        Log::channel('payment')->info('Failed payments reprocessing command completed', $context->toArray());
+        Log::channel('payment')->info('Failed payments reprocessing command completed', $logContext->toArray());
 
         return $hasFailures ? Command::FAILURE : Command::SUCCESS;
     }
@@ -130,7 +127,7 @@ class ReprocessFailedPayments extends Command
         // Filter by gateway
         if ($gateway = $this->option('gateway')) {
             $query->where('gateway', $gateway);
-            $this->line("🔍 Filtering by gateway: {$gateway}");
+            $this->line('🔍 Filtering by gateway: ' . $gateway);
         }
 
         // Filter by max retries
@@ -138,21 +135,21 @@ class ReprocessFailedPayments extends Command
 
         if (! $this->option('force')) {
             $query->where('retries_count', '<', $maxRetries);
-            $this->line("🔍 Filtering by retries < {$maxRetries}");
+            $this->line('🔍 Filtering by retries < ' . $maxRetries);
         }
 
         // Filter by age (last attempt)
         $ageMinutes = (int) ($this->option('age') ?? 5);
-        $query->where(function ($q) use ($ageMinutes) {
+        $query->where(function ($q) use ($ageMinutes): void {
             $q->whereNull('last_attempt_at')
                 ->orWhere('last_attempt_at', '<', now()->subMinutes($ageMinutes));
         });
-        $this->line("🔍 Filtering transactions older than {$ageMinutes} minutes");
+        $this->line(sprintf('🔍 Filtering transactions older than %d minutes', $ageMinutes));
 
         // Apply limit
         if ($limit = $this->option('limit')) {
             $query->limit((int) $limit);
-            $this->line("🔍 Limiting to {$limit} transaction(s)");
+            $this->line(sprintf('🔍 Limiting to %s transaction(s)', $limit));
         }
 
         return $query->orderBy('created_at', 'asc')->get();
@@ -191,14 +188,14 @@ class ReprocessFailedPayments extends Command
         $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->info('  📊 REPROCESSING SUMMARY');
         $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        $this->line("  Total processed:   {$total}");
-        $this->line("  ✅ Successful:      {$successCount}");
+        $this->line('  Total processed:   ' . $total);
+        $this->line('  ✅ Successful:      ' . $successCount);
 
         if ($failureCount > 0) {
-            $this->line("  ❌ Failed:          {$failureCount}");
+            $this->line('  ❌ Failed:          ' . $failureCount);
         }
 
-        $this->line("  ⏱️  Time elapsed:    {$totalTime}s");
+        $this->line(sprintf('  ⏱️  Time elapsed:    %ss', $totalTime));
         $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         if ($failureCount === 0 && $successCount > 0) {

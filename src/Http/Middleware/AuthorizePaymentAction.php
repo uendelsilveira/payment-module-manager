@@ -31,18 +31,12 @@ class AuthorizePaymentAction
     {
         $authorizationStrategy = Config::get('payment.authorization.strategy', 'none');
 
-        switch ($authorizationStrategy) {
-            case 'callback':
-                return $this->authorizeViaCallback($request, $next, $permission);
-
-            case 'laravel_gate':
-                return $this->authorizeViaGate($request, $next, $permission);
-
-            case 'none':
-            default:
-                // Sem autorização - útil para desenvolvimento
-                return $next($request);
-        }
+        return match ($authorizationStrategy) {
+            'callback' => $this->authorizeViaCallback($request, $next, $permission),
+            'laravel_gate' => $this->authorizeViaGate($request, $next, $permission),
+            // Sem autorização - útil para desenvolvimento
+            default => $next($request),
+        };
     }
 
     /**

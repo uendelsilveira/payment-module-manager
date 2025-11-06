@@ -16,21 +16,21 @@ class ReportService
 {
     public function getTransactionSummary(?string $startDate, ?string $endDate): array
     {
-        $baseQuery = Transaction::query();
+        $builder = Transaction::query();
 
         if ($startDate) {
-            $baseQuery->whereDate('created_at', '>=', $startDate);
+            $builder->whereDate('created_at', '>=', $startDate);
         }
 
         if ($endDate) {
-            $baseQuery->whereDate('created_at', '<=', $endDate);
+            $builder->whereDate('created_at', '<=', $endDate);
         }
 
-        $totalTransactions = $baseQuery->count();
-        $totalAmount = (float) $baseQuery->sum('amount');
+        $totalTransactions = $builder->count();
+        $totalAmount = (float) $builder->sum('amount');
 
-        $successfulTransactions = (clone $baseQuery)->where('status', 'approved')->count();
-        $failedTransactions = (clone $baseQuery)->where('status', 'failed')->count();
+        $successfulTransactions = (clone $builder)->where('status', 'approved')->count();
+        $failedTransactions = (clone $builder)->where('status', 'failed')->count();
 
         return [
             'total_transactions' => $totalTransactions,

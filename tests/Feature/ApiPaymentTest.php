@@ -26,7 +26,7 @@ class ApiPaymentTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_it_can_show_a_payment_and_update_status()
+    public function test_it_can_show_a_payment_and_update_status(): void
     {
         // 1. Criar uma transação local com status pendente
         $transaction = Transaction::create([
@@ -39,7 +39,7 @@ class ApiPaymentTest extends TestCase
         ]);
 
         // 2. Mock do cliente do Mercado Pago para retornar um status diferente
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('getPayment')
                 ->with('mp_payment_to_show')
                 ->andReturn((object) [
@@ -54,10 +54,10 @@ class ApiPaymentTest extends TestCase
         }));
 
         // 3. Chamar o endpoint de consulta
-        $response = $this->getJson(route('payment.show', ['transaction' => $transaction->id]));
+        $testResponse = $this->getJson(route('payment.show', ['transaction' => $transaction->id]));
 
         // 4. Verificar a resposta da API
-        $response->assertStatus(200)
+        $testResponse->assertStatus(200)
             ->assertJson([
                 'success' => true,
                 'data' => [
@@ -73,10 +73,10 @@ class ApiPaymentTest extends TestCase
         ]);
     }
 
-    public function test_it_can_process_a_pix_payment_successfully()
+    public function test_it_can_process_a_pix_payment_successfully(): void
     {
         // Mock da MercadoPagoClientInterface para PIX
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')->andReturn((object) [
                 'id' => 'mp_payment_id_pix',
                 'status' => 'pending', // PIX começa como pendente
@@ -101,9 +101,9 @@ class ApiPaymentTest extends TestCase
             'payment_method_id' => 'pix',
         ];
 
-        $response = $this->postJson(route('payment.process'), $payload);
+        $testResponse = $this->postJson(route('payment.process'), $payload);
 
-        $response->assertStatus(201)
+        $testResponse->assertStatus(201)
             ->assertJson([
                 'success' => true,
                 'message' => 'Pagamento processado com sucesso.',
@@ -121,10 +121,10 @@ class ApiPaymentTest extends TestCase
         ]);
     }
 
-    public function test_it_can_process_a_credit_card_payment_successfully()
+    public function test_it_can_process_a_credit_card_payment_successfully(): void
     {
         // Mock da MercadoPagoClientInterface para Cartão de Crédito
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')->andReturn((object) [
                 'id' => 'mp_payment_id_cc',
                 'status' => 'approved', // Cartão geralmente aprova na hora
@@ -155,9 +155,9 @@ class ApiPaymentTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson(route('payment.process'), $payload);
+        $testResponse = $this->postJson(route('payment.process'), $payload);
 
-        $response->assertStatus(201)
+        $testResponse->assertStatus(201)
             ->assertJson([
                 'success' => true,
                 'message' => 'Pagamento processado com sucesso.',
@@ -175,10 +175,10 @@ class ApiPaymentTest extends TestCase
         ]);
     }
 
-    public function test_it_can_process_a_credit_card_payment_with_installments_successfully()
+    public function test_it_can_process_a_credit_card_payment_with_installments_successfully(): void
     {
         // Mock da MercadoPagoClientInterface para Cartão de Crédito com parcelamento
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')->andReturn((object) [
                 'id' => 'mp_payment_id_cc_installments',
                 'status' => 'approved',
@@ -210,9 +210,9 @@ class ApiPaymentTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson(route('payment.process'), $payload);
+        $testResponse = $this->postJson(route('payment.process'), $payload);
 
-        $response->assertStatus(201)
+        $testResponse->assertStatus(201)
             ->assertJson([
                 'success' => true,
                 'message' => 'Pagamento processado com sucesso.',
@@ -230,10 +230,10 @@ class ApiPaymentTest extends TestCase
         ]);
     }
 
-    public function test_it_can_process_a_boleto_payment_successfully()
+    public function test_it_can_process_a_boleto_payment_successfully(): void
     {
         // Mock da MercadoPagoClientInterface para Boleto
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')->andReturn((object) [
                 'id' => 'mp_payment_id_boleto',
                 'status' => 'pending', // Boleto começa como pendente
@@ -274,9 +274,9 @@ class ApiPaymentTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson(route('payment.process'), $payload);
+        $testResponse = $this->postJson(route('payment.process'), $payload);
 
-        $response->assertStatus(201)
+        $testResponse->assertStatus(201)
             ->assertJson([
                 'success' => true,
                 'message' => 'Pagamento processado com sucesso.',
@@ -294,7 +294,7 @@ class ApiPaymentTest extends TestCase
         ]);
     }
 
-    public function test_it_returns_error_for_unsupported_payment_method()
+    public function test_it_returns_error_for_unsupported_payment_method(): void
     {
         $payload = [
             'amount' => 100,
@@ -303,8 +303,8 @@ class ApiPaymentTest extends TestCase
             'payer_email' => 'test@example.com',
         ];
 
-        $response = $this->postJson(route('payment.process'), $payload);
+        $testResponse = $this->postJson(route('payment.process'), $payload);
 
-        $response->assertStatus(422);
+        $testResponse->assertStatus(422);
     }
 }

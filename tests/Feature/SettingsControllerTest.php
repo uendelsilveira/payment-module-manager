@@ -19,7 +19,7 @@ class SettingsControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_can_save_and_get_mercado_pago_settings()
+    public function test_it_can_save_and_get_mercado_pago_settings(): void
     {
         // 1. Salvar as configurações
         $settingsPayload = [
@@ -28,9 +28,9 @@ class SettingsControllerTest extends TestCase
             'webhook_secret' => 'test_webhook_secret',
         ];
 
-        $saveResponse = $this->postJson(route('settings.mercadopago.save'), $settingsPayload);
+        $testResponse = $this->postJson(route('settings.mercadopago.save'), $settingsPayload);
 
-        $saveResponse->assertStatus(200)
+        $testResponse->assertStatus(200)
             ->assertJson([
                 'success' => true,
                 'message' => 'Configurações salvas com sucesso.',
@@ -56,7 +56,7 @@ class SettingsControllerTest extends TestCase
             ]);
     }
 
-    public function test_it_can_update_existing_settings()
+    public function test_it_can_update_existing_settings(): void
     {
         // Salva uma configuração inicial
         PaymentSetting::create([
@@ -83,18 +83,18 @@ class SettingsControllerTest extends TestCase
         ]);
     }
 
-    public function test_it_redirects_to_mercadopago_connect_url()
+    public function test_it_redirects_to_mercadopago_connect_url(): void
     {
         Config::set('payment.gateways.mercadopago.client_id', 'TEST_CLIENT_ID');
 
-        $response = $this->get(route('connect.mercadopago.redirect'));
+        $testResponse = $this->get(route('connect.mercadopago.redirect'));
 
-        $response->assertStatus(302); // Verifica se é um redirecionamento
-        $this->assertStringContainsString('https://auth.mercadopago.com.br/authorization', $response->headers->get('location'));
-        $this->assertStringContainsString('client_id=TEST_CLIENT_ID', $response->headers->get('location'));
+        $testResponse->assertStatus(302); // Verifica se é um redirecionamento
+        $this->assertStringContainsString('https://auth.mercadopago.com.br/authorization', $testResponse->headers->get('location'));
+        $this->assertStringContainsString('client_id=TEST_CLIENT_ID', $testResponse->headers->get('location'));
     }
 
-    public function test_it_handles_mercadopago_callback_and_saves_token()
+    public function test_it_handles_mercadopago_callback_and_saves_token(): void
     {
         Config::set('payment.gateways.mercadopago.client_id', 'TEST_CLIENT_ID');
         Config::set('payment.gateways.mercadopago.client_secret', 'TEST_CLIENT_SECRET');
@@ -109,10 +109,10 @@ class SettingsControllerTest extends TestCase
             ], 200),
         ]);
 
-        $response = $this->get(route('connect.mercadopago.callback', ['code' => 'test_auth_code']));
+        $testResponse = $this->get(route('connect.mercadopago.callback', ['code' => 'test_auth_code']));
 
         // Verifica se o redirecionamento de sucesso ocorreu
-        $response->assertRedirect('/');
+        $testResponse->assertRedirect('/');
 
         // Verifica se as novas credenciais foram salvas no banco de dados
         $this->assertDatabaseHas('payment_settings', [

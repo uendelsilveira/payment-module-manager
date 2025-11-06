@@ -52,7 +52,7 @@ class CurrencyService
             $supported = implode(', ', array_keys($this->getSupportedCurrencies()));
 
             throw new InvalidConfigurationException(
-                "Currency {$currency} is not supported. Supported currencies: {$supported}"
+                sprintf('Currency %s is not supported. Supported currencies: %s', $currency, $supported)
             );
         }
     }
@@ -62,7 +62,7 @@ class CurrencyService
      */
     public function getCurrencyDetails(string $currency): ?array
     {
-        return config("payment.currencies.supported.{$currency}");
+        return config('payment.currencies.supported.' . $currency);
     }
 
     /**
@@ -78,7 +78,7 @@ class CurrencyService
 
         $formatted = number_format($amount, $details['decimal_places']);
 
-        return "{$details['symbol']} {$formatted}";
+        return sprintf('%s %s', $details['symbol'], $formatted);
     }
 
     /**
@@ -109,10 +109,10 @@ class CurrencyService
      */
     private function getExchangeRate(string $from, string $to): float
     {
-        $cacheKey = "exchange_rate:{$from}:{$to}";
+        $cacheKey = sprintf('exchange_rate:%s:%s', $from, $to);
         $cacheTTL = config('payment.currencies.conversion.cache_ttl', 60);
 
-        return Cache::remember($cacheKey, $cacheTTL * 60, function () use ($from, $to) {
+        return Cache::remember($cacheKey, $cacheTTL * 60, function () use ($from, $to): float {
             // Simplified static rates for demonstration
             // In production, call external API here
             $rates = [
@@ -126,7 +126,7 @@ class CurrencyService
                 'ARS_BRL' => 0.025,
             ];
 
-            $key = "{$from}_{$to}";
+            $key = sprintf('%s_%s', $from, $to);
 
             return $rates[$key] ?? 1.0;
         });

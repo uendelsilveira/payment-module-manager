@@ -18,17 +18,17 @@ use UendelSilveira\PaymentModuleManager\Support\LogContext;
  */
 class LogPaymentProcessed
 {
-    public function handle(PaymentProcessed $event): void
+    public function handle(PaymentProcessed $paymentProcessed): void
     {
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
-            ->withTransaction($event->transaction)
-            ->with('gateway_response', $event->gatewayResponse)
+            ->withTransaction($paymentProcessed->transaction)
+            ->with('gateway_response', $paymentProcessed->gatewayResponse)
             ->maskSensitiveData();
 
         Log::channel('payment')->info(
             'Payment processed successfully via event',
-            $context->toArray()
+            $logContext->toArray()
         );
     }
 }

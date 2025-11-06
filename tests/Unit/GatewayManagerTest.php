@@ -24,7 +24,7 @@ class GatewayManagerTest extends TestCase
         parent::setUp();
 
         // Mock do MercadoPagoStrategy para evitar chamadas reais
-        $this->mock(MercadoPagoStrategy::class, function ($mock) {
+        $this->mock(MercadoPagoStrategy::class, function ($mock): void {
             $mock->shouldReceive('charge')->andReturn([
                 'id' => 'mocked_id',
                 'status' => 'approved',
@@ -42,13 +42,13 @@ class GatewayManagerTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_it_creates_mercadopago_strategy_correctly()
+    public function test_it_creates_mercadopago_strategy_correctly(): void
     {
-        $strategy = $this->gatewayManager->create(PaymentGateway::MERCADOPAGO);
-        $this->assertInstanceOf(MercadoPagoStrategy::class, $strategy);
+        $paymentGateway = $this->gatewayManager->create(PaymentGateway::MERCADOPAGO);
+        $this->assertInstanceOf(MercadoPagoStrategy::class, $paymentGateway);
     }
 
-    public function test_it_throws_exception_for_invalid_gateway()
+    public function test_it_throws_exception_for_invalid_gateway(): void
     {
         $this->expectException(\UendelSilveira\PaymentModuleManager\Exceptions\InvalidConfigurationException::class);
         $this->gatewayManager->create('invalid-gateway');

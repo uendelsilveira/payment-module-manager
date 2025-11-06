@@ -16,18 +16,15 @@ use UendelSilveira\PaymentModuleManager\Support\LogContext;
 
 class MercadoPagoStrategy implements PaymentGatewayInterface
 {
-    protected MercadoPagoClientInterface $mpClient;
-
-    public function __construct(MercadoPagoClientInterface $mpClient)
+    public function __construct(protected MercadoPagoClientInterface $mpClient)
     {
-        $this->mpClient = $mpClient;
     }
 
     public function charge(float $amount, array $data): array
     {
         $startTime = microtime(true);
 
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
             ->withGateway('mercadopago')
             ->withAmount($amount)
@@ -35,40 +32,33 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
             ->withRequestId()
             ->maskSensitiveData();
 
-        Log::channel('gateway')->info('MercadoPago charge initiated', $context->toArray());
+        Log::channel('gateway')->info('MercadoPago charge initiated', $logContext->toArray());
 
         try {
             $payload = $this->buildBasePayload($amount, $data);
 
-            switch ($data['payment_method_id']) {
-                case 'credit_card':
-                    $payload = array_merge($payload, $this->buildCreditCardPayload($data));
-                    break;
-                case 'boleto':
-                    $payload = array_merge($payload, $this->buildBoletoPayload($data));
-                    break;
-                case 'pix':
-                default:
-                    $payload = array_merge($payload, $this->buildPixPayload());
-                    break;
-            }
+            $payload = match ($data['payment_method_id']) {
+                'credit_card' => array_merge($payload, $this->buildCreditCardPayload($data)),
+                'boleto' => array_merge($payload, $this->buildBoletoPayload($data)),
+                default => array_merge($payload, $this->buildPixPayload()),
+            };
 
             $payment = $this->mpClient->createPayment($payload);
             $response = $this->formatPaymentResponse($payment);
 
-            $context->withExternalId($response['id'])
+            $logContext->withExternalId($response['id'])
                 ->with('status', $response['status'])
                 ->withDuration($startTime);
 
-            Log::channel('gateway')->info('MercadoPago charge completed', $context->toArray());
+            Log::channel('gateway')->info('MercadoPago charge completed', $logContext->toArray());
 
             return $response;
-        } catch (\Exception $e) {
-            $context->withError($e)->withDuration($startTime);
+        } catch (\Exception $exception) {
+            $logContext->withError($exception)->withDuration($startTime);
 
-            Log::channel('gateway')->error('MercadoPago charge failed', $context->toArray());
+            Log::channel('gateway')->error('MercadoPago charge failed', $logContext->toArray());
 
-            throw new \Exception('Erro ao processar pagamento: '.$e->getMessage());
+            throw new \Exception('Erro ao processar pagamento: '.$exception->getMessage(), $exception->getCode(), $exception);
         }
     }
 
@@ -76,30 +66,30 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     {
         $startTime = microtime(true);
 
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
             ->withGateway('mercadopago')
             ->withExternalId($externalPaymentId)
             ->withRequestId();
 
-        Log::channel('gateway')->info('Fetching MercadoPago payment', $context->toArray());
+        Log::channel('gateway')->info('Fetching MercadoPago payment', $logContext->toArray());
 
         try {
             $payment = $this->mpClient->getPayment($externalPaymentId);
             $response = $this->formatPaymentResponse($payment);
 
-            $context->with('status', $response['status'])
+            $logContext->with('status', $response['status'])
                 ->withDuration($startTime);
 
-            Log::channel('gateway')->info('MercadoPago payment fetched', $context->toArray());
+            Log::channel('gateway')->info('MercadoPago payment fetched', $logContext->toArray());
 
             return $response;
-        } catch (\Exception $e) {
-            $context->withError($e)->withDuration($startTime);
+        } catch (\Exception $exception) {
+            $logContext->withError($exception)->withDuration($startTime);
 
-            Log::channel('gateway')->error('Failed to fetch MercadoPago payment', $context->toArray());
+            Log::channel('gateway')->error('Failed to fetch MercadoPago payment', $logContext->toArray());
 
-            throw new \Exception('Erro ao buscar pagamento: '.$e->getMessage());
+            throw new \Exception('Erro ao buscar pagamento: '.$exception->getMessage(), $exception->getCode(), $exception);
         }
     }
 
@@ -108,7 +98,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
         return [
             'transaction_amount' => $amount,
             'description' => $data['description'] ?? 'Pagamento via API',
-            'notification_url' => rtrim(config('app.url'), '/').'/api/mercadopago/webhook',
+            'notification_url' => rtrim((string) config('app.url'), '/').'/api/mercadopago/webhook',
             'payer' => [
                 'email' => $data['payer_email'],
             ],

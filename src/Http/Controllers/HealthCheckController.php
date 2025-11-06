@@ -31,7 +31,7 @@ class HealthCheckController
             'mercadopago_api' => $this->checkMercadoPagoApi(),
         ];
 
-        $allHealthy = collect($checks)->every(fn ($check) => $check['status'] === 'healthy');
+        $allHealthy = collect($checks)->every(fn ($check): bool => $check['status'] === 'healthy');
         $status = $allHealthy ? 'healthy' : 'degraded';
 
         return $this->successResponse([
@@ -51,11 +51,11 @@ class HealthCheckController
                 'status' => 'healthy',
                 'message' => 'Database connection is working',
             ];
-        } catch (\Exception $e) {
+        } catch (\Exception $exception) {
             return [
                 'status' => 'unhealthy',
                 'message' => 'Database connection failed',
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ];
         }
     }
@@ -81,11 +81,11 @@ class HealthCheckController
                 'status' => 'unhealthy',
                 'message' => 'Cache read/write failed',
             ];
-        } catch (\Exception $e) {
+        } catch (\Exception $exception) {
             return [
                 'status' => 'unhealthy',
                 'message' => 'Cache connection failed',
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ];
         }
     }
@@ -101,11 +101,11 @@ class HealthCheckController
                 'status' => 'healthy',
                 'message' => 'MercadoPago API is reachable',
             ];
-        } catch (\Exception $e) {
+        } catch (\Exception $exception) {
             return [
                 'status' => 'unhealthy',
                 'message' => 'MercadoPago API connection failed',
-                'error' => $e->getMessage(),
+                'error' => $exception->getMessage(),
             ];
         }
     }

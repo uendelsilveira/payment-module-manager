@@ -16,17 +16,14 @@ use UendelSilveira\PaymentModuleManager\Services\ReportService;
 
 class ReportController extends Controller
 {
-    protected ReportService $reportService;
-
-    public function __construct(ReportService $reportService)
+    public function __construct(protected ReportService $reportService)
     {
-        $this->reportService = $reportService;
     }
 
-    public function transactionSummary(TransactionSummaryRequest $request): JsonResponse
+    public function transactionSummary(TransactionSummaryRequest $transactionSummaryRequest): JsonResponse
     {
-        $startDate = $request->validated('start_date');
-        $endDate = $request->validated('end_date');
+        $startDate = $transactionSummaryRequest->validated('start_date');
+        $endDate = $transactionSummaryRequest->validated('end_date');
 
         $summary = $this->reportService->getTransactionSummary($startDate, $endDate);
 
@@ -37,10 +34,10 @@ class ReportController extends Controller
         ]);
     }
 
-    public function transactionsByMethod(TransactionSummaryRequest $request): JsonResponse
+    public function transactionsByMethod(TransactionSummaryRequest $transactionSummaryRequest): JsonResponse
     {
-        $startDate = $request->validated('start_date');
-        $endDate = $request->validated('end_date');
+        $startDate = $transactionSummaryRequest->validated('start_date');
+        $endDate = $transactionSummaryRequest->validated('end_date');
 
         $transactions = $this->reportService->getTransactionsByMethod($startDate, $endDate);
 

@@ -23,10 +23,8 @@ class MercadoPagoWebhookController extends Controller
 
     /**
      * Handle the incoming Mercado Pago webhook request.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
-    public function handle(Request $request)
+    public function handle(Request $request): \Illuminate\Http\JsonResponse
     {
         $startTime = microtime(true);
         $webhookId = $request->input('id');
@@ -34,7 +32,7 @@ class MercadoPagoWebhookController extends Controller
         $webhookAction = $request->input('action');
         $paymentId = $request->input('data.id');
 
-        $context = LogContext::create()
+        $logContext = LogContext::create()
             ->withCorrelationId()
             ->withGateway('mercadopago')
             ->withRequestId()
@@ -45,27 +43,27 @@ class MercadoPagoWebhookController extends Controller
                 'data' => ['id' => $paymentId],
             ]);
 
-        Log::channel('webhook')->info('Webhook received', $context->toArray());
+        Log::channel('webhook')->info('Webhook received', $logContext->toArray());
 
         // Check if async processing is enabled
         $asyncEnabled = config('payment.webhook.async_processing', true);
 
         // Apenas processamos notificações do tipo 'payment'
         if ($webhookType !== 'payment') {
-            $context->with('reason', 'unsupported_type');
-            Log::channel('webhook')->warning('Webhook type not supported', $context->toArray());
+            $logContext->with('reason', 'unsupported_type');
+            Log::channel('webhook')->warning('Webhook type not supported', $logContext->toArray());
 
             return $this->errorResponse('Tipo de notificação não suportado.', 400);
         }
 
         if (empty($paymentId)) {
-            $context->with('reason', 'missing_payment_id');
-            Log::channel('webhook')->error('Payment ID not found in webhook', $context->toArray());
+            $logContext->with('reason', 'missing_payment_id');
+            Log::channel('webhook')->error('Payment ID not found in webhook', $logContext->toArray());
 
             return $this->errorResponse('ID do pagamento não encontrado na notificação.', 400);
         }
 
-        $context->withExternalId($paymentId);
+        $logContext->withExternalId($paymentId);
 
         // Dispatch to queue if async is enabled
         if ($asyncEnabled) {
@@ -74,7 +72,7 @@ class MercadoPagoWebhookController extends Controller
                 $request->all()
             )->onQueue(config('payment.webhook.queue_name', 'webhooks'));
 
-            Log::channel('webhook')->info('Webhook dispatched to queue for async processing', $context->toArray());
+            Log::channel('webhook')->info('Webhook dispatched to queue for async processing', $logContext->toArray());
 
             return $this->successResponse(
                 ['queued' => true],
@@ -92,13 +90,13 @@ class MercadoPagoWebhookController extends Controller
             $transaction = Transaction::where('external_id', $paymentId)->first();
 
             if (! $transaction) {
-                $context->with('reason', 'transaction_not_found');
-                Log::channel('webhook')->warning('Local transaction not found', $context->toArray());
+                $logContext->with('reason', 'transaction_not_found');
+                Log::channel('webhook')->warning('Local transaction not found', $logContext->toArray());
 
                 return $this->errorResponse('Transação local não encontrada.', 404);
             }
 
-            $context->withTransactionId($transaction->id);
+            $logContext->withTransactionId($transaction->id);
 
             // Mapeamento de status do Mercado Pago para status internos (exemplo)
             $newStatus = match ($mpPayment->status) {
@@ -117,25 +115,25 @@ class MercadoPagoWebhookController extends Controller
                 $transaction->metadata = (array) $mpPayment;
                 $transaction->save();
 
-                $context->with('old_status', $oldStatus)
+                $logContext->with('old_status', $oldStatus)
                     ->with('new_status', $newStatus)
                     ->with('mp_status', $mpPayment->status)
                     ->withDuration($startTime);
 
-                Log::channel('webhook')->info('Transaction status updated', $context->toArray());
+                Log::channel('webhook')->info('Transaction status updated', $logContext->toArray());
             } else {
-                $context->with('status', $newStatus)
+                $logContext->with('status', $newStatus)
                     ->with('mp_status', $mpPayment->status)
                     ->withDuration($startTime);
 
-                Log::channel('webhook')->info('Transaction status unchanged', $context->toArray());
+                Log::channel('webhook')->info('Transaction status unchanged', $logContext->toArray());
             }
 
             return $this->successResponse(null, 'Webhook processado com sucesso.');
 
-        } catch (\Exception $e) {
-            $context->withError($e)->withDuration($startTime);
-            Log::channel('webhook')->error('Webhook processing failed', $context->toArray());
+        } catch (\Exception $exception) {
+            $logContext->withError($exception)->withDuration($startTime);
+            Log::channel('webhook')->error('Webhook processing failed', $logContext->toArray());
 
             return $this->errorResponse('Erro interno ao processar webhook.', 500);
         }

@@ -69,10 +69,10 @@ class VerifyMercadoPagoSignature
         }
 
         // Cria a string base para o HMAC
-        $manifest = "id:{$request->input('data.id')};request-id:{$ts};ts:{$ts};".$request->getContent();
+        $manifest = sprintf('id:%s;request-id:%s;ts:%s;', $request->input('data.id'), $ts, $ts).$request->getContent();
 
         // Gera a assinatura esperada
-        $expectedSignature = hash_hmac('sha256', $manifest, $secret);
+        $expectedSignature = hash_hmac('sha256', $manifest, (string) $secret);
 
         // Compara as assinaturas
         if (! hash_equals($expectedSignature, $hash)) {

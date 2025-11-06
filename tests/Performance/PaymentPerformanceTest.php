@@ -28,9 +28,7 @@ class PaymentPerformanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const PERFORMANCE_THRESHOLD_MS = 1000; // 1 second max for payment processing
-
-    private const BATCH_SIZE = 100;
+    private const PERFORMANCE_THRESHOLD_MS = 1000;
 
     private const CACHE_THRESHOLD_MS = 50; // 50ms max for cached operations
 
@@ -44,7 +42,7 @@ class PaymentPerformanceTest extends TestCase
         config(['payment.rate_limiting.enabled' => false]);
 
         // Mock MercadoPago client for all performance tests
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('createPayment')
                 ->andReturn((object) [
                     'id' => 'mp_perf_test_'.uniqid(),
@@ -83,9 +81,8 @@ class PaymentPerformanceTest extends TestCase
 
     /**
      * Test: Single payment processing should complete within acceptable time
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_processes_single_payment_within_performance_threshold(): void
     {
         $payload = [
@@ -98,11 +95,11 @@ class PaymentPerformanceTest extends TestCase
 
         $startTime = microtime(true);
 
-        $response = $this->postJson(route('payment.process'), $payload);
+        $testResponse = $this->postJson(route('payment.process'), $payload);
 
         $elapsedTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
 
-        $response->assertStatus(201);
+        $testResponse->assertStatus(201);
 
         $this->assertLessThan(
             self::PERFORMANCE_THRESHOLD_MS,
@@ -113,9 +110,8 @@ class PaymentPerformanceTest extends TestCase
 
     /**
      * Test: Batch payment processing should maintain acceptable throughput
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_handles_batch_payment_processing_efficiently(): void
     {
         $batchSize = 50; // Reduced for test speed
@@ -155,9 +151,8 @@ class PaymentPerformanceTest extends TestCase
 
     /**
      * Test: Transaction queries should be fast with proper indexes
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_queries_transactions_efficiently_with_indexes(): void
     {
         // Create test data
@@ -165,7 +160,7 @@ class PaymentPerformanceTest extends TestCase
 
         // Test query by status (should use index)
         $startTime = microtime(true);
-        $results = Transaction::where('status', 'approved')->get();
+        Transaction::where('status', 'approved')->get();
         $queryTime = (microtime(true) - $startTime) * 1000;
 
         $this->assertLessThan(
@@ -176,7 +171,7 @@ class PaymentPerformanceTest extends TestCase
 
         // Test query by gateway + status (should use composite index)
         $startTime = microtime(true);
-        $results = Transaction::where('gateway', PaymentGateway::MERCADOPAGO)
+        Transaction::where('gateway', PaymentGateway::MERCADOPAGO)
             ->where('status', 'approved')
             ->get();
         $queryTime = (microtime(true) - $startTime) * 1000;
@@ -190,9 +185,8 @@ class PaymentPerformanceTest extends TestCase
 
     /**
      * Test: Cache performance for settings
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_retrieves_cached_settings_efficiently(): void
     {
         $settingsKey = 'payment_settings:mercadopago';
@@ -217,18 +211,17 @@ class PaymentPerformanceTest extends TestCase
 
     /**
      * Test: Health check endpoint performance
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_executes_health_check_efficiently(): void
     {
         $startTime = microtime(true);
 
-        $response = $this->getJson(route('health.check'));
+        $testResponse = $this->getJson(route('health.check'));
 
         $elapsedTime = (microtime(true) - $startTime) * 1000;
 
-        $response->assertStatus(200);
+        $testResponse->assertStatus(200);
 
         // Health check should be very fast (< 500ms even with DB + cache + API checks)
         $this->assertLessThan(
@@ -240,9 +233,8 @@ class PaymentPerformanceTest extends TestCase
 
     /**
      * Test: Database connection pool performance
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_handles_concurrent_database_operations_efficiently(): void
     {
         $operations = 20;
@@ -274,9 +266,8 @@ class PaymentPerformanceTest extends TestCase
 
     /**
      * Test: Soft delete performance
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_soft_deletes_transactions_efficiently(): void
     {
         $transaction = Transaction::factory()->create();
@@ -310,9 +301,8 @@ class PaymentPerformanceTest extends TestCase
 
     /**
      * Test: Memory usage stays within acceptable limits
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_maintains_acceptable_memory_usage_during_batch_operations(): void
     {
         $memoryBefore = memory_get_usage(true);
@@ -343,9 +333,8 @@ class PaymentPerformanceTest extends TestCase
 
     /**
      * Test: Rate limiting doesn't significantly impact performance for legitimate traffic
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_handles_rate_limiting_with_minimal_overhead(): void
     {
         // Enable rate limiting

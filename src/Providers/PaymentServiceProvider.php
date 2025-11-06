@@ -42,8 +42,8 @@ class PaymentServiceProvider extends ServiceProvider
         $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, SettingsRepository::class);
         $this->app->singleton(MercadoPagoClientInterface::class, MercadoPagoClient::class);
-        $this->app->singleton(GatewayManager::class, fn () => new GatewayManager);
-        $this->app->singleton(PaymentService::class, fn ($app) => new PaymentService(
+        $this->app->singleton(GatewayManager::class, fn (): \UendelSilveira\PaymentModuleManager\Services\GatewayManager => new GatewayManager);
+        $this->app->singleton(PaymentService::class, fn ($app): \UendelSilveira\PaymentModuleManager\Services\PaymentService => new PaymentService(
             $app->make(GatewayManager::class),
             $app->make(TransactionRepositoryInterface::class)
         ));
@@ -79,7 +79,7 @@ class PaymentServiceProvider extends ServiceProvider
 
         Route::prefix('api')
             ->middleware('api')
-            ->group(function () {
+            ->group(function (): void {
                 $this->loadRoutesFrom(__DIR__.'/../../routes/api.php');
             });
 

@@ -25,13 +25,13 @@ class MercadoPagoWebhookTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_webhook_updates_transaction_status_to_approved()
+    public function test_webhook_updates_transaction_status_to_approved(): void
     {
         // Disable async processing for this test
         config(['payment.webhook.async_processing' => false]);
 
         // Mock do MercadoPagoClientInterface para simular um pagamento aprovado
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('getPayment')->andReturn((object) [
                 'id' => 'mp_payment_id_123',
                 'status' => 'approved',
@@ -71,10 +71,10 @@ class MercadoPagoWebhookTest extends TestCase
         ];
 
         // 3. Enviar a requisição do webhook para o endpoint
-        $response = $this->postJson(route('mercadopago.webhook'), $webhookPayload);
+        $testResponse = $this->postJson(route('mercadopago.webhook'), $webhookPayload);
 
         // 4. Verificar a resposta do webhook
-        $response->assertStatus(200)
+        $testResponse->assertStatus(200)
             ->assertJson([
                 'success' => true,
                 'message' => 'Webhook processado com sucesso.',
@@ -88,13 +88,13 @@ class MercadoPagoWebhookTest extends TestCase
         ]);
     }
 
-    public function test_webhook_updates_transaction_status_to_refunded()
+    public function test_webhook_updates_transaction_status_to_refunded(): void
     {
         // Disable async processing for this test
         config(['payment.webhook.async_processing' => false]);
 
         // Mock do MercadoPagoClientInterface para simular um pagamento reembolsado
-        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock) {
+        $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('getPayment')->andReturn((object) [
                 'id' => 'mp_payment_id_refunded',
                 'status' => 'refunded',
@@ -134,10 +134,10 @@ class MercadoPagoWebhookTest extends TestCase
         ];
 
         // 3. Enviar a requisição do webhook para o endpoint
-        $response = $this->postJson(route('mercadopago.webhook'), $webhookPayload);
+        $testResponse = $this->postJson(route('mercadopago.webhook'), $webhookPayload);
 
         // 4. Verificar a resposta do webhook
-        $response->assertStatus(200)
+        $testResponse->assertStatus(200)
             ->assertJson([
                 'success' => true,
                 'message' => 'Webhook processado com sucesso.',
@@ -151,7 +151,7 @@ class MercadoPagoWebhookTest extends TestCase
         ]);
     }
 
-    public function test_webhook_returns_error_for_unsupported_notification_type()
+    public function test_webhook_returns_error_for_unsupported_notification_type(): void
     {
         $webhookPayload = [
             'type' => 'merchant_order',
@@ -160,25 +160,25 @@ class MercadoPagoWebhookTest extends TestCase
             ],
         ];
 
-        $response = $this->postJson(route('mercadopago.webhook'), $webhookPayload);
+        $testResponse = $this->postJson(route('mercadopago.webhook'), $webhookPayload);
 
-        $response->assertStatus(400)
+        $testResponse->assertStatus(400)
             ->assertJson([
                 'success' => false,
                 'message' => 'Tipo de notificação não suportado.',
             ]);
     }
 
-    public function test_webhook_returns_error_if_payment_id_is_missing()
+    public function test_webhook_returns_error_if_payment_id_is_missing(): void
     {
         $webhookPayload = [
             'type' => 'payment',
             'data' => [], // ID do pagamento ausente
         ];
 
-        $response = $this->postJson(route('mercadopago.webhook'), $webhookPayload);
+        $testResponse = $this->postJson(route('mercadopago.webhook'), $webhookPayload);
 
-        $response->assertStatus(400)
+        $testResponse->assertStatus(400)
             ->assertJson([
                 'success' => false,
                 'message' => 'ID do pagamento não encontrado na notificação.',
