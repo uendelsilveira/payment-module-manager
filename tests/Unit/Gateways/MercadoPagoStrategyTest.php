@@ -1,4 +1,10 @@
 <?php
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created: 06/11/2025 20:22:45
+*/
 
 namespace UendelSilveira\PaymentModuleManager\Tests\Unit\Gateways;
 
