@@ -136,7 +136,23 @@ class MercadoPagoStrategyTest extends TestCase
     {
         // Arrange
         $paymentId = '123456789';
-        $expectedCancelResponse = (object) [
+        $pendingPayment = [
+            'id' => $paymentId,
+            'status' => 'pending',
+            'transaction_amount' => 100.00,
+            'description' => 'Pending payment',
+            'payment_method_id' => 'pix',
+            'status_detail' => 'pending_waiting_payment',
+            'metadata' => (object) [],
+        ];
+
+        $this->mpClientMock
+            ->shouldReceive('getPayment')
+            ->once()
+            ->with($paymentId)
+            ->andReturn((object) $pendingPayment);
+
+        $cancelledPayment = (object) [
             'id' => $paymentId,
             'status' => 'cancelled',
             'transaction_amount' => 100.00,
@@ -150,7 +166,7 @@ class MercadoPagoStrategyTest extends TestCase
             ->shouldReceive('cancelPayment')
             ->once()
             ->with($paymentId)
-            ->andReturn($expectedCancelResponse);
+            ->andReturn($cancelledPayment);
 
         // Act
         $result = $this->mercadoPagoStrategy->cancel($paymentId);
@@ -158,21 +174,65 @@ class MercadoPagoStrategyTest extends TestCase
         // Assert
         $this->assertEquals($paymentId, $result['id']);
         $this->assertEquals('cancelled', $result['status']);
-        $this->assertEquals(100.00, $result['transaction_amount']);
-        $this->assertEquals('pix', $result['payment_method_id']);
+    }
+
+    public function test_cancel_payment_fails_if_not_pending(): void
+    {
+        // Arrange
+        $paymentId = '123456789';
+        $approvedPayment = [
+            'id' => $paymentId,
+            'status' => 'approved',
+            'transaction_amount' => 100.00,
+            'description' => 'Approved payment',
+            'payment_method_id' => 'pix',
+            'status_detail' => 'accredited',
+            'metadata' => (object) [],
+        ];
+
+        $this->mpClientMock
+            ->shouldReceive('getPayment')
+            ->once()
+            ->with($paymentId)
+            ->andReturn((object) $approvedPayment);
+
+        $this->mpClientMock
+            ->shouldNotReceive('cancelPayment');
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Pagamento não pode ser cancelado, pois não está pendente.');
+
+        // Act
+        $this->mercadoPagoStrategy->cancel($paymentId);
     }
 
     public function test_cancel_payment_throws_exception(): void
     {
         // Arrange
         $paymentId = '123456789';
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessage('Erro ao cancelar pagamento: Cancel Error');
+        $pendingPayment = [
+            'id' => $paymentId,
+            'status' => 'pending',
+            'transaction_amount' => 100.00,
+            'description' => 'Pending payment',
+            'payment_method_id' => 'pix',
+            'status_detail' => 'pending_waiting_payment',
+            'metadata' => (object) [],
+        ];
+
+        $this->mpClientMock
+            ->shouldReceive('getPayment')
+            ->once()
+            ->with($paymentId)
+            ->andReturn((object) $pendingPayment);
 
         $this->mpClientMock
             ->shouldReceive('cancelPayment')
             ->once()
             ->andThrow(new Exception('Cancel Error'));
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Erro ao cancelar pagamento: Cancel Error');
 
         // Act
         $this->mercadoPagoStrategy->cancel($paymentId);

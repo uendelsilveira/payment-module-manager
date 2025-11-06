@@ -269,6 +269,12 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
         Log::channel('gateway')->info('MercadoPago cancel initiated', $logContext->toArray());
 
         try {
+            $payment = $this->getPayment($externalPaymentId);
+
+            if (! in_array($payment['status'], ['pending', 'in_process'])) {
+                throw new \Exception('Pagamento não pode ser cancelado, pois não está pendente.');
+            }
+
             $payment = $this->mpClient->cancelPayment($externalPaymentId);
             $response = $this->formatPaymentResponse($payment);
 
