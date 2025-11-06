@@ -8,11 +8,7 @@
 [![PHP](https://img.shields.io/packagist/php-v/uendelsilveira/payment-module-manager?&logo=php&logoColor=blue&&label=PHP)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/LARAVEL-11.x-ff2d20?&logo=laravel&logoColor=red)](https://laravel.com)
 
-
-**Versão:** 1.0.7
 **Status:** ✅ **PRODUÇÃO-READY**
-
-Um pacote Laravel robusto e escalável para gerenciamento de pagamentos, com foco inicial na integração com o Mercado Pago. Projetado para ser seguro, plugável e fácil de usar em qualquer aplicação Laravel.
 
 ---
 
