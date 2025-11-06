@@ -100,6 +100,37 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     }
 
     /**
+     * @return array<int, object>
+     */
+    public function getPaymentMethods(): array
+    {
+        $startTime = microtime(true);
+
+        $logContext = LogContext::create()
+            ->withCorrelationId()
+            ->withGateway('mercadopago')
+            ->withRequestId();
+
+        Log::channel('gateway')->info('Fetching MercadoPago payment methods', $logContext->toArray());
+
+        try {
+            $paymentMethods = $this->mpClient->getPaymentMethods();
+
+            $logContext->withDuration($startTime);
+
+            Log::channel('gateway')->info('MercadoPago payment methods fetched', $logContext->toArray());
+
+            return $paymentMethods;
+        } catch (\Exception $exception) {
+            $logContext->withError($exception)->withDuration($startTime);
+
+            Log::channel('gateway')->error('Failed to fetch MercadoPago payment methods', $logContext->toArray());
+
+            throw new \Exception('Erro ao buscar métodos de pagamento: '.$exception->getMessage(), $exception->getCode(), $exception);
+        }
+    }
+
+    /**
      * @param array<string, mixed> $data
      *
      * @return array<string, mixed>
