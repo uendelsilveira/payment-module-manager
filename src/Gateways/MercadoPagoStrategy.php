@@ -211,6 +211,84 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     /**
      * @return array<string, mixed>
      */
+    public function refund(string $externalPaymentId, ?float $amount = null): array
+    {
+        $startTime = microtime(true);
+
+        $logContext = LogContext::create()
+            ->withCorrelationId()
+            ->withGateway('mercadopago')
+            ->withExternalId($externalPaymentId)
+            ->withRequestId();
+
+        if ($amount !== null) {
+            $logContext->withAmount($amount);
+        }
+
+        Log::channel('gateway')->info('MercadoPago refund initiated', $logContext->toArray());
+
+        try {
+            $payload = [];
+            if ($amount !== null) {
+                $payload['amount'] = $amount;
+            }
+
+            $refund = $this->mpClient->createRefund($externalPaymentId, $payload);
+            $response = $this->formatRefundResponse($refund);
+
+            $logContext->with('refund_id', $response['id'])
+                ->with('status', $response['status'])
+                ->withDuration($startTime);
+
+            Log::channel('gateway')->info('MercadoPago refund completed', $logContext->toArray());
+
+            return $response;
+        } catch (\Exception $exception) {
+            $logContext->withError($exception)->withDuration($startTime);
+
+            Log::channel('gateway')->error('MercadoPago refund failed', $logContext->toArray());
+
+            throw new \Exception('Erro ao processar estorno: '.$exception->getMessage(), $exception->getCode(), $exception);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function cancel(string $externalPaymentId): array
+    {
+        $startTime = microtime(true);
+
+        $logContext = LogContext::create()
+            ->withCorrelationId()
+            ->withGateway('mercadopago')
+            ->withExternalId($externalPaymentId)
+            ->withRequestId();
+
+        Log::channel('gateway')->info('MercadoPago cancel initiated', $logContext->toArray());
+
+        try {
+            $payment = $this->mpClient->cancelPayment($externalPaymentId);
+            $response = $this->formatPaymentResponse($payment);
+
+            $logContext->with('status', $response['status'])
+                ->withDuration($startTime);
+
+            Log::channel('gateway')->info('MercadoPago cancel completed', $logContext->toArray());
+
+            return $response;
+        } catch (\Exception $exception) {
+            $logContext->withError($exception)->withDuration($startTime);
+
+            Log::channel('gateway')->error('MercadoPago cancel failed', $logContext->toArray());
+
+            throw new \Exception('Erro ao cancelar pagamento: '.$exception->getMessage(), $exception->getCode(), $exception);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function formatPaymentResponse(object $payment): array
     {
         /** @var object{id: string|int, status: string, transaction_amount: float, description: string, payment_method_id: string, status_detail: string, metadata: object|null, point_of_interaction?: object{transaction_data?: object{qr_code_base64?: string, ticket_url?: string}}} $payment */
@@ -233,5 +311,20 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
         }
 
         return $response;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatRefundResponse(object $refund): array
+    {
+        /** @var object{id: string|int, payment_id: string|int, amount: float, status: string, date_created?: string} $refund */
+        return [
+            'id' => $refund->id,
+            'payment_id' => $refund->payment_id,
+            'amount' => $refund->amount,
+            'status' => $refund->status,
+            'date_created' => $refund->date_created ?? null,
+        ];
     }
 }

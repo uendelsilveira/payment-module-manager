@@ -36,6 +36,7 @@ O módulo foi reestruturado com foco em segurança, escalabilidade e manutenibil
 
 ### Funcionalidades do Gateway
 - **Integração com Mercado Pago:** Processa e consulta pagamentos via PIX, Cartão de Crédito (com parcelamento) e Boleto.
+- **Estornos e Cancelamentos:** Suporte completo para estornar pagamentos aprovados (total ou parcial) e cancelar pagamentos pendentes.
 - **Gerenciamento via API:** Credenciais do gateway podem ser gerenciadas através de endpoints da API.
 - **Conexão OAuth 2.0:** Fluxo seguro para conectar contas de usuários do Mercado Pago.
 - **Reprocessamento de Falhas:** Comando Artisan (`payment:reprocess-failed`) para reprocessar transações que falharam, com estratégia de *retry* configurável.
@@ -198,6 +199,66 @@ curl -X POST "http://localhost/api/payment/process" \
         "amount": [
             "The amount must be a number."
         ]
+    }
+}
+```
+
+#### `POST /api/payments/{transaction_id}/refund`
+
+Realiza o estorno total ou parcial de um pagamento aprovado.
+
+**Exemplo de Requisição (Estorno Total):**
+```bash
+curl -X POST "http://localhost/api/payments/d8f2b3a0-6b7a-4b1e-8b0a-1b2c3d4e5f6a/refund" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer SEU_API_TOKEN"
+```
+
+**Exemplo de Requisição (Estorno Parcial):**
+```bash
+curl -X POST "http://localhost/api/payments/d8f2b3a0-6b7a-4b1e-8b0a-1b2c3d4e5f6a/refund" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer SEU_API_TOKEN" \
+     -d '{"amount": 50.00}'
+```
+
+**Exemplo de Resposta (Sucesso):**
+```json
+{
+    "status": "success",
+    "message": "Estorno processado com sucesso.",
+    "data": {
+        "id": "123456789",
+        "payment_id": "987654321",
+        "amount": 50.00,
+        "status": "approved",
+        "date_created": "2025-11-06T19:30:00.000Z"
+    }
+}
+```
+
+#### `POST /api/payments/{transaction_id}/cancel`
+
+Cancela um pagamento que ainda está pendente ou em processamento.
+
+**Exemplo de Requisição:**
+```bash
+curl -X POST "http://localhost/api/payments/d8f2b3a0-6b7a-4b1e-8b0a-1b2c3d4e5f6a/cancel" \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer SEU_API_TOKEN"
+```
+
+**Exemplo de Resposta (Sucesso):**
+```json
+{
+    "status": "success",
+    "message": "Pagamento cancelado com sucesso.",
+    "data": {
+        "id": "987654321",
+        "status": "cancelled",
+        "transaction_amount": 100.00,
+        "description": "Pagamento cancelado pelo usuário",
+        "payment_method_id": "pix"
     }
 }
 ```

@@ -28,4 +28,23 @@ interface PaymentGatewayInterface
      * @return array<string, mixed> Retorna os dados da transação da API externa
      */
     public function getPayment(string $externalPaymentId): array;
+
+    /**
+     * Realiza o estorno total ou parcial de um pagamento.
+     *
+     * @param string $externalPaymentId O ID do pagamento no gateway externo
+     * @param float|null $amount Valor a estornar (null = estorno total)
+     *
+     * @return array<string, mixed> Retorna os dados do estorno
+     */
+    public function refund(string $externalPaymentId, ?float $amount = null): array;
+
+    /**
+     * Cancela um pagamento pendente.
+     *
+     * @param string $externalPaymentId O ID do pagamento no gateway externo
+     *
+     * @return array<string, mixed> Retorna os dados do cancelamento
+     */
+    public function cancel(string $externalPaymentId): array;
 }

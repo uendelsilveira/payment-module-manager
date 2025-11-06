@@ -227,4 +227,110 @@ class PaymentService
 
         return $transaction;
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function refundPayment(Transaction $transaction, ?float $amount = null): array
+    {
+        $startTime = microtime(true);
+
+        $logContext = LogContext::create()
+            ->withCorrelationId()
+            ->withTransaction($transaction)
+            ->withRequestId();
+
+        if ($amount !== null) {
+            $logContext->withAmount($amount);
+        }
+
+        Log::channel('payment')->info('Starting refund processing', $logContext->toArray());
+
+        if (empty($transaction->external_id)) {
+            throw new \Exception('Transação não possui external_id. Não é possível estornar.');
+        }
+
+        if ($transaction->status === 'refunded') {
+            throw new \Exception('Esta transação já foi estornada.');
+        }
+
+        if ($transaction->status !== 'approved' && $transaction->status !== 'authorized') {
+            throw new \Exception('Apenas pagamentos aprovados ou autorizados podem ser estornados. Status atual: '.$transaction->status);
+        }
+
+        try {
+            $paymentGateway = $this->gatewayManager->create($transaction->gateway);
+            $refundResponse = $paymentGateway->refund($transaction->external_id, $amount);
+
+            $transaction->status = 'refunded';
+            $transaction->metadata = array_merge((array) $transaction->metadata, ['refund' => $refundResponse]);
+            $transaction->save();
+
+            $logContext->withTransaction($transaction)
+                ->withDuration($startTime)
+                ->with('refund_data', $refundResponse);
+
+            Log::channel('payment')->info('Refund processed successfully', $logContext->toArray());
+
+            return $refundResponse;
+        } catch (Throwable $throwable) {
+            $logContext->withError($throwable)
+                ->withDuration($startTime);
+
+            Log::channel('payment')->error('Refund processing failed', $logContext->toArray());
+
+            throw $throwable;
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function cancelPayment(Transaction $transaction): array
+    {
+        $startTime = microtime(true);
+
+        $logContext = LogContext::create()
+            ->withCorrelationId()
+            ->withTransaction($transaction)
+            ->withRequestId();
+
+        Log::channel('payment')->info('Starting payment cancellation', $logContext->toArray());
+
+        if (empty($transaction->external_id)) {
+            throw new \Exception('Transação não possui external_id. Não é possível cancelar.');
+        }
+
+        if ($transaction->status === 'cancelled') {
+            throw new \Exception('Esta transação já foi cancelada.');
+        }
+
+        if ($transaction->status !== 'pending' && $transaction->status !== 'in_process') {
+            throw new \Exception('Apenas pagamentos pendentes ou em processamento podem ser cancelados. Status atual: '.$transaction->status);
+        }
+
+        try {
+            $paymentGateway = $this->gatewayManager->create($transaction->gateway);
+            $cancelResponse = $paymentGateway->cancel($transaction->external_id);
+
+            $transaction->status = 'cancelled';
+            $transaction->metadata = array_merge((array) $transaction->metadata, ['cancellation' => $cancelResponse]);
+            $transaction->save();
+
+            $logContext->withTransaction($transaction)
+                ->withDuration($startTime)
+                ->with('cancel_data', $cancelResponse);
+
+            Log::channel('payment')->info('Payment cancelled successfully', $logContext->toArray());
+
+            return $cancelResponse;
+        } catch (Throwable $throwable) {
+            $logContext->withError($throwable)
+                ->withDuration($startTime);
+
+            Log::channel('payment')->error('Payment cancellation failed', $logContext->toArray());
+
+            throw $throwable;
+        }
+    }
 }

@@ -39,4 +39,24 @@ interface MercadoPagoClientInterface
      * @return array<int, object> A lista de métodos de pagamento.
      */
     public function getPaymentMethods(): array;
+
+    /**
+     * Cria um estorno (refund) total ou parcial no Mercado Pago.
+     *
+     * @param array<string, mixed> $requestData
+     *
+     * @throws \Exception
+     *
+     * @return object A resposta do estorno do Mercado Pago.
+     */
+    public function createRefund(string $paymentId, array $requestData): object;
+
+    /**
+     * Cancela um pagamento pendente no Mercado Pago.
+     *
+     * @throws \Exception
+     *
+     * @return object A resposta do cancelamento do Mercado Pago.
+     */
+    public function cancelPayment(string $paymentId): object;
 }

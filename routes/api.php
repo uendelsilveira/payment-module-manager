@@ -39,6 +39,16 @@ Route::get('payments/{transaction}', [PaymentController::class, 'show'])
     // ->middleware(['payment.auth', 'payment.authorize:view-payment'])
     ->name('payment.show');
 
+Route::post('payments/{transaction}/refund', [PaymentController::class, 'refund'])
+    ->middleware(['payment.rate_limit:payment_process'])
+    // ->middleware(['payment.auth', 'payment.authorize:refund-payment'])
+    ->name('payment.refund');
+
+Route::post('payments/{transaction}/cancel', [PaymentController::class, 'cancel'])
+    ->middleware(['payment.rate_limit:payment_process'])
+    // ->middleware(['payment.auth', 'payment.authorize:cancel-payment'])
+    ->name('payment.cancel');
+
 // Rotas de Webhook
 Route::post('mercadopago/webhook', [MercadoPagoWebhookController::class, 'handle'])
     ->middleware(['mercadopago.webhook.signature', 'payment.rate_limit:webhook'])
