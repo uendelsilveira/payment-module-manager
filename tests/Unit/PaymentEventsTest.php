@@ -58,7 +58,7 @@ class PaymentEventsTest extends TestCase
 
         $testResponse->assertStatus(201);
 
-        Event::assertDispatched(PaymentProcessed::class, fn($event): bool => $event->transaction->status === 'approved'
+        Event::assertDispatched(PaymentProcessed::class, fn ($event): bool => $event->transaction->status === 'approved'
             && $event->gatewayResponse['id'] === 'mp_event_test_success');
     }
 
@@ -85,7 +85,7 @@ class PaymentEventsTest extends TestCase
             // Expected to fail
         }
 
-        Event::assertDispatched(PaymentFailed::class, fn($event): bool => $event->transaction->status === 'failed'
+        Event::assertDispatched(PaymentFailed::class, fn ($event): bool => $event->transaction->status === 'failed'
             && $event->exception instanceof \Exception);
     }
 
@@ -120,7 +120,7 @@ class PaymentEventsTest extends TestCase
 
         $testResponse->assertStatus(200);
 
-        Event::assertDispatched(PaymentStatusChanged::class, fn($event): bool => $event->oldStatus === 'pending'
+        Event::assertDispatched(PaymentStatusChanged::class, fn ($event): bool => $event->oldStatus === 'pending'
             && $event->newStatus === 'approved');
     }
 }

@@ -20,9 +20,7 @@ class SettingsController extends Controller
 {
     use ApiResponseTrait;
 
-    public function __construct(protected SettingsRepositoryInterface $settingsRepository)
-    {
-    }
+    public function __construct(protected SettingsRepositoryInterface $settingsRepository) {}
 
     public function getMercadoPagoSettings(): \Illuminate\Http\JsonResponse
     {
@@ -34,9 +32,9 @@ class SettingsController extends Controller
             'public_key' => $publicKey ? $this->maskCredential($publicKey) : null,
             'access_token' => $accessToken ? $this->maskCredential($accessToken) : null,
             'webhook_secret' => $webhookSecret ? $this->maskCredential($webhookSecret) : null,
-            'public_key_configured' => !in_array($publicKey, [null, '', '0'], true),
-            'access_token_configured' => !in_array($accessToken, [null, '', '0'], true),
-            'webhook_secret_configured' => !in_array($webhookSecret, [null, '', '0'], true),
+            'public_key_configured' => ! in_array($publicKey, [null, '', '0'], true),
+            'access_token_configured' => ! in_array($accessToken, [null, '', '0'], true),
+            'webhook_secret_configured' => ! in_array($webhookSecret, [null, '', '0'], true),
         ];
 
         return $this->successResponse($settings);

@@ -22,9 +22,7 @@ use UendelSilveira\PaymentModuleManager\Support\LogContext;
 
 class PaymentService
 {
-    public function __construct(protected GatewayManager $gatewayManager, protected TransactionRepositoryInterface $transactionRepository)
-    {
-    }
+    public function __construct(protected GatewayManager $gatewayManager, protected TransactionRepositoryInterface $transactionRepository) {}
 
     /**
      * @param array<string, mixed> $data

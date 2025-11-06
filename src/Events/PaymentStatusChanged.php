@@ -20,6 +20,7 @@ class PaymentStatusChanged
 {
     use Dispatchable;
     use SerializesModels;
+
     public function __construct(
         public readonly Transaction $transaction,
         public readonly string $oldStatus,

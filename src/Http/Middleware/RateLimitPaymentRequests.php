@@ -22,9 +22,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RateLimitPaymentRequests
 {
-    public function __construct(protected RateLimiter $limiter)
-    {
-    }
+    public function __construct(protected RateLimiter $limiter) {}
 
     /**
      * Handle an incoming request.

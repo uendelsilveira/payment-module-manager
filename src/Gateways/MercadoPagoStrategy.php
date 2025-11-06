@@ -16,12 +16,11 @@ use UendelSilveira\PaymentModuleManager\Support\LogContext;
 
 class MercadoPagoStrategy implements PaymentGatewayInterface
 {
-    public function __construct(protected MercadoPagoClientInterface $mpClient)
-    {
-    }
+    public function __construct(protected MercadoPagoClientInterface $mpClient) {}
 
     /**
      * @param array<string, mixed> $data
+     *
      * @return array<string, mixed>
      */
     public function charge(float $amount, array $data): array
@@ -102,6 +101,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
 
     /**
      * @param array<string, mixed> $data
+     *
      * @return array<string, mixed>
      */
     private function buildBasePayload(float $amount, array $data): array
@@ -128,6 +128,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
 
     /**
      * @param array<string, mixed> $data
+     *
      * @return array<string, mixed>
      */
     private function buildBoletoPayload(array $data): array
@@ -155,6 +156,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
 
     /**
      * @param array<string, mixed> $data
+     *
      * @return array<string, mixed>
      */
     private function buildCreditCardPayload(array $data): array

@@ -18,6 +18,7 @@ interface PaymentProviderInterface
 
     /**
      * @param array<string, mixed> $options
+     *
      * @return array<string, mixed>
      */
     public function createPayment(float $amount, string $currency, array $options = []): array;

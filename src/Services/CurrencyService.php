@@ -72,7 +72,7 @@ class CurrencyService
      */
     public function getCurrencyDetails(string $currency): ?array
     {
-        $config = config('payment.currencies.supported.' . $currency);
+        $config = config('payment.currencies.supported.'.$currency);
 
         return is_array($config) ? $config : null;
     }

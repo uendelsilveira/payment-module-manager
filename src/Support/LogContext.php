@@ -19,7 +19,7 @@ class LogContext
 
     public static function create(): self
     {
-        return (new self())->withCorrelationId();
+        return (new self)->withCorrelationId();
     }
 
     /**
@@ -235,7 +235,8 @@ class LogContext
      * Recursively mask sensitive fields
      *
      * @param array<string, mixed> $data
-     * @param array<int, string> $sensitiveFields
+     * @param array<int, string>   $sensitiveFields
+     *
      * @return array<string, mixed>
      */
     private function maskRecursive(array $data, array $sensitiveFields): array

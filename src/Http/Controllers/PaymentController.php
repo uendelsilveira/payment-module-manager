@@ -21,9 +21,7 @@ class PaymentController extends Controller
 {
     use ApiResponseTrait;
 
-    public function __construct(protected PaymentService $paymentService)
-    {
-    }
+    public function __construct(protected PaymentService $paymentService) {}
 
     /**
      * Processa um novo pagamento.

@@ -120,6 +120,7 @@ class MercadoPagoWebhookController extends Controller
                 $oldStatus = $transaction->status;
                 $transaction->status = $newStatus;
                 $jsonEncoded = json_encode($mpPayment);
+
                 if ($jsonEncoded !== false) {
                     $metadata = json_decode($jsonEncoded, true);
                     $transaction->metadata = is_array($metadata) ? $metadata : [];

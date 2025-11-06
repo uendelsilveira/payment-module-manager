@@ -45,6 +45,7 @@ class Transaction extends Model
     /** @use HasFactory<\UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory> */
     use HasFactory;
     use SoftDeletes;
+
     /** @var array<int, string> */
     protected $fillable = [
         'gateway',

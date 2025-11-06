@@ -128,9 +128,10 @@ class ReprocessFailedPayments extends Command
 
         // Filter by gateway
         $gateway = $this->option('gateway');
+
         if (is_string($gateway) && $gateway !== '') {
             $query->where('gateway', $gateway);
-            $this->line('🔍 Filtering by gateway: ' . $gateway);
+            $this->line('🔍 Filtering by gateway: '.$gateway);
         }
 
         // Filter by max retries
@@ -138,7 +139,7 @@ class ReprocessFailedPayments extends Command
 
         if (! $this->option('force')) {
             $query->where('retries_count', '<', $maxRetries);
-            $this->line('🔍 Filtering by retries < ' . $maxRetries);
+            $this->line('🔍 Filtering by retries < '.$maxRetries);
         }
 
         // Filter by age (last attempt)
@@ -151,6 +152,7 @@ class ReprocessFailedPayments extends Command
 
         // Apply limit
         $limit = $this->option('limit');
+
         if ($limit !== null && is_numeric($limit)) {
             $query->limit((int) $limit);
             $this->line(sprintf('🔍 Limiting to %d transaction(s)', (int) $limit));
@@ -195,11 +197,11 @@ class ReprocessFailedPayments extends Command
         $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->info('  📊 REPROCESSING SUMMARY');
         $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        $this->line('  Total processed:   ' . $total);
-        $this->line('  ✅ Successful:      ' . $successCount);
+        $this->line('  Total processed:   '.$total);
+        $this->line('  ✅ Successful:      '.$successCount);
 
         if ($failureCount > 0) {
-            $this->line('  ❌ Failed:          ' . $failureCount);
+            $this->line('  ❌ Failed:          '.$failureCount);
         }
 
         $this->line(sprintf('  ⏱️  Time elapsed:    %ss', $totalTime));

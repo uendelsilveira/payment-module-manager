@@ -156,7 +156,7 @@ class IdempotencyTest extends TestCase
         $testResponse->assertStatus(201);
 
         // Verify cache was set
-        $cacheKey = 'idempotency:' . $idempotencyKey;
+        $cacheKey = 'idempotency:'.$idempotencyKey;
         $this->assertTrue(Cache::has($cacheKey));
 
         // Second request should use cache (mock expects only 1 call to createPayment)

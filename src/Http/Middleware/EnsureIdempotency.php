@@ -61,7 +61,7 @@ class EnsureIdempotency
         }
 
         // Check cache first (faster than DB)
-        $cacheKey = 'idempotency:' . $idempotencyKey;
+        $cacheKey = 'idempotency:'.$idempotencyKey;
         $cachedResult = Cache::get($cacheKey);
 
         if ($cachedResult) {
