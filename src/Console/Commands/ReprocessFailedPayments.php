@@ -119,13 +119,16 @@ class ReprocessFailedPayments extends Command
 
     /**
      * Build query with filters from options
+     *
+     * @return \Illuminate\Support\Collection<int, Transaction>
      */
-    private function buildQuery()
+    private function buildQuery(): \Illuminate\Support\Collection
     {
-        $query = Transaction::where('status', 'failed');
+        $query = Transaction::query()->where('status', 'failed');
 
         // Filter by gateway
-        if ($gateway = $this->option('gateway')) {
+        $gateway = $this->option('gateway');
+        if (is_string($gateway) && $gateway !== '') {
             $query->where('gateway', $gateway);
             $this->line('🔍 Filtering by gateway: ' . $gateway);
         }
@@ -147,18 +150,22 @@ class ReprocessFailedPayments extends Command
         $this->line(sprintf('🔍 Filtering transactions older than %d minutes', $ageMinutes));
 
         // Apply limit
-        if ($limit = $this->option('limit')) {
+        $limit = $this->option('limit');
+        if ($limit !== null && is_numeric($limit)) {
             $query->limit((int) $limit);
-            $this->line(sprintf('🔍 Limiting to %s transaction(s)', $limit));
+            $this->line(sprintf('🔍 Limiting to %d transaction(s)', (int) $limit));
         }
 
+        /** @var \Illuminate\Support\Collection<int, Transaction> */
         return $query->orderBy('created_at', 'asc')->get();
     }
 
     /**
      * Display transaction summary table
+     *
+     * @param \Illuminate\Support\Collection<int, Transaction> $transactions
      */
-    private function displayTransactionSummary($transactions): void
+    private function displayTransactionSummary(\Illuminate\Support\Collection $transactions): void
     {
         $headers = ['ID', 'Gateway', 'Amount', 'Retries', 'Last Attempt', 'Created At'];
         $rows = [];
@@ -170,7 +177,7 @@ class ReprocessFailedPayments extends Command
                 number_format($transaction->amount, 2),
                 $transaction->retries_count ?? 0,
                 $transaction->last_attempt_at ? $transaction->last_attempt_at->diffForHumans() : 'Never',
-                $transaction->created_at->diffForHumans(),
+                $transaction->created_at ? $transaction->created_at->diffForHumans() : 'N/A',
             ];
         }
 

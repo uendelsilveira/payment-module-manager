@@ -21,6 +21,10 @@ class PaymentFailed
 {
     use Dispatchable;
     use SerializesModels;
+
+    /**
+     * @param array<string, mixed> $paymentData
+     */
     public function __construct(
         public readonly Transaction $transaction,
         public readonly Throwable $exception,

@@ -10,7 +10,10 @@
 namespace UendelSilveira\PaymentModuleManager\Http\Middleware;
 
 use Closure;
+use Illuminate\Contracts\Auth\Access\Authorizable;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use UendelSilveira\PaymentModuleManager\Exceptions\InvalidConfigurationException;
 use UendelSilveira\PaymentModuleManager\Exceptions\PaymentAuthorizationException;
@@ -41,6 +44,8 @@ class AuthorizePaymentAction
 
     /**
      * Autoriza usando callback customizado.
+     *
+     * @return mixed
      */
     protected function authorizeViaCallback(Request $request, Closure $next, string $permission)
     {
@@ -50,7 +55,8 @@ class AuthorizePaymentAction
             throw new InvalidConfigurationException('Callback de autorização não configurado corretamente.');
         }
 
-        $user = auth()->user();
+        /** @var Authenticatable|null $user */
+        $user = Auth::user();
         $result = call_user_func($callback, $user, $permission, $request);
 
         if ($result !== true) {
@@ -62,10 +68,14 @@ class AuthorizePaymentAction
 
     /**
      * Autoriza usando Laravel Gates.
+     *
+     * @return mixed
      */
     protected function authorizeViaGate(Request $request, Closure $next, string $permission)
     {
-        if (! auth()->user() || ! auth()->user()->can($permission)) {
+        $user = Auth::user();
+
+        if (! $user || ! ($user instanceof Authorizable) || ! $user->can($permission)) {
             throw new PaymentAuthorizationException('Você não tem permissão para executar esta ação.', 403);
         }
 

@@ -16,6 +16,8 @@ class TransactionRepository implements TransactionRepositoryInterface
 {
     /**
      * Cria uma nova transação no banco de dados.
+     *
+     * @param array<string, mixed> $data
      */
     public function create(array $data): Transaction
     {

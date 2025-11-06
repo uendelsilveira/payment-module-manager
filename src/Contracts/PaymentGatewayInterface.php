@@ -14,9 +14,9 @@ interface PaymentGatewayInterface
     /**
      * Processa uma cobrança.
      *
-     * @param array $data Dados adicionais (ex: descrição, dados do cliente)
+     * @param array<string, mixed> $data Dados adicionais (ex: descrição, dados do cliente)
      *
-     * @return array Retorna os dados da transação da API externa
+     * @return array<string, mixed> Retorna os dados da transação da API externa
      */
     public function charge(float $amount, array $data): array;
 
@@ -25,7 +25,7 @@ interface PaymentGatewayInterface
      *
      * @param string $externalPaymentId O ID do pagamento no gateway externo
      *
-     * @return array Retorna os dados da transação da API externa
+     * @return array<string, mixed> Retorna os dados da transação da API externa
      */
     public function getPayment(string $externalPaymentId): array;
 }

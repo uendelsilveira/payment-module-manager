@@ -20,6 +20,10 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     {
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
     public function charge(float $amount, array $data): array
     {
         $startTime = microtime(true);
@@ -62,6 +66,9 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getPayment(string $externalPaymentId): array
     {
         $startTime = microtime(true);
@@ -93,6 +100,10 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
         }
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
     private function buildBasePayload(float $amount, array $data): array
     {
         return [
@@ -105,6 +116,9 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function buildPixPayload(): array
     {
         return [
@@ -112,6 +126,10 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
     private function buildBoletoPayload(array $data): array
     {
         return [
@@ -135,6 +153,10 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
     private function buildCreditCardPayload(array $data): array
     {
         return [
@@ -153,8 +175,12 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function formatPaymentResponse(object $payment): array
     {
+        /** @var object{id: string|int, status: string, transaction_amount: float, description: string, payment_method_id: string, status_detail: string, metadata: object|null, point_of_interaction?: object{transaction_data?: object{qr_code_base64?: string, ticket_url?: string}}} $payment */
         $response = [
             'id' => $payment->id,
             'status' => $payment->status,
@@ -162,7 +188,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
             'description' => $payment->description,
             'payment_method_id' => $payment->payment_method_id,
             'status_detail' => $payment->status_detail,
-            'metadata' => (array) $payment->metadata,
+            'metadata' => (array) ($payment->metadata ?? []),
         ];
 
         if (isset($payment->point_of_interaction->transaction_data)) {

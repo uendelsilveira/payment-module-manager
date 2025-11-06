@@ -10,7 +10,9 @@
 namespace UendelSilveira\PaymentModuleManager\Http\Middleware;
 
 use Closure;
+use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use UendelSilveira\PaymentModuleManager\Exceptions\InvalidConfigurationException;
 use UendelSilveira\PaymentModuleManager\Exceptions\PaymentAuthenticationException;
@@ -45,6 +47,8 @@ class AuthenticatePaymentRequest
 
     /**
      * Valida usando API Token fixo.
+     *
+     * @return mixed
      */
     protected function validateApiToken(Request $request, Closure $next)
     {
@@ -64,10 +68,15 @@ class AuthenticatePaymentRequest
 
     /**
      * Valida usando sistema de autenticação do Laravel.
+     *
+     * @return mixed
      */
     protected function validateLaravelAuth(Request $request, Closure $next, ?string $guard = null)
     {
-        if (! auth($guard)->check()) {
+        /** @var Guard $authGuard */
+        $authGuard = Auth::guard($guard);
+
+        if (! $authGuard->check()) {
             throw new PaymentAuthenticationException('Não autenticado.', 401);
         }
 
@@ -76,6 +85,8 @@ class AuthenticatePaymentRequest
 
     /**
      * Valida usando callback customizado.
+     *
+     * @return mixed
      */
     protected function validateCustom(Request $request, Closure $next)
     {

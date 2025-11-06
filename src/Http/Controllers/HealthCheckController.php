@@ -41,6 +41,9 @@ class HealthCheckController
         ], null, $allHealthy ? 200 : 503);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function checkDatabase(): array
     {
         try {
@@ -60,6 +63,9 @@ class HealthCheckController
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function checkCache(): array
     {
         try {
@@ -90,6 +96,9 @@ class HealthCheckController
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function checkMercadoPagoApi(): array
     {
         try {

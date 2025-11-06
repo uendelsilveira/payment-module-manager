@@ -12,7 +12,7 @@ namespace UendelSilveira\PaymentModuleManager\Facades;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static \UendelSilveira\PaymentModuleManager\Models\Transaction processPayment(array $data)
+ * @method static \UendelSilveira\PaymentModuleManager\Models\Transaction processPayment(array<string, mixed> $data)
  *
  * @see \UendelSilveira\PaymentModuleManager\Services\PaymentService
  */

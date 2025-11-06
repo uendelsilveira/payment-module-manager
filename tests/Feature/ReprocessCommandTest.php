@@ -24,11 +24,14 @@ class ReprocessCommandTest extends TestCase
     /**
      * Desativa o uso de transações do RefreshDatabase para evitar conflito com o DB::transaction() do código.
      * O trait usará o método de truncar tabelas, que é mais lento mas evita o erro de "active transaction".
+     *
+     * @var array<int, string>
      */
     protected $connectionsToTransact = [];
 
     public function test_command_handles_reprocessing_failure_gracefully(): void
     {
+        /** @var Transaction $transaction */
         $transaction = Transaction::factory()->create([
             'status' => 'failed',
             'gateway' => 'mercadopago',
@@ -71,6 +74,7 @@ class ReprocessCommandTest extends TestCase
 
     public function test_command_reprocesses_a_failed_transaction_successfully(): void
     {
+        /** @var Transaction $transaction */
         $transaction = Transaction::factory()->create([
             'status' => 'failed',
             'gateway' => 'mercadopago',

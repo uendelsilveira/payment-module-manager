@@ -26,33 +26,45 @@ class PaymentService
     {
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function processPayment(array $data): Transaction
     {
         $startTime = microtime(true);
-        $correlationId = LogContext::create()->withCorrelationId()->toArray()['correlation_id'];
+        $correlationIdArray = LogContext::create()->withCorrelationId()->toArray();
+        $correlationId = is_string($correlationIdArray['correlation_id'] ?? null) ? $correlationIdArray['correlation_id'] : null;
+
+        $gateway = is_string($data['method'] ?? null) ? $data['method'] : '';
+        $amount = is_float($data['amount'] ?? null) || is_int($data['amount'] ?? null) ? (float) $data['amount'] : 0.0;
+        $paymentMethod = is_string($data['payment_method_id'] ?? null) ? $data['payment_method_id'] : 'unknown';
 
         $logContext = LogContext::create()
             ->withCorrelationId($correlationId)
-            ->withGateway($data['method'])
-            ->withAmount($data['amount'])
-            ->withPaymentMethod($data['payment_method_id'] ?? 'unknown')
+            ->withGateway($gateway)
+            ->withAmount($amount)
+            ->withPaymentMethod($paymentMethod)
             ->withRequestId()
             ->maskSensitiveData();
 
         Log::channel('payment')->info('Starting payment processing', $logContext->toArray());
 
-        $paymentGateway = $this->gatewayManager->create($data['method']);
+        $paymentGateway = $this->gatewayManager->create($gateway);
 
-        return DB::transaction(function () use ($data, $paymentGateway, $startTime, $logContext): \UendelSilveira\PaymentModuleManager\Models\Transaction {
+        $result = DB::transaction(function () use ($data, $paymentGateway, $startTime, $logContext): Transaction {
+            $gateway = is_string($data['method'] ?? null) ? $data['method'] : '';
+            $amount = is_float($data['amount'] ?? null) || is_int($data['amount'] ?? null) ? (float) $data['amount'] : 0.0;
+            $description = is_string($data['description'] ?? null) ? $data['description'] : '';
+
             $transactionData = [
-                'gateway' => $data['method'],
-                'amount' => $data['amount'],
-                'description' => $data['description'],
+                'gateway' => $gateway,
+                'amount' => $amount,
+                'description' => $description,
                 'status' => 'pending',
             ];
 
             // Add idempotency key if provided
-            if (isset($data['_idempotency_key'])) {
+            if (isset($data['_idempotency_key']) && is_string($data['_idempotency_key'])) {
                 $transactionData['idempotency_key'] = $data['_idempotency_key'];
             }
 
@@ -63,10 +75,13 @@ class PaymentService
             Log::channel('transaction')->info('Transaction created', $logContext->toArray());
 
             try {
-                $gatewayResponse = $paymentGateway->charge($data['amount'], $data);
+                $gatewayResponse = $paymentGateway->charge($amount, $data);
 
-                $transaction->external_id = $gatewayResponse['id'];
-                $transaction->status = $gatewayResponse['status'];
+                $externalId = is_string($gatewayResponse['id'] ?? null) ? $gatewayResponse['id'] : null;
+                $status = is_string($gatewayResponse['status'] ?? null) ? $gatewayResponse['status'] : 'unknown';
+
+                $transaction->external_id = $externalId;
+                $transaction->status = $status;
                 $transaction->metadata = array_merge($data, $gatewayResponse);
                 $transaction->save();
 
@@ -96,6 +111,10 @@ class PaymentService
 
             return $transaction;
         });
+
+        assert($result instanceof Transaction);
+
+        return $result;
     }
 
     public function getPaymentDetails(Transaction $transaction): Transaction
@@ -118,9 +137,11 @@ class PaymentService
         $paymentGateway = $this->gatewayManager->create($transaction->gateway);
         $gatewayResponse = $paymentGateway->getPayment($transaction->external_id);
 
-        if ($gatewayResponse['status'] !== $transaction->status) {
+        $responseStatus = is_string($gatewayResponse['status'] ?? null) ? $gatewayResponse['status'] : 'unknown';
+
+        if ($responseStatus !== $transaction->status) {
             $oldStatus = $transaction->status;
-            $newStatus = $gatewayResponse['status'];
+            $newStatus = $responseStatus;
 
             $logContext->with('old_status', $oldStatus)
                 ->with('new_status', $newStatus);
@@ -141,6 +162,9 @@ class PaymentService
         return $transaction;
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, Transaction>
+     */
     public function getFailedTransactions()
     {
         return Transaction::where('status', 'failed')
@@ -155,7 +179,8 @@ class PaymentService
     public function reprocess(Transaction $transaction): Transaction
     {
         $startTime = microtime(true);
-        $maxAttempts = config('payment.retry.max_attempts', 3);
+        $maxAttemptsConfig = config('payment.retry.max_attempts', 3);
+        $maxAttempts = is_int($maxAttemptsConfig) ? $maxAttemptsConfig : 3;
 
         $logContext = LogContext::create()
             ->withCorrelationId()
@@ -171,8 +196,11 @@ class PaymentService
         try {
             $gatewayResponse = $paymentGateway->charge($transaction->amount, $chargeData);
 
-            $transaction->status = $gatewayResponse['status'];
-            $transaction->external_id = $gatewayResponse['id'];
+            $status = is_string($gatewayResponse['status'] ?? null) ? $gatewayResponse['status'] : 'unknown';
+            $externalId = is_string($gatewayResponse['id'] ?? null) ? $gatewayResponse['id'] : null;
+
+            $transaction->status = $status;
+            $transaction->external_id = $externalId;
             $transaction->metadata = array_merge($chargeData, $gatewayResponse);
             $transaction->retries_count++;
             $transaction->last_attempt_at = now();

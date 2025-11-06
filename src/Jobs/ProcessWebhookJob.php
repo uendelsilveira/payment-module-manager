@@ -45,6 +45,8 @@ class ProcessWebhookJob implements ShouldQueue
 
     /**
      * Create a new job instance.
+     *
+     * @param array<string, mixed> $webhookData
      */
     public function __construct(
         public readonly string $gateway,
@@ -105,6 +107,7 @@ class ProcessWebhookJob implements ShouldQueue
         }
 
         // Find transaction by external_id and update status
+        /** @var \UendelSilveira\PaymentModuleManager\Models\Transaction|null $transaction */
         $transaction = \UendelSilveira\PaymentModuleManager\Models\Transaction::where('external_id', $paymentId)->first();
 
         if (! $transaction) {

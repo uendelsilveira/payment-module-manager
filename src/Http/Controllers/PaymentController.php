@@ -33,7 +33,11 @@ class PaymentController extends Controller
         Log::info('[PaymentController] Requisição para processar pagamento recebida.', ['payload' => $createPaymentRequest->validated()]);
 
         try {
-            $transaction = $this->paymentService->processPayment($createPaymentRequest->validated());
+            $validated = $createPaymentRequest->validated();
+            assert(is_array($validated));
+            /** @var array<string, mixed> $validatedData */
+            $validatedData = $validated;
+            $transaction = $this->paymentService->processPayment($validatedData);
 
             return $this->successResponse(
                 $transaction->toArray(),

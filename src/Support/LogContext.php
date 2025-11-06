@@ -14,11 +14,12 @@ use UendelSilveira\PaymentModuleManager\Models\Transaction;
 
 class LogContext
 {
+    /** @var array<string, mixed> */
     private array $context = [];
 
     public static function create(): self
     {
-        return new self;
+        return (new self())->withCorrelationId();
     }
 
     /**
@@ -49,6 +50,8 @@ class LogContext
 
     /**
      * Add transaction ID only
+     *
+     * @param mixed $transactionId
      */
     public function withTransactionId($transactionId): self
     {
@@ -89,6 +92,8 @@ class LogContext
 
     /**
      * Add user context
+     *
+     * @param mixed $user
      */
     public function withUser($user): self
     {
@@ -114,6 +119,8 @@ class LogContext
 
     /**
      * Add webhook context
+     *
+     * @param array<string, mixed> $data
      */
     public function withWebhook(array $data): self
     {
@@ -177,6 +184,8 @@ class LogContext
 
     /**
      * Add custom key-value pair
+     *
+     * @param mixed $value
      */
     public function with(string $key, $value): self
     {
@@ -187,6 +196,8 @@ class LogContext
 
     /**
      * Add multiple custom key-value pairs
+     *
+     * @param array<string, mixed> $data
      */
     public function withMany(array $data): self
     {
@@ -212,6 +223,8 @@ class LogContext
 
     /**
      * Get the context array
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {
@@ -220,6 +233,10 @@ class LogContext
 
     /**
      * Recursively mask sensitive fields
+     *
+     * @param array<string, mixed> $data
+     * @param array<int, string> $sensitiveFields
+     * @return array<string, mixed>
      */
     private function maskRecursive(array $data, array $sensitiveFields): array
     {

@@ -14,6 +14,8 @@ interface MercadoPagoClientInterface
     /**
      * Cria um pagamento no Mercado Pago.
      *
+     * @param array<string, mixed> $requestData
+     *
      * @throws \Exception
      *
      * @return object A resposta do pagamento do Mercado Pago.
@@ -28,4 +30,13 @@ interface MercadoPagoClientInterface
      * @return object A resposta do pagamento do Mercado Pago.
      */
     public function getPayment(string $paymentId): object;
+
+    /**
+     * Obtém os métodos de pagamento disponíveis no Mercado Pago.
+     *
+     * @throws \Exception
+     *
+     * @return array<int, object> A lista de métodos de pagamento.
+     */
+    public function getPaymentMethods(): array;
 }

@@ -22,8 +22,10 @@ class ReportController extends Controller
 
     public function transactionSummary(TransactionSummaryRequest $transactionSummaryRequest): JsonResponse
     {
-        $startDate = $transactionSummaryRequest->validated('start_date');
-        $endDate = $transactionSummaryRequest->validated('end_date');
+        $validated = $transactionSummaryRequest->validated();
+        assert(is_array($validated));
+        $startDate = is_string($validated['start_date'] ?? null) ? $validated['start_date'] : null;
+        $endDate = is_string($validated['end_date'] ?? null) ? $validated['end_date'] : null;
 
         $summary = $this->reportService->getTransactionSummary($startDate, $endDate);
 
@@ -36,8 +38,10 @@ class ReportController extends Controller
 
     public function transactionsByMethod(TransactionSummaryRequest $transactionSummaryRequest): JsonResponse
     {
-        $startDate = $transactionSummaryRequest->validated('start_date');
-        $endDate = $transactionSummaryRequest->validated('end_date');
+        $validated = $transactionSummaryRequest->validated();
+        assert(is_array($validated));
+        $startDate = is_string($validated['start_date'] ?? null) ? $validated['start_date'] : null;
+        $endDate = is_string($validated['end_date'] ?? null) ? $validated['end_date'] : null;
 
         $transactions = $this->reportService->getTransactionsByMethod($startDate, $endDate);
 

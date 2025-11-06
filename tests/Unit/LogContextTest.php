@@ -20,7 +20,7 @@ class LogContextTest extends TestCase
         $logContext = LogContext::create();
 
         $this->assertInstanceOf(LogContext::class, $logContext);
-        $this->assertIsArray($logContext->toArray());
+        $this->assertArrayHasKey('correlation_id', $logContext->toArray());
     }
 
     public function test_can_add_correlation_id(): void
@@ -62,6 +62,7 @@ class LogContextTest extends TestCase
 
     public function test_can_add_transaction(): void
     {
+        /** @var Transaction $transaction */
         $transaction = Transaction::factory()->create([
             'external_id' => 'ext-123',
             'gateway' => 'mercadopago',

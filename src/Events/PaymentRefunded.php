@@ -20,6 +20,10 @@ class PaymentRefunded
 {
     use Dispatchable;
     use SerializesModels;
+
+    /**
+     * @param array<string, mixed> $refundData
+     */
     public function __construct(
         public readonly Transaction $transaction,
         public readonly array $refundData

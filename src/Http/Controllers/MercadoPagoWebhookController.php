@@ -63,14 +63,18 @@ class MercadoPagoWebhookController extends Controller
             return $this->errorResponse('ID do pagamento não encontrado na notificação.', 400);
         }
 
-        $logContext->withExternalId($paymentId);
+        $paymentIdStr = is_string($paymentId) || is_int($paymentId) ? (string) $paymentId : '';
+        $logContext->withExternalId($paymentIdStr);
 
         // Dispatch to queue if async is enabled
         if ($asyncEnabled) {
+            $queueNameConfig = config('payment.webhook.queue_name', 'webhooks');
+            $queueName = is_string($queueNameConfig) ? $queueNameConfig : 'webhooks';
+
             ProcessWebhookJob::dispatch(
                 'mercadopago',
                 $request->all()
-            )->onQueue(config('payment.webhook.queue_name', 'webhooks'));
+            )->onQueue($queueName);
 
             Log::channel('webhook')->info('Webhook dispatched to queue for async processing', $logContext->toArray());
 
@@ -84,9 +88,11 @@ class MercadoPagoWebhookController extends Controller
         try {
             // Consultar a API do Mercado Pago para obter o status atual e canônico do pagamento
             $mpClient = app(\UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface::class);
-            $mpPayment = $mpClient->getPayment($paymentId);
+            $paymentIdStr = is_string($paymentId) || is_int($paymentId) ? (string) $paymentId : '';
+            $mpPayment = $mpClient->getPayment($paymentIdStr);
 
             // Encontrar a transação local pelo external_id
+            /** @var Transaction|null $transaction */
             $transaction = Transaction::where('external_id', $paymentId)->first();
 
             if (! $transaction) {
@@ -99,6 +105,7 @@ class MercadoPagoWebhookController extends Controller
             $logContext->withTransactionId($transaction->id);
 
             // Mapeamento de status do Mercado Pago para status internos (exemplo)
+            /** @var object{status: string} $mpPayment */
             $newStatus = match ($mpPayment->status) {
                 'approved', 'authorized', 'in_process' => 'approved',
                 'pending' => 'pending',
@@ -112,7 +119,13 @@ class MercadoPagoWebhookController extends Controller
             if ($transaction->status !== $newStatus) {
                 $oldStatus = $transaction->status;
                 $transaction->status = $newStatus;
-                $transaction->metadata = (array) $mpPayment;
+                $jsonEncoded = json_encode($mpPayment);
+                if ($jsonEncoded !== false) {
+                    $metadata = json_decode($jsonEncoded, true);
+                    $transaction->metadata = is_array($metadata) ? $metadata : [];
+                } else {
+                    $transaction->metadata = [];
+                }
                 $transaction->save();
 
                 $logContext->with('old_status', $oldStatus)

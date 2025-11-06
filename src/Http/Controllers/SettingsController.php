@@ -68,16 +68,24 @@ class SettingsController extends Controller
             'webhook_secret' => ['nullable', 'string'],
         ]);
 
-        $this->settingsRepository->set('mercadopago_public_key', $request->input('public_key'));
-        $this->settingsRepository->set('mercadopago_access_token', $request->input('access_token'));
-        $this->settingsRepository->set('mercadopago_webhook_secret', $request->input('webhook_secret'));
+        $publicKey = $request->input('public_key');
+        $accessToken = $request->input('access_token');
+        $webhookSecret = $request->input('webhook_secret');
+
+        $this->settingsRepository->set('mercadopago_public_key', is_string($publicKey) ? $publicKey : null);
+        $this->settingsRepository->set('mercadopago_access_token', is_string($accessToken) ? $accessToken : null);
+        $this->settingsRepository->set('mercadopago_webhook_secret', is_string($webhookSecret) ? $webhookSecret : null);
 
         return $this->successResponse(null, 'Configurações salvas com sucesso.');
     }
 
+    /**
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function redirectToMercadoPago()
     {
-        $clientId = Config::get('payment.gateways.mercadopago.client_id');
+        $clientIdConfig = Config::get('payment.gateways.mercadopago.client_id');
+        $clientId = is_string($clientIdConfig) ? $clientIdConfig : '';
         $redirectUri = route('connect.mercadopago.callback');
 
         $url = sprintf('https://auth.mercadopago.com.br/authorization?client_id=%s&response_type=code&platform_id=mp&redirect_uri=%s', $clientId, $redirectUri);
@@ -85,6 +93,9 @@ class SettingsController extends Controller
         return redirect()->away($url);
     }
 
+    /**
+     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
+     */
     public function handleMercadoPagoCallback(Request $request)
     {
         $code = $request->input('code');
@@ -109,12 +120,19 @@ class SettingsController extends Controller
             $response->throw();
 
             $data = $response->json();
+            assert(is_array($data));
 
-            $this->settingsRepository->set('mercadopago_access_token', $data['access_token']);
-            $this->settingsRepository->set('mercadopago_public_key', $data['public_key']);
+            $accessToken = is_string($data['access_token'] ?? null) ? $data['access_token'] : null;
+            $publicKey = is_string($data['public_key'] ?? null) ? $data['public_key'] : null;
+            $refreshToken = is_string($data['refresh_token'] ?? null) ? $data['refresh_token'] : null;
+            $userIdRaw = $data['user_id'] ?? null;
+            $userId = is_string($userIdRaw) || is_int($userIdRaw) ? (string) $userIdRaw : null;
+
+            $this->settingsRepository->set('mercadopago_access_token', $accessToken);
+            $this->settingsRepository->set('mercadopago_public_key', $publicKey);
             // Opcional: Salvar refresh_token, user_id, etc.
-            $this->settingsRepository->set('mercadopago_refresh_token', $data['refresh_token']);
-            $this->settingsRepository->set('mercadopago_user_id', $data['user_id']);
+            $this->settingsRepository->set('mercadopago_refresh_token', $refreshToken);
+            $this->settingsRepository->set('mercadopago_user_id', $userId);
 
             // Redireciona para uma página de sucesso no frontend da aplicação
             return redirect('/')->with('status', 'Conta do Mercado Pago conectada com sucesso!');

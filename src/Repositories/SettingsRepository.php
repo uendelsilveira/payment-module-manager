@@ -25,14 +25,18 @@ class SettingsRepository implements SettingsRepositoryInterface
      */
     protected string $cachePrefix = 'payment_settings:';
 
+    /**
+     * @param mixed $default
+     */
     public function get(string $key, $default = null): ?string
     {
         $cacheKey = $this->getCacheKey($key);
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($key, $default) {
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($key, $default): ?string {
+            /** @var PaymentSetting|null $setting */
             $setting = PaymentSetting::where('key', $key)->first();
 
-            return $setting ? $setting->value : $default;
+            return $setting ? $setting->value : ($default !== null ? (string) $default : null);
         });
     }
 

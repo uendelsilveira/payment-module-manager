@@ -28,6 +28,8 @@ class EnsureIdempotency
 
     /**
      * Handle an incoming request.
+     *
+     * @return mixed
      */
     public function handle(Request $request, Closure $next)
     {
@@ -75,6 +77,7 @@ class EnsureIdempotency
         }
 
         // Check database
+        /** @var Transaction|null $existingTransaction */
         $existingTransaction = Transaction::where('idempotency_key', $idempotencyKey)->first();
 
         if ($existingTransaction) {

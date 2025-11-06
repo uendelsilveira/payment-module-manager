@@ -14,6 +14,9 @@ use UendelSilveira\PaymentModuleManager\Models\Transaction;
 
 class ReportService
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function getTransactionSummary(?string $startDate, ?string $endDate): array
     {
         $builder = Transaction::query();
@@ -27,7 +30,8 @@ class ReportService
         }
 
         $totalTransactions = $builder->count();
-        $totalAmount = (float) $builder->sum('amount');
+        $sumResult = $builder->sum('amount');
+        $totalAmount = is_numeric($sumResult) ? (float) $sumResult : 0.0;
 
         $successfulTransactions = (clone $builder)->where('status', 'approved')->count();
         $failedTransactions = (clone $builder)->where('status', 'failed')->count();
@@ -40,6 +44,9 @@ class ReportService
         ];
     }
 
+    /**
+     * @return array<int, mixed>
+     */
     public function getTransactionsByMethod(?string $startDate, ?string $endDate): array
     {
         $query = Transaction::query();

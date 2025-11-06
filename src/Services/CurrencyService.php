@@ -19,10 +19,14 @@ class CurrencyService
 {
     /**
      * Get list of supported currencies
+     *
+     * @return array<string, mixed>
      */
     public function getSupportedCurrencies(): array
     {
-        return config('payment.currencies.supported', []);
+        $config = config('payment.currencies.supported', []);
+
+        return is_array($config) ? $config : [];
     }
 
     /**
@@ -30,7 +34,9 @@ class CurrencyService
      */
     public function getDefaultCurrency(): string
     {
-        return config('payment.currencies.default', 'BRL');
+        $config = config('payment.currencies.default', 'BRL');
+
+        return is_string($config) ? $config : 'BRL';
     }
 
     /**
@@ -38,7 +44,9 @@ class CurrencyService
      */
     public function isSupported(string $currency): bool
     {
-        return isset(config('payment.currencies.supported')[$currency]);
+        $config = config('payment.currencies.supported');
+
+        return is_array($config) && isset($config[$currency]);
     }
 
     /**
@@ -59,10 +67,14 @@ class CurrencyService
 
     /**
      * Get currency details
+     *
+     * @return array<string, mixed>|null
      */
     public function getCurrencyDetails(string $currency): ?array
     {
-        return config('payment.currencies.supported.' . $currency);
+        $config = config('payment.currencies.supported.' . $currency);
+
+        return is_array($config) ? $config : null;
     }
 
     /**
@@ -76,9 +88,12 @@ class CurrencyService
             return number_format($amount, 2);
         }
 
-        $formatted = number_format($amount, $details['decimal_places']);
+        $decimalPlaces = is_int($details['decimal_places'] ?? null) ? $details['decimal_places'] : 2;
+        $symbol = is_string($details['symbol'] ?? null) ? $details['symbol'] : '';
 
-        return sprintf('%s %s', $details['symbol'], $formatted);
+        $formatted = number_format($amount, $decimalPlaces);
+
+        return sprintf('%s %s', $symbol, $formatted);
     }
 
     /**
@@ -110,7 +125,8 @@ class CurrencyService
     private function getExchangeRate(string $from, string $to): float
     {
         $cacheKey = sprintf('exchange_rate:%s:%s', $from, $to);
-        $cacheTTL = config('payment.currencies.conversion.cache_ttl', 60);
+        $cacheTTLConfig = config('payment.currencies.conversion.cache_ttl', 60);
+        $cacheTTL = is_int($cacheTTLConfig) ? $cacheTTLConfig : 60;
 
         return Cache::remember($cacheKey, $cacheTTL * 60, function () use ($from, $to): float {
             // Simplified static rates for demonstration
@@ -139,6 +155,10 @@ class CurrencyService
     {
         $details = $this->getCurrencyDetails($currency);
 
-        return $details['decimal_places'] ?? 2;
+        if ($details && is_int($details['decimal_places'] ?? null)) {
+            return $details['decimal_places'];
+        }
+
+        return 2;
     }
 }

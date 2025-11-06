@@ -31,14 +31,16 @@ class MercadoPagoClient implements MercadoPagoClientInterface
     {
         $this->baseUrl = Config::get('payment.gateways.mercadopago.base_url', 'https://api.mercadopago.com');
 
-        $this->accessToken = $settingsRepository->get(
+        $accessToken = $settingsRepository->get(
             'mercadopago_access_token',
             Config::get('payment.gateways.mercadopago.access_token')
         );
 
-        if ($this->accessToken === '' || $this->accessToken === '0') {
+        if ($accessToken === null || $accessToken === '' || $accessToken === '0') {
             throw new InvalidConfigurationException('Mercado Pago access token não configurado.');
         }
+
+        $this->accessToken = $accessToken;
 
         $this->httpClient = new Client([
             'base_uri' => $this->baseUrl,
@@ -51,6 +53,9 @@ class MercadoPagoClient implements MercadoPagoClientInterface
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $requestData
+     */
     public function createPayment(array $requestData): object
     {
         try {
@@ -108,6 +113,37 @@ class MercadoPagoClient implements MercadoPagoClientInterface
             Log::error('Erro inesperado ao obter pagamento no Mercado Pago: '.$e->getMessage());
 
             throw new PaymentGatewayException('Erro inesperado ao obter pagamento: '.$e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * @return array<int, object>
+     */
+    public function getPaymentMethods(): array
+    {
+        try {
+            $response = $this->httpClient->get('/v1/payment_methods');
+
+            $body = json_decode($response->getBody()->getContents());
+
+            if ($response->getStatusCode() >= 400) {
+                Log::error('Erro na API do Mercado Pago ao obter métodos de pagamento.', [
+                    'status_code' => $response->getStatusCode(),
+                    'content' => $body,
+                ]);
+
+                throw new PaymentGatewayException('Erro ao obter métodos de pagamento: '.($body->message ?? 'Erro desconhecido'), $response->getStatusCode());
+            }
+
+            return is_array($body) ? $body : [];
+        } catch (GuzzleException $e) {
+            Log::error('Erro de conexão Guzzle ao obter métodos de pagamento: '.$e->getMessage());
+
+            throw new ExternalServiceException('Erro de conexão ao obter métodos de pagamento: '.$e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('Erro inesperado ao obter métodos de pagamento: '.$e->getMessage());
+
+            throw new PaymentGatewayException('Erro inesperado ao obter métodos de pagamento: '.$e->getMessage(), 500);
         }
     }
 }
