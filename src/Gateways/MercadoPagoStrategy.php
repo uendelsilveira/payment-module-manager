@@ -229,6 +229,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
 
         try {
             $payload = [];
+
             if ($amount !== null) {
                 $payload['amount'] = $amount;
             }

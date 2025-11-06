@@ -12,6 +12,7 @@ use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 class MercadoPagoStrategyTest extends TestCase
 {
     private MockInterface&MercadoPagoClientInterface $mpClientMock;
+
     private MercadoPagoStrategy $mercadoPagoStrategy;
 
     protected function setUp(): void
@@ -27,8 +28,8 @@ class MercadoPagoStrategyTest extends TestCase
     {
         // Arrange
         $expectedPaymentMethods = [
-            (object)['id' => 'pix', 'name' => 'Pix'],
-            (object)['id' => 'credit_card', 'name' => 'Credit Card'],
+            (object) ['id' => 'pix', 'name' => 'Pix'],
+            (object) ['id' => 'credit_card', 'name' => 'Credit Card'],
         ];
 
         $this->mpClientMock
@@ -62,7 +63,7 @@ class MercadoPagoStrategyTest extends TestCase
     {
         // Arrange
         $paymentId = '123456789';
-        $expectedRefund = (object)[
+        $expectedRefund = (object) [
             'id' => 'refund_123',
             'payment_id' => $paymentId,
             'amount' => 100.00,
@@ -91,7 +92,7 @@ class MercadoPagoStrategyTest extends TestCase
         // Arrange
         $paymentId = '123456789';
         $partialAmount = 50.00;
-        $expectedRefund = (object)[
+        $expectedRefund = (object) [
             'id' => 'refund_456',
             'payment_id' => $paymentId,
             'amount' => $partialAmount,
@@ -135,14 +136,14 @@ class MercadoPagoStrategyTest extends TestCase
     {
         // Arrange
         $paymentId = '123456789';
-        $expectedCancelResponse = (object)[
+        $expectedCancelResponse = (object) [
             'id' => $paymentId,
             'status' => 'cancelled',
             'transaction_amount' => 100.00,
             'description' => 'Payment cancelled',
             'payment_method_id' => 'pix',
             'status_detail' => 'by_collector',
-            'metadata' => (object)[],
+            'metadata' => (object) [],
         ];
 
         $this->mpClientMock

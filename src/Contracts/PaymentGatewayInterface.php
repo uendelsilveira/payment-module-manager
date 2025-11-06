@@ -32,8 +32,8 @@ interface PaymentGatewayInterface
     /**
      * Realiza o estorno total ou parcial de um pagamento.
      *
-     * @param string $externalPaymentId O ID do pagamento no gateway externo
-     * @param float|null $amount Valor a estornar (null = estorno total)
+     * @param string     $externalPaymentId O ID do pagamento no gateway externo
+     * @param float|null $amount            Valor a estornar (null = estorno total)
      *
      * @return array<string, mixed> Retorna os dados do estorno
      */
