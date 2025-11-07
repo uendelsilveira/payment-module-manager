@@ -39,6 +39,8 @@
     }
   },
   "scripts": {
+    "check-composer": "composer validate --no-check-all --strict",
+    "update-deps": "composer update --no-interaction",
     "lint": "vendor/bin/pint",
     "rector": "vendor/bin/rector",
     "phpstan": "vendor/bin/phpstan analyse --memory-limit=512M",
@@ -46,12 +48,17 @@
     "coverage": "vendor/bin/phpunit --coverage-html coverage",
 
     "ci": [
+      "@check-composer",
+      "@update-deps",
+      "@lint",
       "@rector",
       "@lint",
       "@phpstan",
-      "@test"
+      "@test",
+      "@coverage"
     ]
   },
+
   "extra": {
     "laravel": {
       "providers": [
