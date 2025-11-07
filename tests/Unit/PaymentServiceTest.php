@@ -82,7 +82,7 @@ class PaymentServiceTest extends TestCase
             ->andReturn($paymentGatewayMock);
 
         // Act
-        $result = $this->paymentService->refundPayment($transaction, null);
+        $result = $this->paymentService->refundPayment($transaction);
 
         // Assert
         $this->assertEquals($expectedRefundResponse, $result);

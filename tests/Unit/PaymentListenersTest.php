@@ -71,10 +71,10 @@ class PaymentListenersTest extends TestCase
         /** @var Transaction $transaction */
         $transaction = Transaction::factory()->create(['status' => 'failed']);
         $exception = new \Exception('Payment gateway error');
-        $event = new PaymentFailed($transaction, $exception, ['amount' => 100]);
+        $paymentFailed = new PaymentFailed($transaction, $exception, ['amount' => 100]);
 
-        $listener = new LogPaymentFailed;
-        $listener->handle($event);
+        $logPaymentFailed = new LogPaymentFailed;
+        $logPaymentFailed->handle($paymentFailed);
     }
 
     public function test_log_payment_failed_masks_sensitive_data(): void
@@ -93,10 +93,10 @@ class PaymentListenersTest extends TestCase
             'card_number' => '4111111111111111', // Should be masked
         ];
 
-        $event = new PaymentFailed($transaction, $exception, $paymentData);
+        $paymentFailed = new PaymentFailed($transaction, $exception, $paymentData);
 
-        $listener = new LogPaymentFailed;
-        $listener->handle($event);
+        $logPaymentFailed = new LogPaymentFailed;
+        $logPaymentFailed->handle($paymentFailed);
     }
 
     // SendPaymentStatusNotification tests
@@ -120,17 +120,15 @@ class PaymentListenersTest extends TestCase
             'external_id' => 'MP123',
         ]);
 
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
 
-        Http::assertSent(function ($request) {
-            return $request->url() === 'https://example.com/webhook'
-                && $request['event'] === 'payment.status_changed'
-                && isset($request['transaction_id'])
-                && isset($request['new_status']);
-        });
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://example.com/webhook'
+            && $request['event'] === 'payment.status_changed'
+            && isset($request['transaction_id'])
+            && isset($request['new_status']));
     }
 
     public function test_send_notification_handles_webhook_failure(): void
@@ -149,10 +147,10 @@ class PaymentListenersTest extends TestCase
 
         /** @var Transaction $transaction */
         $transaction = Transaction::factory()->create(['status' => 'approved']);
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
     }
 
     public function test_send_notification_handles_webhook_exception(): void
@@ -165,21 +163,21 @@ class PaymentListenersTest extends TestCase
         Log::shouldReceive('info')->once();
         Log::shouldReceive('error')->once();
 
-        Http::fake(function () {
+        Http::fake(function (): void {
             throw new \Exception('Network error');
         });
 
         /** @var Transaction $transaction */
         $transaction = Transaction::factory()->create(['status' => 'approved']);
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
     }
 
     public function test_send_notification_skips_webhook_when_not_configured(): void
     {
-        Config::set('payment.notifications.webhook_url', null);
+        Config::set('payment.notifications.webhook_url');
         Config::set('payment.notifications.email.enabled', false);
         Config::set('payment.notifications.sms.enabled', false);
 
@@ -190,17 +188,17 @@ class PaymentListenersTest extends TestCase
 
         /** @var Transaction $transaction */
         $transaction = Transaction::factory()->create(['status' => 'approved']);
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
 
         Http::assertNothingSent();
     }
 
     public function test_send_notification_with_email_enabled(): void
     {
-        Config::set('payment.notifications.webhook_url', null);
+        Config::set('payment.notifications.webhook_url');
         Config::set('payment.notifications.email.enabled', true);
         Config::set('payment.notifications.email.default_recipient', 'test@example.com');
         Config::set('payment.notifications.sms.enabled', false);
@@ -214,15 +212,15 @@ class PaymentListenersTest extends TestCase
             'metadata' => ['payer_email' => 'customer@example.com'],
         ]);
 
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
     }
 
     public function test_send_notification_email_uses_default_recipient_when_no_payer_email(): void
     {
-        Config::set('payment.notifications.webhook_url', null);
+        Config::set('payment.notifications.webhook_url');
         Config::set('payment.notifications.email.enabled', true);
         Config::set('payment.notifications.email.default_recipient', 'default@example.com');
         Config::set('payment.notifications.sms.enabled', false);
@@ -236,17 +234,17 @@ class PaymentListenersTest extends TestCase
             'metadata' => [], // No payer_email
         ]);
 
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
     }
 
     public function test_send_notification_email_skips_when_no_recipient(): void
     {
-        Config::set('payment.notifications.webhook_url', null);
+        Config::set('payment.notifications.webhook_url');
         Config::set('payment.notifications.email.enabled', true);
-        Config::set('payment.notifications.email.default_recipient', null);
+        Config::set('payment.notifications.email.default_recipient');
         Config::set('payment.notifications.sms.enabled', false);
 
         Log::shouldReceive('channel')->andReturnSelf();
@@ -259,15 +257,15 @@ class PaymentListenersTest extends TestCase
             'metadata' => [],
         ]);
 
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
     }
 
     public function test_send_notification_with_sms_enabled(): void
     {
-        Config::set('payment.notifications.webhook_url', null);
+        Config::set('payment.notifications.webhook_url');
         Config::set('payment.notifications.email.enabled', false);
         Config::set('payment.notifications.sms.enabled', true);
         Config::set('payment.notifications.sms.provider', 'twilio');
@@ -282,15 +280,15 @@ class PaymentListenersTest extends TestCase
             'metadata' => ['payer_phone' => '+5511999999999'],
         ]);
 
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
     }
 
     public function test_send_notification_sms_skips_when_no_phone(): void
     {
-        Config::set('payment.notifications.webhook_url', null);
+        Config::set('payment.notifications.webhook_url');
         Config::set('payment.notifications.email.enabled', false);
         Config::set('payment.notifications.sms.enabled', true);
 
@@ -304,10 +302,10 @@ class PaymentListenersTest extends TestCase
             'metadata' => [], // No phone
         ]);
 
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
     }
 
     public function test_send_notification_processes_multiple_channels(): void
@@ -333,10 +331,10 @@ class PaymentListenersTest extends TestCase
             ],
         ]);
 
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
 
         Http::assertSentCount(1);
     }
@@ -361,16 +359,14 @@ class PaymentListenersTest extends TestCase
             'status' => 'approved',
         ]);
 
-        $event = new PaymentStatusChanged($transaction, 'pending', 'approved');
+        $paymentStatusChanged = new PaymentStatusChanged($transaction, 'pending', 'approved');
 
-        $listener = new SendPaymentStatusNotification;
-        $listener->handle($event);
+        $sendPaymentStatusNotification = new SendPaymentStatusNotification;
+        $sendPaymentStatusNotification->handle($paymentStatusChanged);
 
-        Http::assertSent(function ($request) {
-            return $request['external_id'] === 'MP12345'
-                && $request['gateway'] === 'mercadopago'
-                && $request['amount'] == 150.00
-                && $request['currency'] === 'BRL';
-        });
+        Http::assertSent(fn ($request): bool => $request['external_id'] === 'MP12345'
+            && $request['gateway'] === 'mercadopago'
+            && $request['amount'] == 150.00
+            && $request['currency'] === 'BRL');
     }
 }

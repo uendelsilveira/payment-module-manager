@@ -1,13 +1,11 @@
 {
   "name": "uendelsilveira/payment-module-manager",
-    "version": "1.2.1",
   "description": "Um gerenciador de módulos de pagamento para Laravel.",
   "type": "library",
   "license": "MIT",
   "authors": [
     {
       "name": "Uendel Silveira",
-    "version": "1.2.1",
       "email": "uendel.silveira@gmail.com"
     }
   ],
@@ -41,11 +39,19 @@
     }
   },
   "scripts": {
-    "test": "vendor/bin/phpunit",
-    "coverage": "vendor/bin/phpunit --coverage-html coverage",
     "lint": "vendor/bin/pint",
     "rector": "vendor/bin/rector",
-    "phpstan": "vendor/bin/phpstan analyse --memory-limit=512M"
+    "phpstan": "vendor/bin/phpstan analyse --memory-limit=512M",
+    "test": "vendor/bin/phpunit",
+    "coverage": "vendor/bin/phpunit --coverage-html coverage",
+
+    "ci": [
+      "@lint",
+      "@rector",
+      "@lint",
+      "@phpstan",
+      "@test"
+    ]
   },
   "extra": {
     "laravel": {

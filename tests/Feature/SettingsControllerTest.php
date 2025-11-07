@@ -89,7 +89,8 @@ class SettingsControllerTest extends TestCase
 
         $testResponse = $this->get(route('connect.mercadopago.redirect'));
 
-        $testResponse->assertStatus(302); // Verifica se é um redirecionamento
+        $testResponse->assertStatus(302);
+        // Verifica se é um redirecionamento
         $location = $testResponse->headers->get('location');
         $this->assertIsString($location);
         $this->assertStringContainsString('https://auth.mercadopago.com.br/authorization', $location);

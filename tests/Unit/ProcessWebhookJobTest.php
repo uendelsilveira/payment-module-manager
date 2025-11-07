@@ -68,29 +68,29 @@ class ProcessWebhookJobTest extends TestCase
 
     public function test_job_has_correct_configuration(): void
     {
-        $job = new ProcessWebhookJob('mercadopago', ['test' => 'data']);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', ['test' => 'data']);
 
-        $this->assertEquals(3, $job->tries);
-        $this->assertEquals(60, $job->backoff);
-        $this->assertTrue($job->deleteWhenMissingModels);
+        $this->assertEquals(3, $processWebhookJob->tries);
+        $this->assertEquals(60, $processWebhookJob->backoff);
+        $this->assertTrue($processWebhookJob->deleteWhenMissingModels);
     }
 
     public function test_job_can_be_constructed_with_parameters(): void
     {
         $webhookData = ['type' => 'payment', 'data' => ['id' => '123']];
-        $job = new ProcessWebhookJob('mercadopago', $webhookData, 1);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData, 1);
 
-        $this->assertEquals('mercadopago', $job->gateway);
-        $this->assertEquals($webhookData, $job->webhookData);
-        $this->assertEquals(1, $job->transactionId);
+        $this->assertEquals('mercadopago', $processWebhookJob->gateway);
+        $this->assertEquals($webhookData, $processWebhookJob->webhookData);
+        $this->assertEquals(1, $processWebhookJob->transactionId);
     }
 
     public function test_job_can_be_constructed_without_transaction_id(): void
     {
         $webhookData = ['type' => 'payment'];
-        $job = new ProcessWebhookJob('mercadopago', $webhookData);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData);
 
-        $this->assertNull($job->transactionId);
+        $this->assertNull($processWebhookJob->transactionId);
     }
 
     public function test_handle_processes_mercadopago_payment_webhook(): void
@@ -117,8 +117,8 @@ class ProcessWebhookJobTest extends TestCase
             ->once()
             ->andReturn($transaction);
 
-        $job = new ProcessWebhookJob('mercadopago', $webhookData);
-        $job->handle($this->paymentService);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData);
+        $processWebhookJob->handle($this->paymentService);
 
         $this->assertTrue(true); // Test completed without exceptions
     }
@@ -138,8 +138,8 @@ class ProcessWebhookJobTest extends TestCase
         $this->paymentService
             ->shouldNotReceive('getPaymentDetails');
 
-        $job = new ProcessWebhookJob('mercadopago', $webhookData);
-        $job->handle($this->paymentService);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData);
+        $processWebhookJob->handle($this->paymentService);
 
         $this->assertTrue(true); // Test completed without exceptions
     }
@@ -158,8 +158,8 @@ class ProcessWebhookJobTest extends TestCase
         $this->paymentService
             ->shouldNotReceive('getPaymentDetails');
 
-        $job = new ProcessWebhookJob('mercadopago', $webhookData);
-        $job->handle($this->paymentService);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData);
+        $processWebhookJob->handle($this->paymentService);
 
         $this->assertTrue(true); // Test completed without exceptions
     }
@@ -179,8 +179,8 @@ class ProcessWebhookJobTest extends TestCase
         $this->paymentService
             ->shouldNotReceive('getPaymentDetails');
 
-        $job = new ProcessWebhookJob('mercadopago', $webhookData);
-        $job->handle($this->paymentService);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData);
+        $processWebhookJob->handle($this->paymentService);
 
         $this->assertTrue(true); // Test completed without exceptions
     }
@@ -211,8 +211,8 @@ class ProcessWebhookJobTest extends TestCase
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Service error');
 
-        $job = new ProcessWebhookJob('mercadopago', $webhookData);
-        $job->handle($this->paymentService);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData);
+        $processWebhookJob->handle($this->paymentService);
     }
 
     public function test_failed_logs_critical_error(): void
@@ -221,10 +221,10 @@ class ProcessWebhookJobTest extends TestCase
         Log::shouldReceive('critical')->once();
 
         $webhookData = ['type' => 'payment'];
-        $job = new ProcessWebhookJob('mercadopago', $webhookData, 1);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData, 1);
 
         $exception = new \Exception('Final failure');
-        $job->failed($exception);
+        $processWebhookJob->failed($exception);
 
         $this->assertTrue(true); // Test completed without exceptions
     }
@@ -237,11 +237,9 @@ class ProcessWebhookJobTest extends TestCase
 
         ProcessWebhookJob::dispatch('mercadopago', $webhookData, 1);
 
-        Queue::assertPushed(ProcessWebhookJob::class, function ($job) use ($webhookData) {
-            return $job->gateway === 'mercadopago'
-                && $job->webhookData === $webhookData
-                && $job->transactionId === 1;
-        });
+        Queue::assertPushed(ProcessWebhookJob::class, fn ($job): bool => $job->gateway === 'mercadopago'
+            && $job->webhookData === $webhookData
+            && $job->transactionId === 1);
     }
 
     public function test_job_processes_with_correlation_id_in_logs(): void
@@ -249,9 +247,7 @@ class ProcessWebhookJobTest extends TestCase
         Log::shouldReceive('channel')->andReturnSelf();
         Log::shouldReceive('info')->atLeast()->once()->with(
             Mockery::any(),
-            Mockery::on(function ($context) {
-                return isset($context['correlation_id']);
-            })
+            Mockery::on(fn ($context): bool => isset($context['correlation_id']))
         );
         Log::shouldReceive('error')->zeroOrMoreTimes();
 
@@ -273,8 +269,8 @@ class ProcessWebhookJobTest extends TestCase
             ->once()
             ->andReturn($transactionForReturn);
 
-        $job = new ProcessWebhookJob('mercadopago', $webhookData);
-        $job->handle($this->paymentService);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData);
+        $processWebhookJob->handle($this->paymentService);
 
         $this->assertTrue(true); // Test completed without exceptions
     }
@@ -284,10 +280,9 @@ class ProcessWebhookJobTest extends TestCase
         Log::shouldReceive('channel')->andReturnSelf();
         Log::shouldReceive('info')->atLeast()->once()->with(
             Mockery::any(),
-            Mockery::on(function ($context) {
+            Mockery::on(fn ($context): bool =>
                 // Should not contain raw sensitive data
-                return ! isset($context['webhook_data']['password']);
-            })
+                ! isset($context['webhook_data']['password']))
         );
         Log::shouldReceive('error')->zeroOrMoreTimes();
 
@@ -309,8 +304,8 @@ class ProcessWebhookJobTest extends TestCase
             ->once()
             ->andReturn($transactionForMask);
 
-        $job = new ProcessWebhookJob('mercadopago', $webhookData);
-        $job->handle($this->paymentService);
+        $processWebhookJob = new ProcessWebhookJob('mercadopago', $webhookData);
+        $processWebhookJob->handle($this->paymentService);
 
         $this->assertTrue(true); // Test completed without exceptions
     }

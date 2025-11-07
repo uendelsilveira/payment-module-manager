@@ -82,7 +82,7 @@ class VerifyMercadoPagoSignature
         $expectedSignature = hash_hmac('sha256', $manifest, (string) $secret);
 
         // Compara as assinaturas
-        if (! hash_equals($expectedSignature, (string) $hash)) {
+        if (! hash_equals($expectedSignature, $hash)) {
             throw new WebhookSignatureException('Invalid Mercado Pago signature.', 403);
         }
 

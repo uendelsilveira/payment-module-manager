@@ -127,6 +127,7 @@ class MercadoPagoWebhookController extends Controller
                 } else {
                     $transaction->metadata = [];
                 }
+
                 $transaction->save();
 
                 $logContext->with('old_status', $oldStatus)

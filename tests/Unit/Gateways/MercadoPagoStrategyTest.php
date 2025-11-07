@@ -28,6 +28,7 @@ class MercadoPagoStrategyTest extends TestCase
         /** @var MockInterface&MercadoPagoClientInterface $mpClientMock */
         $mpClientMock = Mockery::mock(MercadoPagoClientInterface::class);
         $this->mpClientMock = $mpClientMock;
+
         $this->mercadoPagoStrategy = new MercadoPagoStrategy($this->mpClientMock);
     }
 
@@ -59,10 +60,8 @@ class MercadoPagoStrategyTest extends TestCase
         $this->mpClientMock
             ->shouldReceive('createPayment')
             ->once()
-            ->with(Mockery::on(function ($payload) use ($amount) {
-                return $payload['payment_method_id'] === 'pix'
-                    && $payload['transaction_amount'] === $amount;
-            }))
+            ->with(Mockery::on(fn ($payload): bool => $payload['payment_method_id'] === 'pix'
+                && $payload['transaction_amount'] === $amount))
             ->andReturn($expectedPaymentResponse);
 
         // Act
@@ -115,10 +114,8 @@ class MercadoPagoStrategyTest extends TestCase
         $this->mpClientMock
             ->shouldReceive('createPayment')
             ->once()
-            ->with(Mockery::on(function ($payload) {
-                return $payload['payment_method_id'] === 'boleto'
-                    && $payload['payer']['first_name'] === 'John';
-            }))
+            ->with(Mockery::on(fn ($payload): bool => $payload['payment_method_id'] === 'boleto'
+                && $payload['payer']['first_name'] === 'John'))
             ->andReturn($expectedPaymentResponse);
 
         // Act
@@ -161,10 +158,8 @@ class MercadoPagoStrategyTest extends TestCase
         $this->mpClientMock
             ->shouldReceive('createPayment')
             ->once()
-            ->with(Mockery::on(function ($payload) {
-                return $payload['payment_method_id'] === 'credit_card'
-                    && $payload['token'] === 'card_token_123';
-            }))
+            ->with(Mockery::on(fn ($payload): bool => $payload['payment_method_id'] === 'credit_card'
+                && $payload['token'] === 'card_token_123'))
             ->andReturn($expectedPaymentResponse);
 
         // Act

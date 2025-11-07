@@ -50,7 +50,7 @@ class CurrencyServiceTest extends TestCase
 
     public function test_get_supported_currencies_returns_empty_array_when_not_configured(): void
     {
-        Config::set('payment.currencies.supported', null);
+        Config::set('payment.currencies.supported');
 
         $currencies = $this->currencyService->getSupportedCurrencies();
 
@@ -66,7 +66,7 @@ class CurrencyServiceTest extends TestCase
 
     public function test_get_default_currency_returns_brl_when_not_configured(): void
     {
-        Config::set('payment.currencies.default', null);
+        Config::set('payment.currencies.default');
 
         $currency = $this->currencyService->getDefaultCurrency();
 

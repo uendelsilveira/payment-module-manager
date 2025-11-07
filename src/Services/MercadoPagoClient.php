@@ -36,7 +36,7 @@ class MercadoPagoClient implements MercadoPagoClientInterface
             Config::get('payment.gateways.mercadopago.access_token')
         );
 
-        if ($accessToken === null || $accessToken === '' || $accessToken === '0') {
+        if (in_array($accessToken, [null, '', '0'], true)) {
             throw new InvalidConfigurationException('Mercado Pago access token não configurado.');
         }
 

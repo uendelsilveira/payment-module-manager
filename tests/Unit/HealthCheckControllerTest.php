@@ -13,7 +13,7 @@ use UendelSilveira\PaymentModuleManager\Providers\PaymentServiceProvider;
 
 class HealthCheckControllerTest extends TestCase
 {
-    private HealthCheckController $controller;
+    private HealthCheckController $healthCheckController;
 
     /** @var MercadoPagoClientInterface&MockInterface */
     private MercadoPagoClientInterface $mercadoPagoClient;
@@ -25,7 +25,8 @@ class HealthCheckControllerTest extends TestCase
         /** @var MercadoPagoClientInterface&MockInterface $mercadoPagoClient */
         $mercadoPagoClient = Mockery::mock(MercadoPagoClientInterface::class);
         $this->mercadoPagoClient = $mercadoPagoClient;
-        $this->controller = new HealthCheckController($this->mercadoPagoClient);
+
+        $this->healthCheckController = new HealthCheckController($this->mercadoPagoClient);
     }
 
     protected function tearDown(): void
@@ -59,16 +60,16 @@ class HealthCheckControllerTest extends TestCase
             ->andReturn([]);
 
         // Create transactions table for DB check
-        DB::connection()->getSchemaBuilder()->create('transactions', function ($table) {
+        DB::connection()->getSchemaBuilder()->create('transactions', function ($table): void {
             $table->id();
             $table->timestamps();
         });
 
-        $response = $this->controller->check();
+        $jsonResponse = $this->healthCheckController->check();
 
-        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertEquals(200, $jsonResponse->getStatusCode());
 
-        $responseData = $response->getData(true);
+        $responseData = $jsonResponse->getData(true);
         $data = $responseData['data'];
 
         $this->assertEquals('healthy', $data['status']);
@@ -89,16 +90,16 @@ class HealthCheckControllerTest extends TestCase
             ->andThrow(new \Exception('API connection failed'));
 
         // Create transactions table for DB check
-        DB::connection()->getSchemaBuilder()->create('transactions', function ($table) {
+        DB::connection()->getSchemaBuilder()->create('transactions', function ($table): void {
             $table->id();
             $table->timestamps();
         });
 
-        $response = $this->controller->check();
+        $jsonResponse = $this->healthCheckController->check();
 
-        $this->assertEquals(503, $response->getStatusCode());
+        $this->assertEquals(503, $jsonResponse->getStatusCode());
 
-        $responseData = $response->getData(true);
+        $responseData = $jsonResponse->getData(true);
         $data = $responseData['data'];
 
         $this->assertEquals('degraded', $data['status']);
@@ -116,11 +117,11 @@ class HealthCheckControllerTest extends TestCase
 
         // Don't create the transactions table to simulate DB failure
 
-        $response = $this->controller->check();
+        $jsonResponse = $this->healthCheckController->check();
 
-        $this->assertEquals(503, $response->getStatusCode());
+        $this->assertEquals(503, $jsonResponse->getStatusCode());
 
-        $responseData = $response->getData(true);
+        $responseData = $jsonResponse->getData(true);
         $data = $responseData['data'];
 
         $this->assertEquals('degraded', $data['status']);
@@ -134,13 +135,13 @@ class HealthCheckControllerTest extends TestCase
             ->once()
             ->andReturn([]);
 
-        DB::connection()->getSchemaBuilder()->create('transactions', function ($table) {
+        DB::connection()->getSchemaBuilder()->create('transactions', function ($table): void {
             $table->id();
             $table->timestamps();
         });
 
-        $response = $this->controller->check();
-        $responseData = $response->getData(true);
+        $jsonResponse = $this->healthCheckController->check();
+        $responseData = $jsonResponse->getData(true);
         $data = $responseData['data'];
 
         $this->assertEquals('healthy', $data['checks']['database']['status']);
@@ -154,13 +155,13 @@ class HealthCheckControllerTest extends TestCase
             ->once()
             ->andReturn([]);
 
-        DB::connection()->getSchemaBuilder()->create('transactions', function ($table) {
+        DB::connection()->getSchemaBuilder()->create('transactions', function ($table): void {
             $table->id();
             $table->timestamps();
         });
 
-        $response = $this->controller->check();
-        $responseData = $response->getData(true);
+        $jsonResponse = $this->healthCheckController->check();
+        $responseData = $jsonResponse->getData(true);
         $data = $responseData['data'];
 
         $this->assertEquals('healthy', $data['checks']['cache']['status']);
@@ -174,7 +175,7 @@ class HealthCheckControllerTest extends TestCase
             ->once()
             ->andReturn([]);
 
-        DB::connection()->getSchemaBuilder()->create('transactions', function ($table) {
+        DB::connection()->getSchemaBuilder()->create('transactions', function ($table): void {
             $table->id();
             $table->timestamps();
         });
@@ -183,13 +184,13 @@ class HealthCheckControllerTest extends TestCase
         Cache::put('test_key', 'test_value', 10);
         $this->assertTrue(Cache::has('test_key'));
 
-        $response = $this->controller->check();
+        $jsonResponse = $this->healthCheckController->check();
 
         // Original key should still exist
         $this->assertTrue(Cache::has('test_key'));
 
         // The health check key should be cleaned up (not exist)
-        $responseData = $response->getData(true);
+        $responseData = $jsonResponse->getData(true);
         $data = $responseData['data'];
         $this->assertEquals('healthy', $data['checks']['cache']['status']);
     }
@@ -201,13 +202,13 @@ class HealthCheckControllerTest extends TestCase
             ->once()
             ->andReturn(['visa', 'mastercard']);
 
-        DB::connection()->getSchemaBuilder()->create('transactions', function ($table) {
+        DB::connection()->getSchemaBuilder()->create('transactions', function ($table): void {
             $table->id();
             $table->timestamps();
         });
 
-        $response = $this->controller->check();
-        $responseData = $response->getData(true);
+        $jsonResponse = $this->healthCheckController->check();
+        $responseData = $jsonResponse->getData(true);
         $data = $responseData['data'];
 
         $this->assertEquals('healthy', $data['checks']['mercadopago_api']['status']);
@@ -223,13 +224,13 @@ class HealthCheckControllerTest extends TestCase
             ->once()
             ->andThrow(new \Exception($errorMessage));
 
-        DB::connection()->getSchemaBuilder()->create('transactions', function ($table) {
+        DB::connection()->getSchemaBuilder()->create('transactions', function ($table): void {
             $table->id();
             $table->timestamps();
         });
 
-        $response = $this->controller->check();
-        $responseData = $response->getData(true);
+        $jsonResponse = $this->healthCheckController->check();
+        $responseData = $jsonResponse->getData(true);
         $data = $responseData['data'];
 
         $this->assertArrayHasKey('error', $data['checks']['mercadopago_api']);
@@ -243,13 +244,13 @@ class HealthCheckControllerTest extends TestCase
             ->once()
             ->andReturn([]);
 
-        DB::connection()->getSchemaBuilder()->create('transactions', function ($table) {
+        DB::connection()->getSchemaBuilder()->create('transactions', function ($table): void {
             $table->id();
             $table->timestamps();
         });
 
-        $response = $this->controller->check();
-        $responseData = $response->getData(true);
+        $jsonResponse = $this->healthCheckController->check();
+        $responseData = $jsonResponse->getData(true);
         $data = $responseData['data'];
 
         $this->assertArrayHasKey('status', $data);

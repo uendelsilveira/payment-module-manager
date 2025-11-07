@@ -124,13 +124,13 @@ class ReprocessFailedPayments extends Command
      */
     private function buildQuery(): \Illuminate\Support\Collection
     {
-        $query = Transaction::query()->where('status', 'failed');
+        $builder = Transaction::query()->where('status', 'failed');
 
         // Filter by gateway
         $gateway = $this->option('gateway');
 
         if (is_string($gateway) && $gateway !== '') {
-            $query->where('gateway', $gateway);
+            $builder->where('gateway', $gateway);
             $this->line('🔍 Filtering by gateway: '.$gateway);
         }
 
@@ -138,13 +138,13 @@ class ReprocessFailedPayments extends Command
         $maxRetries = (int) $this->option('max-retries');
 
         if (! $this->option('force')) {
-            $query->where('retries_count', '<', $maxRetries);
+            $builder->where('retries_count', '<', $maxRetries);
             $this->line('🔍 Filtering by retries < '.$maxRetries);
         }
 
         // Filter by age (last attempt)
         $ageMinutes = (int) ($this->option('age') ?? 5);
-        $query->where(function ($q) use ($ageMinutes): void {
+        $builder->where(function ($q) use ($ageMinutes): void {
             $q->whereNull('last_attempt_at')
                 ->orWhere('last_attempt_at', '<', now()->subMinutes($ageMinutes));
         });
@@ -154,12 +154,12 @@ class ReprocessFailedPayments extends Command
         $limit = $this->option('limit');
 
         if ($limit !== null && is_numeric($limit)) {
-            $query->limit((int) $limit);
+            $builder->limit((int) $limit);
             $this->line(sprintf('🔍 Limiting to %d transaction(s)', (int) $limit));
         }
 
         /** @var \Illuminate\Support\Collection<int, Transaction> */
-        return $query->orderBy('created_at', 'asc')->get();
+        return $builder->orderBy('created_at', 'asc')->get();
     }
 
     /**

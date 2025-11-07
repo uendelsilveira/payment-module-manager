@@ -20,6 +20,6 @@ class GatewayManager
             return app(MercadoPagoStrategy::class);
         }
 
-        throw new InvalidConfigurationException("O gateway '{$gateway}' não é suportado.");
+        throw new InvalidConfigurationException(sprintf("O gateway '%s' não é suportado.", $gateway));
     }
 }
