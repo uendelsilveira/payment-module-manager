@@ -3,32 +3,34 @@
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
-         cacheDirectory=".phpunit.cache">
+         cacheDirectory=".phpunit.cache"
+         stopOnFailure="false"
+         executionOrder="depends,defects">
+
+    <testsuites>
+        <testsuite name="Payment Module Manager Test Suite">
+            <directory suffix="Test.php">./tests/Unit</directory>
+            <directory suffix="Test.php">./tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+
     <php>
-        <!-- Mercado Pago Test Credentials - Set these in your environment or create phpunit.xml -->
+        <env name="APP_ENV" value="testing"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+
+        <!-- Mercado Pago Test Credentials -->
         <env name="MERCADOPAGO_ACCESS_TOKEN" value=""/>
         <env name="MERCADOPAGO_PUBLIC_KEY" value=""/>
         <env name="MERCADOPAGO_WEBHOOK_SECRET" value=""/>
         <env name="MERCADOPAGO_CLIENT_ID" value=""/>
         <env name="MERCADOPAGO_CLIENT_SECRET" value=""/>
     </php>
-    <testsuites>
-        <testsuite name="Unit">
-            <directory suffix="Test.php">./tests/Unit</directory>
-        </testsuite>
-        <testsuite name="Feature">
-            <directory suffix="Test.php">./tests/Feature</directory>
-        </testsuite>
-    </testsuites>
-    <source>
-        <include>
-            <directory suffix=".php">./src</directory>
-        </include>
-        <exclude>
-            <directory suffix=".php">./vendor</directory>
-        </exclude>
-    </source>
+
     <coverage>
+        <include>
+            <directory>./src</directory>
+        </include>
         <report>
             <clover outputFile="coverage.xml"/>
             <html outputDirectory="coverage-html"/>

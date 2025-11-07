@@ -18,7 +18,7 @@ use UendelSilveira\PaymentModuleManager\Support\LogContext;
  */
 class LogPaymentStatusChanged
 {
-    public function handle(PaymentStatusChanged $paymentStatusChanged): void
+    public function __invoke(PaymentStatusChanged $paymentStatusChanged): void
     {
         $logContext = LogContext::create()
             ->withCorrelationId()

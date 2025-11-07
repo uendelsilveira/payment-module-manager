@@ -1,12 +1,5 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 04/11/2025 16:09:38
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Providers;
 
 use Illuminate\Support\Facades\Event;
@@ -39,11 +32,12 @@ class PaymentServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../../config/payment.php', 'payment');
+
         $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, SettingsRepository::class);
         $this->app->singleton(MercadoPagoClientInterface::class, MercadoPagoClient::class);
-        $this->app->singleton(GatewayManager::class, fn (): \UendelSilveira\PaymentModuleManager\Services\GatewayManager => new GatewayManager);
-        $this->app->singleton(PaymentService::class, fn ($app): \UendelSilveira\PaymentModuleManager\Services\PaymentService => new PaymentService(
+        $this->app->singleton(GatewayManager::class, fn (): GatewayManager => new GatewayManager);
+        $this->app->singleton(PaymentService::class, fn ($app): PaymentService => new PaymentService(
             $app->make(GatewayManager::class),
             $app->make(TransactionRepositoryInterface::class)
         ));
@@ -51,18 +45,17 @@ class PaymentServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Register event listeners
         Event::listen(PaymentProcessed::class, LogPaymentProcessed::class);
         Event::listen(PaymentFailed::class, LogPaymentFailed::class);
-        Event::listen(PaymentStatusChanged::class, LogPaymentStatusChanged::class);
-        Event::listen(PaymentStatusChanged::class, SendPaymentStatusNotification::class);
+        Event::listen(PaymentStatusChanged::class, [
+            LogPaymentStatusChanged::class,
+            SendPaymentStatusNotification::class,
+        ]);
 
-        // Carrega as factories do pacote para que possam ser usadas nos testes.
         if ($this->app->runningUnitTests()) {
             $this->loadFactoriesFrom(__DIR__.'/../../database/factories');
         }
 
-        // Registra os aliases dos middlewares
         $router = $this->app->make('router');
         $router->aliasMiddleware('mercadopago.webhook.signature', VerifyMercadoPagoSignature::class);
         $router->aliasMiddleware('payment.auth', AuthenticatePaymentRequest::class);
@@ -70,22 +63,22 @@ class PaymentServiceProvider extends ServiceProvider
         $router->aliasMiddleware('payment.rate_limit', RateLimitPaymentRequests::class);
         $router->aliasMiddleware('payment.idempotency', EnsureIdempotency::class);
 
-        // Registra os comandos Artisan
         if ($this->app->runningInConsole()) {
-            $this->commands([
-                ReprocessFailedPayments::class,
-            ]);
+            $this->commands([ReprocessFailedPayments::class]);
         }
 
         Route::prefix('api')
             ->middleware('api')
-            ->group(function (): void {
-                $this->loadRoutesFrom(__DIR__.'/../../routes/api.php');
-            });
+            ->group(fn () => $this->loadRoutesFrom(__DIR__.'/../../routes/api.php'));
 
         $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+
+        $configPath = function_exists('config_path')
+            ? config_path('payment.php')
+            : __DIR__.'/../../config/payment.php';
+
         $this->publishes([
-            __DIR__.'/../../config/payment.php' => config_path('payment.php'),
+            __DIR__.'/../../config/payment.php' => $configPath,
         ], 'config');
     }
 }

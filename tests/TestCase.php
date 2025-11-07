@@ -1,34 +1,18 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 04/11/2025 16:09:38
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Tests;
 
-use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use Orchestra\Testbench\TestCase as Orchestra;
 use UendelSilveira\PaymentModuleManager\Providers\PaymentServiceProvider;
 
-class TestCase extends OrchestraTestCase
+abstract class TestCase extends Orchestra
 {
-    protected function setUp(): void
+    protected function getPackageProviders($app): array
     {
-        parent::setUp();
-
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        return [PaymentServiceProvider::class];
     }
 
-    protected function getPackageProviders($app)
-    {
-        return [
-            PaymentServiceProvider::class,
-        ];
-    }
-
-    protected function getEnvironmentSetUp($app)
+    protected function defineEnvironment($app): void
     {
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', [
@@ -37,26 +21,29 @@ class TestCase extends OrchestraTestCase
             'prefix' => '',
         ]);
 
-        // Configure logging channels for testing
+        // Configuração de logs para ambiente de teste
         $app['config']->set('logging.channels.payment', [
             'driver' => 'single',
             'path' => storage_path('logs/payment-test.log'),
             'level' => 'debug',
         ]);
-        $app['config']->set('logging.channels.webhook', [
-            'driver' => 'single',
-            'path' => storage_path('logs/webhook-test.log'),
-            'level' => 'debug',
-        ]);
-        $app['config']->set('logging.channels.gateway', [
-            'driver' => 'single',
-            'path' => storage_path('logs/gateway-test.log'),
-            'level' => 'debug',
-        ]);
-        $app['config']->set('logging.channels.transaction', [
-            'driver' => 'single',
-            'path' => storage_path('logs/transaction-test.log'),
-            'level' => 'debug',
-        ]);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Carrega migrações e factories apenas se existirem
+        $migrations = __DIR__.'/../database/migrations';
+
+        if (is_dir($migrations)) {
+            $this->loadMigrationsFrom($migrations);
+        }
+
+        $factories = __DIR__.'/../database/factories';
+
+        if (is_dir($factories)) {
+            $this->withFactories($factories);
+        }
     }
 }
