@@ -10,12 +10,12 @@ class PaymentAuthenticationExceptionTest extends TestCase
     public function test_exception_can_be_instantiated_with_default_values(): void
     {
         // Act
-        $exception = new PaymentAuthenticationException();
+        $paymentAuthenticationException = new PaymentAuthenticationException;
 
         // Assert
-        $this->assertInstanceOf(PaymentAuthenticationException::class, $exception);
-        $this->assertEquals('Não autenticado', $exception->getMessage());
-        $this->assertEquals(401, $exception->getStatusCode());
+        $this->assertInstanceOf(PaymentAuthenticationException::class, $paymentAuthenticationException);
+        $this->assertEquals('Não autenticado', $paymentAuthenticationException->getMessage());
+        $this->assertEquals(401, $paymentAuthenticationException->getStatusCode());
     }
 
     public function test_exception_can_be_instantiated_with_custom_values(): void
@@ -25,11 +25,11 @@ class PaymentAuthenticationExceptionTest extends TestCase
         $statusCode = 403;
 
         // Act
-        $exception = new PaymentAuthenticationException($message, $statusCode);
+        $paymentAuthenticationException = new PaymentAuthenticationException($message, $statusCode);
 
         // Assert
-        $this->assertInstanceOf(PaymentAuthenticationException::class, $exception);
-        $this->assertEquals($message, $exception->getMessage());
-        $this->assertEquals($statusCode, $exception->getStatusCode());
+        $this->assertInstanceOf(PaymentAuthenticationException::class, $paymentAuthenticationException);
+        $this->assertEquals($message, $paymentAuthenticationException->getMessage());
+        $this->assertEquals($statusCode, $paymentAuthenticationException->getStatusCode());
     }
 }
