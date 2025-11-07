@@ -38,15 +38,21 @@ jobs:
       - name: Validate composer.json
         run: composer validate --strict
 
+      - name: Check PHP and Composer versions
+        run: |
+          php -v
+          composer --version
+          composer check-platform-reqs
+
       - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: composer update --prefer-dist --no-interaction --no-progress --optimize-autoloader --prefer-stable
         env:
           COMPOSER_ALLOW_SUPERUSER: 1
 
       - name: Run tests
         env:
           MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
-        run: vendor/bin/phpunit
+        run: vendor/bin/phpunit --no-coverage
 
       - name: Run Tests with Coverage
         if: success()
