@@ -52,11 +52,11 @@ jobs:
       - name: Run tests
         env:
           MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
-        run: vendor/bin/phpunit --no-coverage --do-not-cache-result
+        run: vendor/bin/phpunit --do-not-cache-result
 
       - name: Run Tests with Coverage
-        if: success()
-        run: vendor/bin/phpunit --testdox --coverage-clover=coverage.xml
+        if: success() && matrix.php == '8.4'
+        run: vendor/bin/phpunit --testdox --coverage-clover=coverage.xml --coverage-html=coverage-html
         continue-on-error: true
 
       - name: Upload coverage to Codecov
