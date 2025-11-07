@@ -31,6 +31,172 @@ class MercadoPagoStrategyTest extends TestCase
         $this->mercadoPagoStrategy = new MercadoPagoStrategy($this->mpClientMock);
     }
 
+    public function test_charge_with_pix_successfully(): void
+    {
+        // Arrange
+        $amount = 100.0;
+        $data = [
+            'payment_method_id' => 'pix',
+            'payer_email' => 'test@example.com',
+            'description' => 'Test PIX Payment',
+        ];
+
+        $expectedPaymentResponse = (object) [
+            'id' => 12345,
+            'status' => 'pending',
+            'transaction_amount' => $amount,
+            'description' => 'Test PIX Payment',
+            'payment_method_id' => 'pix',
+            'status_detail' => 'pending_waiting_payment',
+            'metadata' => null,
+            'point_of_interaction' => (object) [
+                'transaction_data' => (object) [
+                    'qr_code_base64' => 'test_qr_code_base64',
+                ],
+            ],
+        ];
+
+        $this->mpClientMock
+            ->shouldReceive('createPayment')
+            ->once()
+            ->with(Mockery::on(function ($payload) use ($amount) {
+                return $payload['payment_method_id'] === 'pix'
+                    && $payload['transaction_amount'] === $amount;
+            }))
+            ->andReturn($expectedPaymentResponse);
+
+        // Act
+        $result = $this->mercadoPagoStrategy->charge($amount, $data);
+
+        // Assert
+        $this->assertEquals(12345, $result['id']);
+        $this->assertEquals('pending', $result['status']);
+        $this->assertEquals('test_qr_code_base64', $result['external_resource_url']);
+    }
+
+    public function test_charge_with_boleto_successfully(): void
+    {
+        // Arrange
+        $amount = 150.0;
+        $data = [
+            'payment_method_id' => 'boleto',
+            'payer_email' => 'boleto@example.com',
+            'description' => 'Test Boleto Payment',
+            'payer' => [
+                'first_name' => 'John',
+                'last_name' => 'Doe',
+                'identification' => ['type' => 'CPF', 'number' => '12345678909'],
+                'address' => [
+                    'zip_code' => '01001000',
+                    'street_name' => 'Praça da Sé',
+                    'street_number' => 's/n',
+                    'neighborhood' => 'Sé',
+                    'city' => 'São Paulo',
+                    'federal_unit' => 'SP',
+                ],
+            ],
+        ];
+
+        $expectedPaymentResponse = (object) [
+            'id' => 54321,
+            'status' => 'pending',
+            'transaction_amount' => $amount,
+            'description' => 'Test Boleto Payment',
+            'payment_method_id' => 'boleto',
+            'status_detail' => 'pending_waiting_payment',
+            'metadata' => null,
+            'point_of_interaction' => (object) [
+                'transaction_data' => (object) [
+                    'ticket_url' => 'https://example.com/boleto/123',
+                ],
+            ],
+        ];
+
+        $this->mpClientMock
+            ->shouldReceive('createPayment')
+            ->once()
+            ->with(Mockery::on(function ($payload) {
+                return $payload['payment_method_id'] === 'boleto'
+                    && $payload['payer']['first_name'] === 'John';
+            }))
+            ->andReturn($expectedPaymentResponse);
+
+        // Act
+        $result = $this->mercadoPagoStrategy->charge($amount, $data);
+
+        // Assert
+        $this->assertEquals(54321, $result['id']);
+        $this->assertEquals('pending', $result['status']);
+        $this->assertEquals('https://example.com/boleto/123', $result['external_resource_url']);
+    }
+
+    public function test_charge_with_credit_card_successfully(): void
+    {
+        // Arrange
+        $amount = 200.0;
+        $data = [
+            'payment_method_id' => 'credit_card',
+            'payer_email' => 'cc@example.com',
+            'description' => 'Test Credit Card Payment',
+            'token' => 'card_token_123',
+            'installments' => 1,
+            'issuer_id' => '321',
+            'payer' => [
+                'first_name' => 'Jane',
+                'last_name' => 'Doe',
+                'identification' => ['type' => 'CPF', 'number' => '98765432101'],
+            ],
+        ];
+
+        $expectedPaymentResponse = (object) [
+            'id' => 67890,
+            'status' => 'approved',
+            'transaction_amount' => $amount,
+            'description' => 'Test Credit Card Payment',
+            'payment_method_id' => 'credit_card',
+            'status_detail' => 'accredited',
+            'metadata' => null,
+        ];
+
+        $this->mpClientMock
+            ->shouldReceive('createPayment')
+            ->once()
+            ->with(Mockery::on(function ($payload) {
+                return $payload['payment_method_id'] === 'credit_card'
+                    && $payload['token'] === 'card_token_123';
+            }))
+            ->andReturn($expectedPaymentResponse);
+
+        // Act
+        $result = $this->mercadoPagoStrategy->charge($amount, $data);
+
+        // Assert
+        $this->assertEquals(67890, $result['id']);
+        $this->assertEquals('approved', $result['status']);
+        $this->assertArrayNotHasKey('external_resource_url', $result);
+    }
+
+    public function test_charge_throws_exception(): void
+    {
+        // Arrange
+        $amount = 100.0;
+        $data = [
+            'payment_method_id' => 'pix',
+            'payer_email' => 'test@example.com',
+        ];
+
+        $this->mpClientMock
+            ->shouldReceive('createPayment')
+            ->once()
+            ->andThrow(new Exception('Payment processor error'));
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('Erro ao processar pagamento: Payment processor error');
+
+        // Act
+        $this->mercadoPagoStrategy->charge($amount, $data);
+    }
+
     public function test_get_payment_methods_successfully(): void
     {
         // Arrange

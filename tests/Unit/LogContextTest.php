@@ -9,6 +9,7 @@
 
 namespace UendelSilveira\PaymentModuleManager\Tests\Unit;
 
+use stdClass;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Support\LogContext;
 use UendelSilveira\PaymentModuleManager\Tests\TestCase;
@@ -86,6 +87,27 @@ class LogContextTest extends TestCase
         $logContext = LogContext::create()->withTransactionId(123);
 
         $this->assertEquals(123, $logContext->toArray()['transaction_id']);
+    }
+
+    public function test_can_add_user(): void
+    {
+        $user = new stdClass;
+        $user->id = 1;
+        $user->email = 'test@example.com';
+
+        $logContext = LogContext::create()->withUser($user);
+        $data = $logContext->toArray();
+
+        $this->assertArrayHasKey('user', $data);
+        $this->assertEquals(1, $data['user']['id']);
+        $this->assertEquals('test@example.com', $data['user']['email']);
+    }
+
+    public function test_does_not_add_null_user(): void
+    {
+        $logContext = LogContext::create()->withUser(null);
+
+        $this->assertArrayNotHasKey('user', $logContext->toArray());
     }
 
     public function test_can_add_external_id(): void
