@@ -46,7 +46,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
                 default => array_merge($payload, $this->buildPixPayload()),
             };
 
-            $payment = $this->mpClient->createPayment($payload);
+            $payment = $this->mpClient->createPayment($amount, $payload);
             $response = $this->formatPaymentResponse($payment);
 
             $logContext->withExternalId($response['id'])
@@ -137,10 +137,13 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
      */
     private function buildBasePayload(float $amount, array $data): array
     {
+        $appUrl = config('app.url');
+        $notificationUrl = rtrim(is_string($appUrl) ? $appUrl : '', '/').'/api/mercadopago/webhook';
+
         return [
             'transaction_amount' => $amount,
             'description' => $data['description'] ?? 'Pagamento via API',
-            'notification_url' => rtrim((string) config('app.url'), '/').'/api/mercadopago/webhook',
+            'notification_url' => $notificationUrl,
             'payer' => [
                 'email' => $data['payer_email'],
             ],
@@ -234,7 +237,7 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
                 $payload['amount'] = $amount;
             }
 
-            $refund = $this->mpClient->createRefund($externalPaymentId, $payload);
+            $refund = $this->mpClient->refundPayment($externalPaymentId, $amount);
             $response = $this->formatRefundResponse($refund);
 
             $logContext->with('refund_id', $response['id'])
@@ -294,18 +297,27 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     }
 
     /**
+     * @param array<string, mixed>|object $payment
+     *
      * @return array<string, mixed>
      */
-    private function formatPaymentResponse(object $payment): array
+    private function formatPaymentResponse(array|object $payment): array
     {
-        /** @var object{id: string|int, status: string, transaction_amount: float, description: string, payment_method_id: string, status_detail: string, metadata: object|null, point_of_interaction?: object{transaction_data?: object{qr_code_base64?: string, ticket_url?: string}}} $payment */
+        // Converter array para object se necessário
+        if (is_array($payment)) {
+            $payment = (object) $payment;
+        }
+
+        /**
+         * @var object{id: string|int, status: string, transaction_amount: float, description: string, payment_method_id: string, status_detail: string, metadata: array<string, mixed>|object|null, point_of_interaction?: object{transaction_data?: object{qr_code_base64?: string, ticket_url?: string}}} $payment
+         */
         $response = [
-            'id' => $payment->id,
-            'status' => $payment->status,
-            'transaction_amount' => $payment->transaction_amount,
-            'description' => $payment->description,
-            'payment_method_id' => $payment->payment_method_id,
-            'status_detail' => $payment->status_detail,
+            'id' => $payment->id ?? null,
+            'status' => $payment->status ?? 'unknown',
+            'transaction_amount' => $payment->transaction_amount ?? 0.0,
+            'description' => $payment->description ?? '',
+            'payment_method_id' => $payment->payment_method_id ?? 'unknown',
+            'status_detail' => $payment->status_detail ?? '',
             'metadata' => (array) ($payment->metadata ?? []),
         ];
 
@@ -321,16 +333,23 @@ class MercadoPagoStrategy implements PaymentGatewayInterface
     }
 
     /**
+     * @param array<string, mixed>|object $refund
+     *
      * @return array<string, mixed>
      */
-    private function formatRefundResponse(object $refund): array
+    private function formatRefundResponse(array|object $refund): array
     {
+        // Converter array para object se necessário
+        if (is_array($refund)) {
+            $refund = (object) $refund;
+        }
+
         /** @var object{id: string|int, payment_id: string|int, amount: float, status: string, date_created?: string} $refund */
         return [
-            'id' => $refund->id,
-            'payment_id' => $refund->payment_id,
-            'amount' => $refund->amount,
-            'status' => $refund->status,
+            'id' => $refund->id ?? null,
+            'payment_id' => $refund->payment_id ?? null,
+            'amount' => $refund->amount ?? 0.0,
+            'status' => $refund->status ?? 'unknown',
             'date_created' => $refund->date_created ?? null,
         ];
     }

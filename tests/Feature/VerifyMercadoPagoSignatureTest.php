@@ -54,8 +54,9 @@ class VerifyMercadoPagoSignatureTest extends TestCase
         $ts = time();
         $secret = Config::get('payment.gateways.mercadopago.webhook_secret');
 
+        $secretStr = is_string($secret) ? $secret : '';
         $manifest = sprintf('id:%s;request-id:%d;ts:%d;', $payload['data']['id'], $ts, $ts).json_encode($payload);
-        $signature = hash_hmac('sha256', $manifest, (string) $secret);
+        $signature = hash_hmac('sha256', $manifest, $secretStr);
 
         $testResponse = $this->withHeaders([
             'x-signature' => sprintf('ts=%d,v1=%s', $ts, $signature),

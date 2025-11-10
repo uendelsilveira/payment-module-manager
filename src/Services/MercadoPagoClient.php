@@ -1,12 +1,5 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 04/11/2025 16:09:38
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Services;
 
 use GuzzleHttp\Client;
@@ -30,18 +23,13 @@ class MercadoPagoClient implements MercadoPagoClientInterface
     public function __construct(SettingsRepositoryInterface $settingsRepository)
     {
         $this->baseUrl = Config::get('payment.gateways.mercadopago.base_url', 'https://api.mercadopago.com');
-
-        $accessToken = $settingsRepository->get(
-            'mercadopago_access_token',
-            Config::get('payment.gateways.mercadopago.access_token')
-        );
+        $accessToken = $settingsRepository->get('mercadopago_access_token', Config::get('payment.gateways.mercadopago.access_token'));
 
         if (in_array($accessToken, [null, '', '0'], true)) {
             throw new InvalidConfigurationException('Mercado Pago access token não configurado.');
         }
 
         $this->accessToken = $accessToken;
-
         $this->httpClient = new Client([
             'base_uri' => $this->baseUrl,
             'headers' => [
@@ -49,167 +37,71 @@ class MercadoPagoClient implements MercadoPagoClientInterface
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ],
-            'http_errors' => false, // Não lança exceções para 4xx ou 5xx, permite verificar a resposta
+            'http_errors' => false,
         ]);
     }
 
-    /**
-     * @param array<string, mixed> $requestData
-     */
-    public function createPayment(array $requestData): object
+    public function createPayment(float $amount, array $data): array
     {
-        try {
-            $response = $this->httpClient->post('/v1/payments', [
-                'json' => $requestData,
-            ]);
+        $requestData = array_merge($data, ['transaction_amount' => $amount]);
 
-            $body = json_decode($response->getBody()->getContents());
-
-            if ($response->getStatusCode() >= 400) {
-                Log::error('Erro na API do Mercado Pago ao criar pagamento.', [
-                    'status_code' => $response->getStatusCode(),
-                    'content' => $body,
-                    'request_data' => $requestData,
-                ]);
-
-                throw new PaymentGatewayException('Erro ao criar pagamento com Mercado Pago: '.($body->message ?? 'Erro desconhecido'), $response->getStatusCode());
-            }
-
-            return $body;
-        } catch (GuzzleException $e) {
-            Log::error('Erro de conexão Guzzle ao criar pagamento no Mercado Pago: '.$e->getMessage());
-
-            throw new ExternalServiceException('Erro de conexão ao criar pagamento: '.$e->getMessage());
-        } catch (\Exception $e) {
-            Log::error('Erro inesperado ao criar pagamento no Mercado Pago: '.$e->getMessage());
-
-            throw new PaymentGatewayException('Erro inesperado ao criar pagamento: '.$e->getMessage(), 500);
-        }
+        return $this->sendRequest('POST', '/v1/payments', ['json' => $requestData]);
     }
 
-    public function getPayment(string $paymentId): object
+    public function getPayment(string $paymentId): array
     {
-        try {
-            $response = $this->httpClient->get('/v1/payments/'.$paymentId);
-
-            $body = json_decode($response->getBody()->getContents());
-
-            if ($response->getStatusCode() >= 400) {
-                Log::error('Erro na API do Mercado Pago ao obter pagamento.', [
-                    'status_code' => $response->getStatusCode(),
-                    'content' => $body,
-                    'payment_id' => $paymentId,
-                ]);
-
-                throw new PaymentGatewayException('Erro ao obter pagamento com Mercado Pago: '.($body->message ?? 'Erro desconhecido'), $response->getStatusCode());
-            }
-
-            return $body;
-        } catch (GuzzleException $e) {
-            Log::error('Erro de conexão Guzzle ao obter pagamento no Mercado Pago: '.$e->getMessage());
-
-            throw new ExternalServiceException('Erro de conexão ao obter pagamento: '.$e->getMessage());
-        } catch (\Exception $e) {
-            Log::error('Erro inesperado ao obter pagamento no Mercado Pago: '.$e->getMessage());
-
-            throw new PaymentGatewayException('Erro inesperado ao obter pagamento: '.$e->getMessage(), 500);
-        }
+        return $this->sendRequest('GET', '/v1/payments/'.$paymentId);
     }
 
-    /**
-     * @return array<int, object>
-     */
     public function getPaymentMethods(): array
     {
-        try {
-            $response = $this->httpClient->get('/v1/payment_methods');
+        $response = $this->sendRequest('GET', '/v1/payment_methods');
 
-            $body = json_decode($response->getBody()->getContents());
+        // Convert array items to objects as required by interface and reindex
+        return array_values(array_map(fn ($item): object => (object) $item, $response));
+    }
+
+    public function refundPayment(string $paymentId, ?float $amount = null): array
+    {
+        $payload = $amount ? ['amount' => $amount] : [];
+
+        return $this->sendRequest('POST', '/v1/payments/'.$paymentId.'/refunds', ['json' => $payload]);
+    }
+
+    public function cancelPayment(string $paymentId): array
+    {
+        return $this->sendRequest('PUT', '/v1/payments/'.$paymentId, ['json' => ['status' => 'cancelled']]);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @throws PaymentGatewayException|ExternalServiceException
+     *
+     * @return array<string, mixed>
+     */
+    private function sendRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+            $body = json_decode($response->getBody()->getContents(), true);
 
             if ($response->getStatusCode() >= 400) {
-                Log::error('Erro na API do Mercado Pago ao obter métodos de pagamento.', [
+                $message = is_array($body) && isset($body['message']) && is_string($body['message']) ? $body['message'] : 'Erro desconhecido';
+                Log::error('Erro na API do Mercado Pago: '.$message, [
                     'status_code' => $response->getStatusCode(),
                     'content' => $body,
+                    'uri' => $uri,
                 ]);
 
-                throw new PaymentGatewayException('Erro ao obter métodos de pagamento: '.($body->message ?? 'Erro desconhecido'), $response->getStatusCode());
+                throw new PaymentGatewayException('Erro na API do Mercado Pago: '.$message, $response->getStatusCode());
             }
 
             return is_array($body) ? $body : [];
-        } catch (GuzzleException $e) {
-            Log::error('Erro de conexão Guzzle ao obter métodos de pagamento: '.$e->getMessage());
+        } catch (GuzzleException $guzzleException) {
+            Log::error('Erro de conexão Guzzle: '.$guzzleException->getMessage());
 
-            throw new ExternalServiceException('Erro de conexão ao obter métodos de pagamento: '.$e->getMessage());
-        } catch (\Exception $e) {
-            Log::error('Erro inesperado ao obter métodos de pagamento: '.$e->getMessage());
-
-            throw new PaymentGatewayException('Erro inesperado ao obter métodos de pagamento: '.$e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * @param array<string, mixed> $requestData
-     */
-    public function createRefund(string $paymentId, array $requestData): object
-    {
-        try {
-            $response = $this->httpClient->post('/v1/payments/'.$paymentId.'/refunds', [
-                'json' => $requestData,
-            ]);
-
-            $body = json_decode($response->getBody()->getContents());
-
-            if ($response->getStatusCode() >= 400) {
-                Log::error('Erro na API do Mercado Pago ao criar estorno.', [
-                    'status_code' => $response->getStatusCode(),
-                    'content' => $body,
-                    'payment_id' => $paymentId,
-                    'request_data' => $requestData,
-                ]);
-
-                throw new PaymentGatewayException('Erro ao criar estorno com Mercado Pago: '.($body->message ?? 'Erro desconhecido'), $response->getStatusCode());
-            }
-
-            return $body;
-        } catch (GuzzleException $e) {
-            Log::error('Erro de conexão Guzzle ao criar estorno no Mercado Pago: '.$e->getMessage());
-
-            throw new ExternalServiceException('Erro de conexão ao criar estorno: '.$e->getMessage());
-        } catch (\Exception $e) {
-            Log::error('Erro inesperado ao criar estorno no Mercado Pago: '.$e->getMessage());
-
-            throw new PaymentGatewayException('Erro inesperado ao criar estorno: '.$e->getMessage(), 500);
-        }
-    }
-
-    public function cancelPayment(string $paymentId): object
-    {
-        try {
-            $response = $this->httpClient->put('/v1/payments/'.$paymentId, [
-                'json' => ['status' => 'cancelled'],
-            ]);
-
-            $body = json_decode($response->getBody()->getContents());
-
-            if ($response->getStatusCode() >= 400) {
-                Log::error('Erro na API do Mercado Pago ao cancelar pagamento.', [
-                    'status_code' => $response->getStatusCode(),
-                    'content' => $body,
-                    'payment_id' => $paymentId,
-                ]);
-
-                throw new PaymentGatewayException('Erro ao cancelar pagamento com Mercado Pago: '.($body->message ?? 'Erro desconhecido'), $response->getStatusCode());
-            }
-
-            return $body;
-        } catch (GuzzleException $e) {
-            Log::error('Erro de conexão Guzzle ao cancelar pagamento no Mercado Pago: '.$e->getMessage());
-
-            throw new ExternalServiceException('Erro de conexão ao cancelar pagamento: '.$e->getMessage());
-        } catch (\Exception $e) {
-            Log::error('Erro inesperado ao cancelar pagamento no Mercado Pago: '.$e->getMessage());
-
-            throw new PaymentGatewayException('Erro inesperado ao cancelar pagamento: '.$e->getMessage(), 500);
+            throw new ExternalServiceException('Erro de conexão com o gateway de pagamento: '.$guzzleException->getMessage());
         }
     }
 }

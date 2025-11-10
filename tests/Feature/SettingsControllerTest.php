@@ -1,130 +1,126 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 28/10/2025 20:43:21
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Http;
-use UendelSilveira\PaymentModuleManager\Models\PaymentSetting;
+use Illuminate\Http\Request;
+use Mockery;
+use UendelSilveira\PaymentModuleManager\Contracts\GatewayInterface;
+use UendelSilveira\PaymentModuleManager\Services\GatewayManager;
 use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class SettingsControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_can_save_and_get_mercado_pago_settings(): void
+    private \UendelSilveira\PaymentModuleManager\Contracts\GatewayInterface|\Mockery\MockInterface $gatewayMock;
+
+    protected function setUp(): void
     {
-        // 1. Salvar as configurações
+        parent::setUp();
+
+        // Cria um mock da nossa GatewayInterface
+        $this->gatewayMock = Mockery::mock(GatewayInterface::class);
+
+        // Cria um mock do GatewayManager
+        $managerMock = Mockery::mock(GatewayManager::class);
+        // Configura o manager para retornar nosso mock de gateway quando `create('mercadopago')` for chamado
+        $managerMock->shouldReceive('create')->with('mercadopago')->andReturn($this->gatewayMock);
+
+        // Injeta o mock do manager no container de serviços do Laravel
+        $this->app->instance(GatewayManager::class, $managerMock);
+    }
+
+    public function test_it_can_get_gateway_settings(): void
+    {
+        // Arrange: O que esperamos que o gateway retorne
+        $expectedSettings = [
+            'public_key' => 'TEST_KEY_MASKED',
+            'public_key_configured' => true,
+        ];
+        $this->gatewayMock->shouldReceive('getSettings')->once()->andReturn($expectedSettings);
+
+        // Act: Chama a rota do controller
+        $testResponse = $this->getJson(route('settings.gateway.get', ['gateway' => 'mercadopago']));
+
+        // Assert: Verifica se a resposta está correta
+        $testResponse->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => $expectedSettings,
+            ]);
+    }
+
+    public function test_it_can_save_gateway_settings(): void
+    {
+        // Arrange: Os dados que enviaremos
         $settingsPayload = [
             'public_key' => 'test_public_key',
             'access_token' => 'test_access_token',
-            'webhook_secret' => 'test_webhook_secret',
         ];
 
-        $testResponse = $this->postJson(route('settings.mercadopago.save'), $settingsPayload);
+        // Configura o mock para esperar uma chamada ao método `saveSettings` com os dados corretos
+        $this->gatewayMock->shouldReceive('saveSettings')->once()->with($settingsPayload);
 
+        // Act: Chama a rota
+        $testResponse = $this->postJson(route('settings.gateway.save', ['gateway' => 'mercadopago']), $settingsPayload);
+
+        // Assert: Verifica se a resposta foi de sucesso
         $testResponse->assertStatus(200)
             ->assertJson([
                 'success' => true,
                 'message' => 'Configurações salvas com sucesso.',
             ]);
-
-        // 2. Verificar se as configurações foram salvas no banco de dados
-        $this->assertDatabaseHas('payment_settings', [
-            'key' => 'mercadopago_access_token',
-            'value' => 'test_access_token',
-        ]);
-
-        // 3. Buscar as configurações salvas
-        $getResponse = $this->getJson(route('settings.mercadopago.get'));
-
-        $getResponse->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'public_key_configured' => true,
-                    'access_token_configured' => true,
-                    'webhook_secret_configured' => true,
-                ],
-            ]);
     }
 
-    public function test_it_can_update_existing_settings(): void
+    public function test_it_redirects_to_gateway_connect_url(): void
     {
-        // Salva uma configuração inicial
-        PaymentSetting::create([
-            'key' => 'mercadopago_access_token',
-            'value' => 'old_token',
-        ]);
+        // Arrange: A URL que esperamos que o gateway nos forneça
+        $expectedUrl = 'https://auth.mercadopago.com.br/authorization?client_id=TEST_CLIENT_ID';
+        $this->gatewayMock->shouldReceive('getAuthorizationUrl')->once()->andReturn($expectedUrl);
 
-        // Envia a requisição para atualizar
-        $updatePayload = [
-            'access_token' => 'new_token',
-        ];
+        // Act: Chama a rota
+        $testResponse = $this->get(route('connect.gateway.redirect', ['gateway' => 'mercadopago']));
 
-        $this->postJson(route('settings.mercadopago.save'), $updatePayload);
-
-        // Verifica se o valor foi atualizado no banco de dados
-        $this->assertDatabaseHas('payment_settings', [
-            'key' => 'mercadopago_access_token',
-            'value' => 'new_token',
-        ]);
-
-        $this->assertDatabaseMissing('payment_settings', [
-            'key' => 'mercadopago_access_token',
-            'value' => 'old_token',
-        ]);
-    }
-
-    public function test_it_redirects_to_mercadopago_connect_url(): void
-    {
-        Config::set('payment.gateways.mercadopago.client_id', 'TEST_CLIENT_ID');
-
-        $testResponse = $this->get(route('connect.mercadopago.redirect'));
-
+        // Assert: Verifica se o redirecionamento ocorreu para a URL correta
         $testResponse->assertStatus(302);
-        // Verifica se é um redirecionamento
-        $location = $testResponse->headers->get('location');
-        $this->assertIsString($location);
-        $this->assertStringContainsString('https://auth.mercadopago.com.br/authorization', $location);
-        $this->assertStringContainsString('client_id=TEST_CLIENT_ID', $location);
+        $testResponse->assertRedirect($expectedUrl);
     }
 
-    public function test_it_handles_mercadopago_callback_and_saves_token(): void
+    public function test_it_handles_gateway_callback(): void
     {
-        Config::set('payment.gateways.mercadopago.client_id', 'TEST_CLIENT_ID');
-        Config::set('payment.gateways.mercadopago.client_secret', 'TEST_CLIENT_SECRET');
+        // Arrange: Configura o mock para esperar uma chamada ao `handleCallback`
+        // Usamos um closure para poder fazer asserções no objeto Request que é passado
+        $this->gatewayMock->shouldReceive('handleCallback')->once()->with(Mockery::on(function ($request): true {
+            $this->assertInstanceOf(Request::class, $request);
+            $this->assertEquals('test_auth_code', $request->input('code'));
 
-        // Mock da chamada HTTP para a API do Mercado Pago
-        Http::fake([
-            'https://api.mercadopago.com/oauth/token' => Http::response([
-                'access_token' => 'new_access_token_from_oauth',
-                'public_key' => 'new_public_key_from_oauth',
-                'refresh_token' => 'new_refresh_token',
-                'user_id' => 12345,
-            ], 200),
-        ]);
+            return true;
+        }));
 
-        $testResponse = $this->get(route('connect.mercadopago.callback', ['code' => 'test_auth_code']));
+        // Act: Chama a rota de callback
+        $testResponse = $this->get(route('connect.gateway.callback', ['gateway' => 'mercadopago', 'code' => 'test_auth_code']));
 
-        // Verifica se o redirecionamento de sucesso ocorreu
+        // Assert: Verifica se o redirecionamento de sucesso ocorreu
         $testResponse->assertRedirect('/');
+        $testResponse->assertSessionHas('status', 'Conta do gateway conectada com sucesso!');
+    }
 
-        // Verifica se as novas credenciais foram salvas no banco de dados
-        $this->assertDatabaseHas('payment_settings', [
-            'key' => 'mercadopago_access_token',
-            'value' => 'new_access_token_from_oauth',
-        ]);
-        $this->assertDatabaseHas('payment_settings', [
-            'key' => 'mercadopago_public_key',
-            'value' => 'new_public_key_from_oauth',
-        ]);
+    public function test_it_handles_invalid_gateway(): void
+    {
+        // Arrange: Recria o mock do manager para lançar uma exceção quando um gateway inválido for solicitado
+        $managerMock = Mockery::mock(GatewayManager::class);
+        $managerMock->shouldReceive('create')->with('invalid-gateway')->andThrow(new \InvalidArgumentException('Gateway [invalid-gateway] não é suportado.'));
+        $this->app->instance(GatewayManager::class, $managerMock);
+
+        // Act: Chama a rota com o gateway inválido
+        $testResponse = $this->getJson(route('settings.gateway.get', ['gateway' => 'invalid-gateway']));
+
+        // Assert: Verifica se a resposta é um 404 Not Found
+        $testResponse->assertStatus(404)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Gateway [invalid-gateway] não é suportado.',
+            ]);
     }
 }

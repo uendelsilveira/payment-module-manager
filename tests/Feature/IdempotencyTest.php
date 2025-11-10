@@ -9,7 +9,7 @@
 
 namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
 use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
@@ -18,7 +18,7 @@ use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class IdempotencyTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected function tearDown(): void
     {
@@ -29,14 +29,14 @@ class IdempotencyTest extends TestCase
     public function test_payment_with_same_idempotency_key_returns_same_transaction(): void
     {
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('createPayment')->once()->andReturn((object) [
+            $mock->shouldReceive('createPayment')->once()->andReturn([
                 'id' => 'mp_idempotency_test',
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
                 'description' => 'Idempotency test',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'accredited',
-                'metadata' => (object) [],
+                'metadata' => [],
             ]);
         }));
 
@@ -73,14 +73,14 @@ class IdempotencyTest extends TestCase
     public function test_payment_without_idempotency_key_creates_new_transaction(): void
     {
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('createPayment')->twice()->andReturn((object) [
+            $mock->shouldReceive('createPayment')->twice()->andReturn([
                 'id' => 'mp_test_'.uniqid(),
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
                 'description' => 'Test',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'accredited',
-                'metadata' => (object) [],
+                'metadata' => [],
             ]);
         }));
 
@@ -128,14 +128,14 @@ class IdempotencyTest extends TestCase
     public function test_idempotency_uses_cache_for_subsequent_requests(): void
     {
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('createPayment')->once()->andReturn((object) [
+            $mock->shouldReceive('createPayment')->once()->andReturn([
                 'id' => 'mp_cache_test',
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
                 'description' => 'Cache test',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'accredited',
-                'metadata' => (object) [],
+                'metadata' => [],
             ]);
         }));
 
@@ -169,14 +169,14 @@ class IdempotencyTest extends TestCase
     public function test_different_idempotency_keys_create_different_transactions(): void
     {
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('createPayment')->twice()->andReturn((object) [
+            $mock->shouldReceive('createPayment')->twice()->andReturn([
                 'id' => 'mp_diff_test_'.uniqid(),
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
                 'description' => 'Different keys test',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'accredited',
-                'metadata' => (object) [],
+                'metadata' => [],
             ]);
         }));
 

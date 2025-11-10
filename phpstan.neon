@@ -18,9 +18,6 @@ parameters:
         -
             path: tests/
             message: '#Cannot access offset .* on mixed#'
-        -
-            path: tests/
-            message: '#Cannot access property .* on mixed#'
 
         # PHPUnit assertions with mixed
         -
@@ -32,36 +29,9 @@ parameters:
             path: tests/TestCase.php
             message: '#Cannot call method set\(\) on mixed#'
 
-        # HTTP Response methods (Laravel middleware returns mixed)
-        -
-            path: src/Http/Middleware/EnsureIdempotency.php
-            message: '#Cannot call method#'
-
-        # JSON decode results - function parameter type
-        -
-            path: src/Http/Controllers/MercadoPagoWebhookController.php
-            message: '#(json_decode expects|does not accept array<mixed>)#'
 
         # Array merge with API responses
         - '#array_merge expects array, mixed given#'
-
-        # Property access on stdClass/object from APIs
-        -
-            path: src/Gateways/
-            message: '#Cannot access property .* on mixed#'
-
-        # Cannot cast mixed
-        - '#Cannot cast mixed to string#'
-
-        # Mixed parameters in Support/LogContext
-        -
-            path: src/Support/
-            message: '#Parameter .* expects .*, mixed given#'
-
-        # Mixed parameters in Gateways
-        -
-            path: src/Gateways/
-            message: '#Parameter .* expects .*, mixed given#'
 
         # Mixed parameters in Middlewares
         -
@@ -78,10 +48,6 @@ parameters:
             path: src/Providers/
             message: '#Cannot call method .* on mixed#'
 
-        # Mixed in MercadoPagoClient
-        -
-            path: src/Services/MercadoPagoClient.php
-            message: '#(Cannot access property|should return .* but returns mixed|Binary operation)#'
 
         # Mixed in Listeners
         -
@@ -118,10 +84,6 @@ parameters:
             path: src/Http/Middleware/RateLimitPaymentRequests.php
             message: '#(Cannot access constant class|Cannot call method getAuthIdentifier|should return int but returns mixed)#'
 
-        # PaymentServiceProvider container resolution
-        -
-            path: src/Providers/PaymentServiceProvider.php
-            message: '#expects .*, mixed given#'
 
         # LogContext dynamic data handling
         -
@@ -131,6 +93,6 @@ parameters:
     paths:
         - src
         - tests
-    level: 10
+    level: 9
     bootstrapFiles:
         - tests/TestCase.php

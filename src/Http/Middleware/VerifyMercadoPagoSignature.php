@@ -1,12 +1,5 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 04/11/2025 16:09:38
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Http\Middleware;
 
 use Closure;
@@ -24,23 +17,19 @@ class VerifyMercadoPagoSignature
     {
         $secret = Config::get('payment.gateways.mercadopago.webhook_secret');
         $requireSignature = Config::get('payment.webhook.require_signature', true);
-        $isProduction = app()->environment('production');
 
-        // Em produção, sempre exige o secret configurado
-        if ($isProduction && empty($secret)) {
-            throw new WebhookSignatureException('Webhook secret não configurado. Configure MERCADOPAGO_WEBHOOK_SECRET no ambiente de produção.', 500);
-        }
+        if (empty($secret)) {
+            if (app()->environment('production') || $requireSignature) {
+                throw new WebhookSignatureException('Webhook secret não configurado.', 500);
+            }
 
-        // Se não houver secret configurado e não for obrigatório (apenas desenvolvimento)
-        if (empty($secret) && ! $requireSignature) {
-            Log::warning('[VerifyMercadoPagoSignature] Webhook recebido sem validação de assinatura. Isso não é recomendado!');
+            Log::warning('[VerifyMercadoPagoSignature] Webhook recebido sem validação de assinatura. Não recomendado!');
 
             return $next($request);
         }
 
-        // Se chegou aqui, temos secret e devemos validar
-        if (empty($secret)) {
-            throw new WebhookSignatureException('Webhook signature validation is required but secret is not configured.', 403);
+        if (! is_string($secret)) {
+            throw new WebhookSignatureException('Webhook secret configurado não é uma string.', 500);
         }
 
         $signatureHeader = $request->header('x-signature');
@@ -49,9 +38,6 @@ class VerifyMercadoPagoSignature
             throw new WebhookSignatureException('Mercado Pago signature header not found.', 403);
         }
 
-        // Extrai o timestamp (ts) e o hash (v1) do header
-        /** @var array<string, string> $signatureParts */
-        $signatureParts = [];
         $headerString = is_array($signatureHeader) ? implode(',', $signatureHeader) : (string) $signatureHeader;
         parse_str(str_replace(',', '&', $headerString), $signatureParts);
         $ts = $signatureParts['ts'] ?? null;
@@ -61,8 +47,27 @@ class VerifyMercadoPagoSignature
             throw new WebhookSignatureException('Invalid Mercado Pago signature format.', 403);
         }
 
-        // Validação de timestamp para prevenir replay attacks
-        $maxAge = Config::get('payment.webhook.max_age_seconds', 300); // 5 minutos por padrão
+        $this->validateTimestamp($ts);
+
+        $dataId = $request->input('data.id');
+
+        if (! is_string($dataId)) {
+            throw new WebhookSignatureException('data.id não encontrado ou inválido no payload do webhook.', 400);
+        }
+
+        $manifest = sprintf('id:%s;request-id:%s;ts:%s;%s', $dataId, $ts, $ts, $request->getContent());
+        $expectedSignature = hash_hmac('sha256', $manifest, $secret);
+
+        if (! hash_equals($expectedSignature, $hash)) {
+            throw new WebhookSignatureException('Invalid Mercado Pago signature.', 403);
+        }
+
+        return $next($request);
+    }
+
+    private function validateTimestamp(string $ts): void
+    {
+        $maxAge = Config::get('payment.webhook.max_age_seconds', 300);
         $currentTime = time();
         $timestampAge = $currentTime - (int) $ts;
 
@@ -71,21 +76,7 @@ class VerifyMercadoPagoSignature
         }
 
         if ($timestampAge < -60) {
-            // Timestamp no futuro (tolerância de 1 minuto para diferenças de relógio)
             throw new WebhookSignatureException('Webhook signature timestamp is in the future.', 403);
         }
-
-        // Cria a string base para o HMAC
-        $manifest = sprintf('id:%s;request-id:%s;ts:%s;', $request->input('data.id'), $ts, $ts).$request->getContent();
-
-        // Gera a assinatura esperada
-        $expectedSignature = hash_hmac('sha256', $manifest, (string) $secret);
-
-        // Compara as assinaturas
-        if (! hash_equals($expectedSignature, $hash)) {
-            throw new WebhookSignatureException('Invalid Mercado Pago signature.', 403);
-        }
-
-        return $next($request);
     }
 }

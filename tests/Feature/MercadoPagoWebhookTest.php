@@ -32,14 +32,14 @@ class MercadoPagoWebhookTest extends TestCase
 
         // Mock do MercadoPagoClientInterface para simular um pagamento aprovado
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('getPayment')->andReturn((object) [
+            $mock->shouldReceive('getPayment')->andReturn([
                 'id' => 'mp_payment_id_123',
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
                 'description' => 'Webhook Test Payment',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'accredited',
-                'metadata' => (object) [],
+                'metadata' => [],
             ]);
         }));
 
@@ -95,14 +95,14 @@ class MercadoPagoWebhookTest extends TestCase
 
         // Mock do MercadoPagoClientInterface para simular um pagamento reembolsado
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('getPayment')->andReturn((object) [
+            $mock->shouldReceive('getPayment')->andReturn([
                 'id' => 'mp_payment_id_refunded',
                 'status' => 'refunded',
                 'transaction_amount' => 50.00,
                 'description' => 'Webhook Test Refund',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'refunded',
-                'metadata' => (object) [],
+                'metadata' => [],
             ]);
         }));
 

@@ -60,9 +60,9 @@ class MercadoPagoStrategyTest extends TestCase
         $this->mpClientMock
             ->shouldReceive('createPayment')
             ->once()
-            ->with(Mockery::on(fn ($payload): bool => $payload['payment_method_id'] === 'pix'
+            ->with($amount, Mockery::on(fn ($payload): bool => $payload['payment_method_id'] === 'pix'
                 && $payload['transaction_amount'] === $amount))
-            ->andReturn($expectedPaymentResponse);
+            ->andReturn((array) $expectedPaymentResponse);
 
         // Act
         $result = $this->mercadoPagoStrategy->charge($amount, $data);
@@ -114,9 +114,9 @@ class MercadoPagoStrategyTest extends TestCase
         $this->mpClientMock
             ->shouldReceive('createPayment')
             ->once()
-            ->with(Mockery::on(fn ($payload): bool => $payload['payment_method_id'] === 'boleto'
+            ->with($amount, Mockery::on(fn ($payload): bool => $payload['payment_method_id'] === 'boleto'
                 && $payload['payer']['first_name'] === 'John'))
-            ->andReturn($expectedPaymentResponse);
+            ->andReturn((array) $expectedPaymentResponse);
 
         // Act
         $result = $this->mercadoPagoStrategy->charge($amount, $data);
@@ -158,9 +158,9 @@ class MercadoPagoStrategyTest extends TestCase
         $this->mpClientMock
             ->shouldReceive('createPayment')
             ->once()
-            ->with(Mockery::on(fn ($payload): bool => $payload['payment_method_id'] === 'credit_card'
+            ->with($amount, Mockery::on(fn ($payload): bool => $payload['payment_method_id'] === 'credit_card'
                 && $payload['token'] === 'card_token_123'))
-            ->andReturn($expectedPaymentResponse);
+            ->andReturn((array) $expectedPaymentResponse);
 
         // Act
         $result = $this->mercadoPagoStrategy->charge($amount, $data);
@@ -240,10 +240,10 @@ class MercadoPagoStrategyTest extends TestCase
         ];
 
         $this->mpClientMock
-            ->shouldReceive('createRefund')
+            ->shouldReceive('refundPayment')
             ->once()
-            ->with($paymentId, [])
-            ->andReturn($expectedRefund);
+            ->with($paymentId, null)
+            ->andReturn((array) $expectedRefund);
 
         // Act
         $result = $this->mercadoPagoStrategy->refund($paymentId);
@@ -269,10 +269,10 @@ class MercadoPagoStrategyTest extends TestCase
         ];
 
         $this->mpClientMock
-            ->shouldReceive('createRefund')
+            ->shouldReceive('refundPayment')
             ->once()
-            ->with($paymentId, ['amount' => $partialAmount])
-            ->andReturn($expectedRefund);
+            ->with($paymentId, $partialAmount)
+            ->andReturn((array) $expectedRefund);
 
         // Act
         $result = $this->mercadoPagoStrategy->refund($paymentId, $partialAmount);
@@ -292,7 +292,7 @@ class MercadoPagoStrategyTest extends TestCase
         $this->expectExceptionMessage('Erro ao processar estorno: Refund Error');
 
         $this->mpClientMock
-            ->shouldReceive('createRefund')
+            ->shouldReceive('refundPayment')
             ->once()
             ->andThrow(new Exception('Refund Error'));
 
@@ -318,16 +318,16 @@ class MercadoPagoStrategyTest extends TestCase
             ->shouldReceive('getPayment')
             ->once()
             ->with($paymentId)
-            ->andReturn((object) $pendingPayment);
+            ->andReturn($pendingPayment);
 
-        $cancelledPayment = (object) [
+        $cancelledPayment = [
             'id' => $paymentId,
             'status' => 'cancelled',
             'transaction_amount' => 100.00,
             'description' => 'Payment cancelled',
             'payment_method_id' => 'pix',
             'status_detail' => 'by_collector',
-            'metadata' => (object) [],
+            'metadata' => [],
         ];
 
         $this->mpClientMock
@@ -362,7 +362,7 @@ class MercadoPagoStrategyTest extends TestCase
             ->shouldReceive('getPayment')
             ->once()
             ->with($paymentId)
-            ->andReturn((object) $approvedPayment);
+            ->andReturn($approvedPayment);
 
         $this->mpClientMock
             ->shouldNotReceive('cancelPayment');
@@ -392,7 +392,7 @@ class MercadoPagoStrategyTest extends TestCase
             ->shouldReceive('getPayment')
             ->once()
             ->with($paymentId)
-            ->andReturn((object) $pendingPayment);
+            ->andReturn($pendingPayment);
 
         $this->mpClientMock
             ->shouldReceive('cancelPayment')

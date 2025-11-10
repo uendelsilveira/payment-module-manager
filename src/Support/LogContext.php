@@ -72,10 +72,16 @@ class LogContext
 
     /**
      * Add payment method context
+     *
+     * @param mixed $paymentMethod
      */
-    public function withPaymentMethod(string $paymentMethod): self
+    public function withPaymentMethod($paymentMethod): self
     {
-        $this->context['payment_method'] = $paymentMethod;
+        if (is_scalar($paymentMethod) || (is_object($paymentMethod) && method_exists($paymentMethod, '__toString'))) {
+            $this->context['payment_method'] = (string) $paymentMethod;
+        } else {
+            $this->context['payment_method'] = 'unknown';
+        }
 
         return $this;
     }
@@ -109,10 +115,12 @@ class LogContext
 
     /**
      * Add external ID context
+     *
+     * @param mixed $externalId
      */
-    public function withExternalId(string $externalId): self
+    public function withExternalId($externalId): self
     {
-        $this->context['external_id'] = $externalId;
+        $this->context['external_id'] = is_string($externalId) || is_int($externalId) ? (string) $externalId : $externalId;
 
         return $this;
     }
@@ -211,10 +219,13 @@ class LogContext
      */
     public function maskSensitiveData(): self
     {
-        $sensitiveFields = config('logging.sensitive_fields', [
+        $sensitiveFieldsConfig = config('logging.sensitive_fields', [
             'token', 'access_token', 'password', 'card_number',
             'cvv', 'security_code', 'webhook_secret',
         ]);
+
+        /** @var array<int, string> $sensitiveFields */
+        $sensitiveFields = is_array($sensitiveFieldsConfig) ? $sensitiveFieldsConfig : [];
 
         $this->context = $this->maskRecursive($this->context, $sensitiveFields);
 

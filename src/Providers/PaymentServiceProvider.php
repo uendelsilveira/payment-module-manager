@@ -36,7 +36,10 @@ class PaymentServiceProvider extends ServiceProvider
         $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, SettingsRepository::class);
         $this->app->singleton(MercadoPagoClientInterface::class, MercadoPagoClient::class);
-        $this->app->singleton(GatewayManager::class, fn (): GatewayManager => new GatewayManager);
+
+        // Corrigido: Deixa o container do Laravel resolver as dependências do GatewayManager.
+        $this->app->singleton(GatewayManager::class);
+
         $this->app->singleton(PaymentService::class, fn ($app): PaymentService => new PaymentService(
             $app->make(GatewayManager::class),
             $app->make(TransactionRepositoryInterface::class)

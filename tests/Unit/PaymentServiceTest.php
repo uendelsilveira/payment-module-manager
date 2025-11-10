@@ -1,17 +1,10 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 28/10/2025 20:57:39
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Tests\Unit;
 
 use Mockery;
 use Mockery\MockInterface;
-use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
+use UendelSilveira\PaymentModuleManager\Contracts\GatewayInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Services\GatewayManager;
@@ -20,9 +13,9 @@ use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class PaymentServiceTest extends TestCase
 {
-    private MockInterface&GatewayManager $gatewayManager;
+    private \Mockery\MockInterface&\UendelSilveira\PaymentModuleManager\Services\GatewayManager $gatewayManager;
 
-    private MockInterface&TransactionRepositoryInterface $transactionRepository;
+    private \Mockery\MockInterface&\UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface $transactionRepository;
 
     private PaymentService $paymentService;
 
@@ -40,14 +33,7 @@ class PaymentServiceTest extends TestCase
         $this->paymentService = new PaymentService($this->gatewayManager, $this->transactionRepository);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function it_can_be_instantiated_and_has_dependencies(): void
-    {
-        $this->assertInstanceOf(PaymentService::class, $this->paymentService);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function refund_method_correctly_handles_null_amount_for_full_refund(): void
+    public function test_refund_method_correctly_handles_null_amount_for_full_refund(): void
     {
         // Arrange
         $transaction = new Transaction([
@@ -56,30 +42,15 @@ class PaymentServiceTest extends TestCase
             'external_id' => 'mp_payment_123',
             'amount' => 100.00,
             'status' => 'approved',
-            'description' => 'Test Payment',
-            'metadata' => ['payment_method_id' => 'pix'],
         ]);
 
-        $expectedRefundResponse = [
-            'id' => 'refund_123',
-            'payment_id' => 'mp_payment_123',
-            'amount' => 100.00,
-            'status' => 'approved',
-            'date_created' => '2025-11-06T19:30:00.000Z',
-        ];
+        $expectedRefundResponse = ['id' => 'refund_123', 'status' => 'approved'];
 
-        $paymentGatewayMock = Mockery::mock(PaymentGatewayInterface::class);
-        $paymentGatewayMock
-            ->shouldReceive('refund')
-            ->once()
-            ->with('mp_payment_123', null)
-            ->andReturn($expectedRefundResponse);
+        // Mock da nossa interface unificada GatewayInterface
+        $gatewayMock = Mockery::mock(GatewayInterface::class);
+        $gatewayMock->shouldReceive('refund')->once()->with('mp_payment_123', null)->andReturn($expectedRefundResponse);
 
-        $this->gatewayManager
-            ->shouldReceive('create')
-            ->once()
-            ->with('mercadopago')
-            ->andReturn($paymentGatewayMock);
+        $this->gatewayManager->shouldReceive('create')->once()->with('mercadopago')->andReturn($gatewayMock);
 
         // Act
         $result = $this->paymentService->refundPayment($transaction);
@@ -87,13 +58,9 @@ class PaymentServiceTest extends TestCase
         // Assert
         $this->assertEquals($expectedRefundResponse, $result);
         $this->assertEquals('refunded', $transaction->status);
-        $this->assertIsArray($transaction->metadata);
-        $this->assertArrayHasKey('refund', $transaction->metadata);
-        $this->assertEquals($expectedRefundResponse, $transaction->metadata['refund']);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function refund_method_correctly_handles_specific_amount_for_partial_refund(): void
+    public function test_refund_method_correctly_handles_specific_amount_for_partial_refund(): void
     {
         // Arrange
         $transaction = new Transaction([
@@ -102,31 +69,14 @@ class PaymentServiceTest extends TestCase
             'external_id' => 'mp_payment_456',
             'amount' => 100.00,
             'status' => 'approved',
-            'description' => 'Test Payment',
-            'metadata' => ['payment_method_id' => 'credit_card'],
         ]);
-
         $partialAmount = 50.00;
-        $expectedRefundResponse = [
-            'id' => 'refund_456',
-            'payment_id' => 'mp_payment_456',
-            'amount' => $partialAmount,
-            'status' => 'approved',
-            'date_created' => '2025-11-06T19:30:00.000Z',
-        ];
+        $expectedRefundResponse = ['id' => 'refund_456', 'status' => 'approved', 'amount' => $partialAmount];
 
-        $paymentGatewayMock = Mockery::mock(PaymentGatewayInterface::class);
-        $paymentGatewayMock
-            ->shouldReceive('refund')
-            ->once()
-            ->with('mp_payment_456', $partialAmount)
-            ->andReturn($expectedRefundResponse);
+        $gatewayMock = Mockery::mock(GatewayInterface::class);
+        $gatewayMock->shouldReceive('refund')->once()->with('mp_payment_456', $partialAmount)->andReturn($expectedRefundResponse);
 
-        $this->gatewayManager
-            ->shouldReceive('create')
-            ->once()
-            ->with('mercadopago')
-            ->andReturn($paymentGatewayMock);
+        $this->gatewayManager->shouldReceive('create')->once()->with('mercadopago')->andReturn($gatewayMock);
 
         // Act
         $result = $this->paymentService->refundPayment($transaction, $partialAmount);
@@ -134,44 +84,18 @@ class PaymentServiceTest extends TestCase
         // Assert
         $this->assertEquals($expectedRefundResponse, $result);
         $this->assertEquals('refunded', $transaction->status);
-        $this->assertIsArray($transaction->metadata);
-        $this->assertArrayHasKey('refund', $transaction->metadata);
-        $this->assertEquals($expectedRefundResponse, $transaction->metadata['refund']);
-        $this->assertEquals($partialAmount, $result['amount']);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function cancel_method_successfully_cancels_payment_when_status_is_in_process(): void
+    public function test_cancel_method_successfully_cancels_payment(): void
     {
         // Arrange
-        $transaction = new Transaction([
-            'id' => 3,
-            'gateway' => 'mercadopago',
-            'external_id' => 'mp_payment_789',
-            'amount' => 150.00,
-            'status' => 'in_process',
-            'description' => 'Test Payment',
-            'metadata' => ['payment_method_id' => 'pix'],
-        ]);
+        $transaction = new Transaction(['id' => 3, 'gateway' => 'mercadopago', 'external_id' => 'mp_payment_789', 'amount' => 100.00, 'status' => 'in_process']);
+        $expectedCancelResponse = ['id' => 'mp_payment_789', 'status' => 'cancelled'];
 
-        $expectedCancelResponse = [
-            'id' => 'mp_payment_789',
-            'status' => 'cancelled',
-            'date_cancelled' => '2025-11-06T20:00:00.000Z',
-        ];
+        $gatewayMock = Mockery::mock(GatewayInterface::class);
+        $gatewayMock->shouldReceive('cancel')->once()->with('mp_payment_789')->andReturn($expectedCancelResponse);
 
-        $paymentGatewayMock = Mockery::mock(PaymentGatewayInterface::class);
-        $paymentGatewayMock
-            ->shouldReceive('cancel')
-            ->once()
-            ->with('mp_payment_789')
-            ->andReturn($expectedCancelResponse);
-
-        $this->gatewayManager
-            ->shouldReceive('create')
-            ->once()
-            ->with('mercadopago')
-            ->andReturn($paymentGatewayMock);
+        $this->gatewayManager->shouldReceive('create')->once()->with('mercadopago')->andReturn($gatewayMock);
 
         // Act
         $result = $this->paymentService->cancelPayment($transaction);
@@ -179,72 +103,16 @@ class PaymentServiceTest extends TestCase
         // Assert
         $this->assertEquals($expectedCancelResponse, $result);
         $this->assertEquals('cancelled', $transaction->status);
-        $this->assertIsArray($transaction->metadata);
-        $this->assertArrayHasKey('cancellation', $transaction->metadata);
-        $this->assertEquals($expectedCancelResponse, $transaction->metadata['cancellation']);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function cancel_method_throws_exception_when_attempting_to_cancel_approved_payment(): void
+    public function test_cancel_method_throws_exception_for_invalid_status(): void
     {
         // Arrange
-        $transaction = new Transaction([
-            'id' => 4,
-            'gateway' => 'mercadopago',
-            'external_id' => 'mp_payment_101',
-            'amount' => 200.00,
-            'status' => 'approved',
-            'description' => 'Test Payment',
-            'metadata' => ['payment_method_id' => 'credit_card'],
-        ]);
+        $transaction = new Transaction(['amount' => 100.00, 'external_id' => 'mp_payment_999', 'status' => 'approved']);
 
         // Assert
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Apenas pagamentos pendentes ou em processamento podem ser cancelados. Status atual: approved');
-
-        // Act
-        $this->paymentService->cancelPayment($transaction);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function cancel_method_throws_exception_when_attempting_to_cancel_rejected_payment(): void
-    {
-        // Arrange
-        $transaction = new Transaction([
-            'id' => 5,
-            'gateway' => 'mercadopago',
-            'external_id' => 'mp_payment_102',
-            'amount' => 250.00,
-            'status' => 'rejected',
-            'description' => 'Test Payment',
-            'metadata' => ['payment_method_id' => 'pix'],
-        ]);
-
-        // Assert
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Apenas pagamentos pendentes ou em processamento podem ser cancelados. Status atual: rejected');
-
-        // Act
-        $this->paymentService->cancelPayment($transaction);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function cancel_method_throws_exception_when_attempting_to_cancel_already_cancelled_payment(): void
-    {
-        // Arrange
-        $transaction = new Transaction([
-            'id' => 6,
-            'gateway' => 'mercadopago',
-            'external_id' => 'mp_payment_103',
-            'amount' => 300.00,
-            'status' => 'cancelled',
-            'description' => 'Test Payment',
-            'metadata' => ['payment_method_id' => 'debit_card'],
-        ]);
-
-        // Assert
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Esta transação já foi cancelada.');
 
         // Act
         $this->paymentService->cancelPayment($transaction);

@@ -1,62 +1,33 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 28/10/2025 20:43:21
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Contracts;
 
 interface MercadoPagoClientInterface
 {
     /**
-     * Cria um pagamento no Mercado Pago.
+     * @param array<string, mixed> $data
      *
-     * @param array<string, mixed> $requestData
-     *
-     * @throws \Exception
-     *
-     * @return object A resposta do pagamento do Mercado Pago.
+     * @return array<string, mixed>
      */
-    public function createPayment(array $requestData): object;
+    public function createPayment(float $amount, array $data): array;
 
     /**
-     * Obtém os detalhes de um pagamento no Mercado Pago.
-     *
-     * @throws \Exception
-     *
-     * @return object A resposta do pagamento do Mercado Pago.
+     * @return array<string, mixed>
      */
-    public function getPayment(string $paymentId): object;
+    public function getPayment(string $paymentId): array;
 
     /**
-     * Obtém os métodos de pagamento disponíveis no Mercado Pago.
-     *
-     * @throws \Exception
-     *
-     * @return array<int, object> A lista de métodos de pagamento.
+     * @return array<int, object>
      */
     public function getPaymentMethods(): array;
 
     /**
-     * Cria um estorno (refund) total ou parcial no Mercado Pago.
-     *
-     * @param array<string, mixed> $requestData
-     *
-     * @throws \Exception
-     *
-     * @return object A resposta do estorno do Mercado Pago.
+     * @return array<string, mixed>
      */
-    public function createRefund(string $paymentId, array $requestData): object;
+    public function refundPayment(string $paymentId, ?float $amount = null): array;
 
     /**
-     * Cancela um pagamento pendente no Mercado Pago.
-     *
-     * @throws \Exception
-     *
-     * @return object A resposta do cancelamento do Mercado Pago.
+     * @return array<string, mixed>
      */
-    public function cancelPayment(string $paymentId): object;
+    public function cancelPayment(string $paymentId): array;
 }

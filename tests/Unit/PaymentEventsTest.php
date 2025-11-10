@@ -35,14 +35,14 @@ class PaymentEventsTest extends TestCase
         Event::fake();
 
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('createPayment')->andReturn((object) [
+            $mock->shouldReceive('createPayment')->andReturn([
                 'id' => 'mp_event_test_success',
                 'status' => 'approved',
                 'transaction_amount' => 100.00,
                 'description' => 'Event test payment',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'accredited',
-                'metadata' => (object) [],
+                'metadata' => [],
             ]);
         }));
 
@@ -105,14 +105,14 @@ class PaymentEventsTest extends TestCase
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('getPayment')
                 ->with('mp_status_change_test')
-                ->andReturn((object) [
+                ->andReturn([
                     'id' => 'mp_status_change_test',
                     'status' => 'approved', // Status changed from pending to approved
                     'transaction_amount' => 100.00,
                     'description' => 'Status change test',
                     'payment_method_id' => 'pix',
                     'status_detail' => 'accredited',
-                    'metadata' => (object) [],
+                    'metadata' => [],
                 ]);
         }));
 

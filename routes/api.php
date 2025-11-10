@@ -49,32 +49,32 @@ Route::post('payments/{transaction}/cancel', [PaymentController::class, 'cancel'
     // ->middleware(['payment.auth', 'payment.authorize:cancel-payment'])
     ->name('payment.cancel');
 
-// Rotas de Webhook
+// Rotas de Webhook (ainda específicas por gateway)
 Route::post('mercadopago/webhook', [MercadoPagoWebhookController::class, 'handle'])
     ->middleware(['mercadopago.webhook.signature', 'payment.rate_limit:webhook'])
     ->name('mercadopago.webhook');
 
-// Rotas de Configuração (SENSÍVEIS - Recomenda-se habilitar autenticação)
-Route::prefix('settings')->group(function () {
-    Route::get('mercadopago', [SettingsController::class, 'getMercadoPagoSettings'])
+// Rotas de Configuração (Genéricas)
+Route::prefix('settings/{gateway}')->group(function () {
+    Route::get('/', [SettingsController::class, 'getSettings'])
         ->middleware(['payment.rate_limit:settings'])
         // ->middleware(['payment.auth', 'payment.authorize:view-settings'])
-        ->name('settings.mercadopago.get');
+        ->name('settings.gateway.get');
 
-    Route::post('mercadopago', [SettingsController::class, 'saveMercadoPagoSettings'])
+    Route::post('/', [SettingsController::class, 'saveSettings'])
         ->middleware(['payment.rate_limit:settings'])
         // ->middleware(['payment.auth', 'payment.authorize:manage-settings'])
-        ->name('settings.mercadopago.save');
+        ->name('settings.gateway.save');
 });
 
-// Rotas para o fluxo de conexão (OAuth 2.0)
-Route::prefix('connect')->group(function () {
-    Route::get('mercadopago', [SettingsController::class, 'redirectToMercadoPago'])
+// Rotas para o fluxo de conexão (OAuth 2.0 - Genéricas)
+Route::prefix('connect/{gateway}')->group(function () {
+    Route::get('/', [SettingsController::class, 'redirectToGateway'])
         // ->middleware(['payment.auth'])
-        ->name('connect.mercadopago.redirect');
+        ->name('connect.gateway.redirect');
 
-    Route::get('mercadopago/callback', [SettingsController::class, 'handleMercadoPagoCallback'])
-        ->name('connect.mercadopago.callback');
+    Route::get('callback', [SettingsController::class, 'handleGatewayCallback'])
+        ->name('connect.gateway.callback');
 });
 
 // Rotas de Relatórios

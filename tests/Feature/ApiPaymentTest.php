@@ -42,14 +42,14 @@ class ApiPaymentTest extends TestCase
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
             $mock->shouldReceive('getPayment')
                 ->with('mp_payment_to_show')
-                ->andReturn((object) [
+                ->andReturn([
                     'id' => 'mp_payment_to_show',
                     'status' => 'approved', // O gateway agora diz que foi aprovado
                     'transaction_amount' => 150.00,
                     'description' => 'Transaction to be updated',
                     'payment_method_id' => 'pix',
                     'status_detail' => 'accredited',
-                    'metadata' => (object) [],
+                    'metadata' => [],
                 ]);
         }));
 
@@ -77,16 +77,16 @@ class ApiPaymentTest extends TestCase
     {
         // Mock da MercadoPagoClientInterface para PIX
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('createPayment')->andReturn((object) [
+            $mock->shouldReceive('createPayment')->andReturn([
                 'id' => 'mp_payment_id_pix',
                 'status' => 'pending', // PIX começa como pendente
                 'transaction_amount' => 150.75,
                 'description' => 'Teste de pagamento com PIX',
                 'payment_method_id' => 'pix',
                 'status_detail' => 'pending_waiting_transfer',
-                'metadata' => (object) [],
-                'point_of_interaction' => (object) [
-                    'transaction_data' => (object) [
+                'metadata' => [],
+                'point_of_interaction' => [
+                    'transaction_data' => [
                         'qr_code_base64' => 'mocked_qr_code_base64',
                     ],
                 ],
@@ -125,14 +125,14 @@ class ApiPaymentTest extends TestCase
     {
         // Mock da MercadoPagoClientInterface para Cartão de Crédito
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('createPayment')->andReturn((object) [
+            $mock->shouldReceive('createPayment')->andReturn([
                 'id' => 'mp_payment_id_cc',
                 'status' => 'approved', // Cartão geralmente aprova na hora
                 'transaction_amount' => 250.00,
                 'description' => 'Teste de pagamento com Cartão',
                 'payment_method_id' => 'visa',
                 'status_detail' => 'accredited',
-                'metadata' => (object) [],
+                'metadata' => [],
             ]);
         }));
 
@@ -179,7 +179,7 @@ class ApiPaymentTest extends TestCase
     {
         // Mock da MercadoPagoClientInterface para Cartão de Crédito com parcelamento
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('createPayment')->andReturn((object) [
+            $mock->shouldReceive('createPayment')->andReturn([
                 'id' => 'mp_payment_id_cc_installments',
                 'status' => 'approved',
                 'transaction_amount' => 300.00,
@@ -187,7 +187,7 @@ class ApiPaymentTest extends TestCase
                 'payment_method_id' => 'visa',
                 'installments' => 3,
                 'status_detail' => 'accredited',
-                'metadata' => (object) [],
+                'metadata' => [],
             ]);
         }));
 
@@ -234,16 +234,16 @@ class ApiPaymentTest extends TestCase
     {
         // Mock da MercadoPagoClientInterface para Boleto
         $this->instance(MercadoPagoClientInterface::class, Mockery::mock(MercadoPagoClientInterface::class, function ($mock): void {
-            $mock->shouldReceive('createPayment')->andReturn((object) [
+            $mock->shouldReceive('createPayment')->andReturn([
                 'id' => 'mp_payment_id_boleto',
                 'status' => 'pending', // Boleto começa como pendente
                 'transaction_amount' => 100.00,
                 'description' => 'Teste de pagamento com Boleto',
                 'payment_method_id' => 'bolbradesco',
                 'status_detail' => 'pending_waiting_payment',
-                'metadata' => (object) [],
-                'point_of_interaction' => (object) [
-                    'transaction_data' => (object) [
+                'metadata' => [],
+                'point_of_interaction' => [
+                    'transaction_data' => [
                         'ticket_url' => 'https://mocked.boleto.url/123',
                     ],
                 ],

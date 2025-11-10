@@ -2,24 +2,30 @@
 
 namespace UendelSilveira\PaymentModuleManager\Services;
 
-use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
-use UendelSilveira\PaymentModuleManager\Enums\PaymentGateway;
-use UendelSilveira\PaymentModuleManager\Exceptions\InvalidConfigurationException;
-use UendelSilveira\PaymentModuleManager\Gateways\MercadoPagoStrategy;
+use Illuminate\Contracts\Container\Container;
+use UendelSilveira\PaymentModuleManager\Contracts\GatewayInterface;
+use UendelSilveira\PaymentModuleManager\Gateways\MercadoPagoGateway;
 
 class GatewayManager
 {
+    public function __construct(protected Container $container) {}
+
     /**
-     * Cria uma instância do gateway de pagamento.
-     *
-     * @throws InvalidConfigurationException
+     * @throws \InvalidArgumentException
      */
-    public function create(string $gateway): PaymentGatewayInterface
+    public function create(string $gateway): GatewayInterface
     {
-        if ($gateway === PaymentGateway::MERCADOPAGO || $gateway === 'mercadopago') {
-            return app(MercadoPagoStrategy::class);
+        $method = 'create'.ucfirst($gateway).'Driver';
+
+        if (method_exists($this, $method)) {
+            return $this->{$method}();
         }
 
-        throw new InvalidConfigurationException(sprintf("O gateway '%s' não é suportado.", $gateway));
+        throw new \InvalidArgumentException(sprintf('Gateway [%s] não é suportado.', $gateway));
+    }
+
+    protected function createMercadopagoDriver(): GatewayInterface
+    {
+        return $this->container->make(MercadoPagoGateway::class);
     }
 }

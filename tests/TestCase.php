@@ -27,6 +27,28 @@ abstract class TestCase extends Orchestra
             'path' => storage_path('logs/payment-test.log'),
             'level' => 'debug',
         ]);
+
+        $app['config']->set('logging.channels.gateway', [
+            'driver' => 'single',
+            'path' => storage_path('logs/gateway-test.log'),
+            'level' => 'debug',
+        ]);
+
+        $app['config']->set('logging.channels.transaction', [
+            'driver' => 'single',
+            'path' => storage_path('logs/transaction-test.log'),
+            'level' => 'debug',
+        ]);
+
+        $app['config']->set('logging.channels.webhook', [
+            'driver' => 'single',
+            'path' => storage_path('logs/webhook-test.log'),
+            'level' => 'debug',
+        ]);
+
+        // Configuração do gateway Mercado Pago para testes
+        $app['config']->set('payment.gateways.mercadopago.access_token', 'test-access-token');
+        $app['config']->set('payment.gateways.mercadopago.base_url', 'https://api.mercadopago.com');
     }
 
     protected function setUp(): void
