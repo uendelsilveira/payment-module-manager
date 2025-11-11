@@ -1,0 +1,49 @@
+<?php
+
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created at: 11/11/25
+*/
+
+namespace UendelSilveira\PaymentModuleManager\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class ResolvePaymentGateway
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        $gateways = (array) config('payment.gateways', []);
+        $supported = array_keys($gateways);
+
+        $default = (string) config('payment.default_gateway');
+        $chosen = (string) ($request->input('method')
+            ?? $request->input('gateway')
+            ?? $default);
+
+        if ($chosen === '' || $chosen === null) {
+            return response()->json([
+                'message' => 'No default payment gateway configured. Set PAYMENT_DEFAULT_GATEWAY or provide method/gateway in the request.',
+            ], 500);
+        }
+
+        if (! in_array($chosen, $supported, true)) {
+            return response()->json([
+                'message' => 'Payment gateway not supported.',
+                'gateway' => $chosen,
+                'supported' => $supported,
+            ], 422);
+        }
+
+        $request->merge([
+            'method' => $chosen,
+            'gateway' => $chosen,
+        ]);
+
+        return $next($request);
+    }
+}

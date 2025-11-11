@@ -1,6 +1,6 @@
 # 🧩 Payment Module Manager
 
-Pacote Laravel independente para gerenciar múltiplos gateways de pagamento (Mercado Pago, PagSeguro, PayPal, Stripe, etc).  
+Pacote Laravel independente para gerenciar múltiplos gateways de pagamento (Gateway A, PagSeguro, PayPal, Stripe, etc).  
 Permite integração plugável via composer (`uendelsilveira/payment-module-manager`).
 
 ---
@@ -28,7 +28,7 @@ payment-module-manager/
 │   │   ├── PaymentService.php
 │   │   └── GatewayManager.php
 │   ├── Gateways/
-│   │   ├── MercadoPagoStrategy.php
+│   │   ├── GatewayAStrategy.php
 │   │   ├── PagSeguroStrategy.php
 │   │   ├── PayPalStrategy.php
 │   │   └── StripeStrategy.php
@@ -145,7 +145,7 @@ POST /api/payment/process
 ```json
 {
   "amount": 199.90,
-  "method": "mercadopago",
+  "method": "default_gateway",
   "description": "Assinatura Premium"
 }
 ```

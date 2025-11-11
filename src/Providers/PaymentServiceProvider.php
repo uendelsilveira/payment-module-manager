@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use UendelSilveira\PaymentModuleManager\Console\Commands\ReprocessFailedPayments;
-use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Events\PaymentFailed;
@@ -16,15 +15,14 @@ use UendelSilveira\PaymentModuleManager\Http\Middleware\AuthenticatePaymentReque
 use UendelSilveira\PaymentModuleManager\Http\Middleware\AuthorizePaymentAction;
 use UendelSilveira\PaymentModuleManager\Http\Middleware\EnsureIdempotency;
 use UendelSilveira\PaymentModuleManager\Http\Middleware\RateLimitPaymentRequests;
-use UendelSilveira\PaymentModuleManager\Http\Middleware\VerifyMercadoPagoSignature;
+use UendelSilveira\PaymentModuleManager\Http\Middleware\ResolvePaymentGateway;
 use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentFailed;
 use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentProcessed;
 use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentStatusChanged;
 use UendelSilveira\PaymentModuleManager\Listeners\SendPaymentStatusNotification;
+use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
 use UendelSilveira\PaymentModuleManager\Repositories\SettingsRepository;
 use UendelSilveira\PaymentModuleManager\Repositories\TransactionRepository;
-use UendelSilveira\PaymentModuleManager\Services\GatewayManager;
-use UendelSilveira\PaymentModuleManager\Services\MercadoPagoClient;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 
 class PaymentServiceProvider extends ServiceProvider
@@ -35,13 +33,15 @@ class PaymentServiceProvider extends ServiceProvider
 
         $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, SettingsRepository::class);
-        $this->app->singleton(MercadoPagoClientInterface::class, MercadoPagoClient::class);
 
-        // Corrigido: Deixa o container do Laravel resolver as dependências do GatewayManager.
-        $this->app->singleton(GatewayManager::class);
+        // Registrar o PaymentGatewayManager
+        $this->app->singleton(
+            PaymentGatewayManager::class,
+            fn ($app): PaymentGatewayManager => new PaymentGatewayManager($app['config']['payment'])
+        );
 
         $this->app->singleton(PaymentService::class, fn ($app): PaymentService => new PaymentService(
-            $app->make(GatewayManager::class),
+            $app->make(PaymentGatewayManager::class),
             $app->make(TransactionRepositoryInterface::class)
         ));
     }
@@ -60,7 +60,7 @@ class PaymentServiceProvider extends ServiceProvider
         }
 
         $router = $this->app->make('router');
-        $router->aliasMiddleware('mercadopago.webhook.signature', VerifyMercadoPagoSignature::class);
+        $router->aliasMiddleware('payment.resolve', ResolvePaymentGateway::class);
         $router->aliasMiddleware('payment.auth', AuthenticatePaymentRequest::class);
         $router->aliasMiddleware('payment.authorize', AuthorizePaymentAction::class);
         $router->aliasMiddleware('payment.rate_limit', RateLimitPaymentRequests::class);

@@ -28,13 +28,21 @@ class PaymentController extends Controller
      */
     public function process(CreatePaymentRequest $createPaymentRequest): \Illuminate\Http\JsonResponse
     {
-        Log::info('[PaymentController] Requisição para processar pagamento recebida.', ['payload' => $createPaymentRequest->validated()]);
+        Log::info(
+            '[PaymentController] Requisição para processar pagamento recebida.',
+            ['payload' => $createPaymentRequest->validated()]
+        );
 
         try {
             $validated = $createPaymentRequest->validated();
             assert(is_array($validated));
             /** @var array<string, mixed> $validatedData */
             $validatedData = $validated;
+
+            if (isset($validatedData['method']) && ! isset($validatedData['gateway'])) {
+                $validatedData['gateway'] = $validatedData['method'];
+            }
+
             $transaction = $this->paymentService->processPayment($validatedData);
 
             return $this->successResponse(
@@ -43,7 +51,10 @@ class PaymentController extends Controller
                 201 // Created
             );
         } catch (Throwable $throwable) {
-            Log::error('[PaymentController] Erro ao processar pagamento.', ['exception' => $throwable->getMessage()]);
+            Log::error(
+                '[PaymentController] Erro ao processar pagamento.',
+                ['exception' => $throwable->getMessage()]
+            );
 
             // Em produção, retorna uma resposta de erro padronizada.
             return $this->errorResponse(
@@ -58,7 +69,10 @@ class PaymentController extends Controller
      */
     public function show(Transaction $transaction): \Illuminate\Http\JsonResponse
     {
-        Log::info('[PaymentController] Requisição para obter detalhes da transação.', ['transaction_id' => $transaction->id]);
+        Log::info(
+            '[PaymentController] Requisição para obter detalhes da transação.',
+            ['transaction_id' => $transaction->id]
+        );
 
         try {
             $updatedTransaction = $this->paymentService->getPaymentDetails($transaction);
@@ -68,7 +82,10 @@ class PaymentController extends Controller
                 'Detalhes da transação obtidos com sucesso.'
             );
         } catch (Throwable $throwable) {
-            Log::error('[PaymentController] Erro ao obter detalhes da transação.', ['transaction_id' => $transaction->id, 'exception' => $throwable->getMessage()]);
+            Log::error(
+                '[PaymentController] Erro ao obter detalhes da transação.',
+                ['transaction_id' => $transaction->id, 'exception' => $throwable->getMessage()]
+            );
 
             return $this->errorResponse(
                 'Falha ao obter detalhes da transação: '.$throwable->getMessage(),
@@ -80,9 +97,14 @@ class PaymentController extends Controller
     /**
      * Realiza o estorno total ou parcial de um pagamento.
      */
-    public function refund(Transaction $transaction, \Illuminate\Http\Request $request): \Illuminate\Http\JsonResponse
-    {
-        Log::info('[PaymentController] Requisição para estornar pagamento.', ['transaction_id' => $transaction->id]);
+    public function refund(
+        Transaction $transaction,
+        \Illuminate\Http\Request $request
+    ): \Illuminate\Http\JsonResponse {
+        Log::info(
+            '[PaymentController] Requisição para estornar pagamento.',
+            ['transaction_id' => $transaction->id]
+        );
 
         try {
             $amount = $request->input('amount');
@@ -98,7 +120,10 @@ class PaymentController extends Controller
                 'Estorno processado com sucesso.'
             );
         } catch (Throwable $throwable) {
-            Log::error('[PaymentController] Erro ao estornar pagamento.', ['transaction_id' => $transaction->id, 'exception' => $throwable->getMessage()]);
+            Log::error(
+                '[PaymentController] Erro ao estornar pagamento.',
+                ['transaction_id' => $transaction->id, 'exception' => $throwable->getMessage()]
+            );
 
             return $this->errorResponse(
                 'Falha ao processar estorno: '.$throwable->getMessage(),
@@ -112,7 +137,10 @@ class PaymentController extends Controller
      */
     public function cancel(Transaction $transaction): \Illuminate\Http\JsonResponse
     {
-        Log::info('[PaymentController] Requisição para cancelar pagamento.', ['transaction_id' => $transaction->id]);
+        Log::info(
+            '[PaymentController] Requisição para cancelar pagamento.',
+            ['transaction_id' => $transaction->id]
+        );
 
         try {
             $cancelData = $this->paymentService->cancelPayment($transaction);
@@ -122,7 +150,10 @@ class PaymentController extends Controller
                 'Pagamento cancelado com sucesso.'
             );
         } catch (Throwable $throwable) {
-            Log::error('[PaymentController] Erro ao cancelar pagamento.', ['transaction_id' => $transaction->id, 'exception' => $throwable->getMessage()]);
+            Log::error(
+                '[PaymentController] Erro ao cancelar pagamento.',
+                ['transaction_id' => $transaction->id, 'exception' => $throwable->getMessage()]
+            );
 
             return $this->errorResponse(
                 'Falha ao cancelar pagamento: '.$throwable->getMessage(),

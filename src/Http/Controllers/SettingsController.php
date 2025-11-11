@@ -32,11 +32,10 @@ class SettingsController extends Controller
         try {
             $gatewayInstance = $this->gatewayManager->create($gateway);
 
-            // A validação pode ser movida para uma FormRequest ou para dentro do próprio Gateway se ficar mais complexa
             $request->validate([
-                'public_key' => ['nullable', 'string'],
-                'access_token' => ['nullable', 'string'],
-                'webhook_secret' => ['nullable', 'string'],
+                'public_key' => ['sometimes', 'nullable', 'string'],
+                'access_token' => ['sometimes', 'nullable', 'string'],
+                'webhook_secret' => ['sometimes', 'nullable', 'string'],
             ]);
 
             $gatewayInstance->saveSettings($request->all());
@@ -65,13 +64,11 @@ class SettingsController extends Controller
             $gatewayInstance = $this->gatewayManager->create($gateway);
             $gatewayInstance->handleCallback($request);
 
-            // Redireciona para uma página de sucesso no frontend da aplicação
             return redirect('/')->with('status', 'Conta do gateway conectada com sucesso!');
 
         } catch (\InvalidArgumentException $e) {
             abort(404, $e->getMessage());
         } catch (\Exception $e) {
-            // Idealmente, logar o erro aqui
             return redirect('/')->with('error', 'Falha ao conectar a conta do gateway: '.$e->getMessage());
         }
     }

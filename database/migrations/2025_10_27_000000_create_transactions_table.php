@@ -10,7 +10,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use UendelSilveira\PaymentModuleManager\Enums\PaymentGateway;
+use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
 
 return new class extends Migration
 {
@@ -25,9 +25,10 @@ return new class extends Migration
             $table->string('gateway'); // Usar o enum PaymentGateway
             $table->decimal('amount', 10, 2);
             $table->string('currency')->default('BRL');
-            $table->string('status')->default('pending'); // pending, approved, rejected, refunded, etc.
+            $table->enum('status', PaymentStatus::values())
+                ->default(PaymentStatus::PENDING->value);
             $table->text('description')->nullable();
-            $table->json('metadata')->nullable(); // Para armazenar dados adicionais do gateway
+            $table->json('metadata')->nullable();
             $table->timestamps();
         });
     }

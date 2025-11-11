@@ -1,82 +1,41 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 28/10/2025 20:43:21
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Repositories;
 
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
-use UendelSilveira\PaymentModuleManager\Models\PaymentSetting;
 
 class SettingsRepository implements SettingsRepositoryInterface
 {
-    /**
-     * Cache TTL em segundos (1 hora por padrão)
-     */
-    protected int $cacheTtl = 3600;
+    protected array $cache = [];
 
     /**
-     * Prefixo para chaves de cache
+     * Obtém uma configuração, seja do banco, do config() ou de variáveis .env
      */
-    protected string $cachePrefix = 'payment_settings:';
-
-    /**
-     * @param mixed $default
-     */
-    public function get(string $key, $default = null): ?string
+    public function get(string $key, mixed $default = null): mixed
     {
-        $cacheKey = $this->getCacheKey($key);
+        // 1️⃣ Prioriza cache local
+        if (array_key_exists($key, $this->cache)) {
+            return $this->cache[$key];
+        }
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($key, $default): ?string {
-            /** @var PaymentSetting|null $setting */
-            $setting = PaymentSetting::where('key', $key)->first();
+        // 2️⃣ Tenta obter via config()
+        $value = Config::get($key);
 
-            return $setting ? $setting->value : ($default !== null ? (string) $default : null);
-        });
-    }
+        // 3️⃣ Se ainda não encontrar, usa default
+        $value ??= $default;
 
-    public function set(string $key, ?string $value): void
-    {
-        PaymentSetting::updateOrCreate(
-            ['key' => $key],
-            ['value' => $value]
-        );
+        // 4️⃣ Armazena em cache local
+        $this->cache[$key] = $value;
 
-        // Invalidar cache após atualização
-        $this->forgetCache($key);
+        return $value;
     }
 
     /**
-     * Gera a chave de cache para uma configuração
+     * Define um valor (poderia salvar no banco, mas aqui é só cache local)
      */
-    protected function getCacheKey(string $key): string
+    public function set(string $key, mixed $value): void
     {
-        return $this->cachePrefix.$key;
-    }
-
-    /**
-     * Remove uma configuração do cache
-     */
-    protected function forgetCache(string $key): void
-    {
-        Cache::forget($this->getCacheKey($key));
-    }
-
-    /**
-     * Limpa todo o cache de configurações
-     */
-    public function clearCache(): void
-    {
-        // Se estiver usando Redis/Memcached, pode usar tags
-        // Cache::tags(['payment_settings'])->flush();
-
-        // Para drivers que não suportam tags, limpar individualmente
-        // ou usar um padrão de chave para limpar em lote
-        Cache::flush();
+        $this->cache[$key] = $value;
     }
 }

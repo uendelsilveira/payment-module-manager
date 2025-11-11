@@ -19,7 +19,7 @@ O módulo foi reestruturado com foco em segurança, escalabilidade e manutenibil
 ### Segurança
 - **Autenticação e Autorização:** Middlewares configuráveis para proteger rotas com estratégias como `api_token`, `laravel_auth` ou `custom`.
 - **Proteção de Credenciais:** As credenciais nunca são expostas via API, sendo sempre mascaradas.
-- **Validação de Webhook:** Assinatura de webhooks do Mercado Pago é validada compulsoriamente em ambiente de produção, incluindo proteção contra *replay attacks*.
+- **Validação de Webhook:** Assinatura de webhooks do gateway de pagamento é validada compulsoriamente em ambiente de produção, incluindo proteção contra *replay attacks*.
 - **Rate Limiting:** Proteção contra abuso e ataques de força bruta com limites de requisição configuráveis por tipo de endpoint.
 - **Validação de Idempotência:** Previne o processamento duplicado de transações através de uma `Idempotency-Key`.
 
@@ -31,10 +31,9 @@ O módulo foi reestruturado com foco em segurança, escalabilidade e manutenibil
 - **Logging Estruturado:** Logs detalhados com `Correlation ID` para rastreabilidade completa de requisições.
 
 ### Funcionalidades do Gateway
-- **Integração com Mercado Pago:** Processa e consulta pagamentos via PIX, Cartão de Crédito (com parcelamento) e Boleto.
+- **Integração com Múltiplos Gateways:** Processa e consulta pagamentos via PIX, Cartão de Crédito (com parcelamento) e Boleto através de diversos gateways.
 - **Estornos e Cancelamentos:** Suporte completo para estornar pagamentos aprovados (total ou parcial) e cancelar pagamentos pendentes.
 - **Gerenciamento via API:** Credenciais do gateway podem ser gerenciadas através de endpoints da API.
-- **Conexão OAuth 2.0:** Fluxo seguro para conectar contas de usuários do Mercado Pago.
 - **Reprocessamento de Falhas:** Comando Artisan (`payment:reprocess-failed`) para reprocessar transações que falharam, com estratégia de *retry* configurável.
 - **Relatórios e Métricas:** Endpoints para sumarizar transações e analisar dados por método de pagamento.
 - **Health Check:** Endpoint `GET /api/health` para monitorar a saúde da aplicação e suas dependências (banco de dados, cache, API externa).
@@ -88,12 +87,8 @@ Se o pacote não estiver no Packagist, adicione o repositório ao seu `composer.
     Estas variáveis servem como fallback se nenhuma configuração for encontrada no banco de dados.
 
     ```dotenv
-    MERCADOPAGO_PUBLIC_KEY="SEU_PUBLIC_KEY"
-    MERCADOPAGO_ACCESS_TOKEN="SEU_ACCESS_TOKEN"
-    MERCADOPAGO_WEBHOOK_SECRET="SEU_WEBHOOK_SECRET"
-
-    MERCADOPAGO_CLIENT_ID="SEU_CLIENT_ID_DA_APLICACAO"
-    MERCADOPAGO_CLIENT_SECRET="SEU_CLIENT_SECRET_DA_APLICACAO"
+    # Define o gateway de pagamento padrão.
+    PAYMENT_DEFAULT_GATEWAY=""
     ```
 
 ---
@@ -112,7 +107,6 @@ Para começar a usar o módulo rapidamente, siga estes passos:
          -H "Idempotency-Key: unique-request-id-123" \
          -d '{
                "amount": 100.50,
-               "method": "mercadopago",
                "description": "Produto Exemplo",
                "payer_email": "comprador@email.com",
                "payment_method_id": "pix"
@@ -127,6 +121,91 @@ Para começar a usar o módulo rapidamente, siga estes passos:
 ---
 
 ## 📖 Uso Detalhado
+
+### Gerenciamento de Gateways de Pagamento
+
+O pacote utiliza um `PaymentGatewayManager` para gerenciar diferentes provedores de pagamento. Você pode acessar o gerenciador através do container de serviços do Laravel.
+
+#### Obtendo um Gateway
+
+Você pode obter uma instância do gateway padrão ou de um gateway específico:
+
+```php
+use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
+use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
+
+// Obtém o gateway padrão (definido em config/payment.php ou .env)
+$defaultGateway = app(PaymentGatewayManager::class)->gateway();
+
+// Obtém um gateway específico pelo nome
+$specificGateway = app(PaymentGatewayManager::class)->gateway('some_gateway_name');
+
+// Exemplo de uso:
+$paymentData = [
+    'amount' => 100.00,
+    'currency' => 'BRL',
+    // ... outros dados específicos do gateway
+];
+$response = $defaultGateway->processPayment($paymentData);
+```
+
+#### Adicionando Novos Gateways
+
+Você pode estender o `PaymentGatewayManager` para adicionar suporte a novos gateways de pagamento. Isso é feito no seu `PaymentServiceProvider` (ou em outro Service Provider):
+
+```php
+// Em app/Providers/AppServiceProvider.php ou um Service Provider customizado
+use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
+use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
+use Illuminate\Support\ServiceProvider;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        // ...
+    }
+
+    public function boot(): void
+    {
+        $this->app->make(PaymentGatewayManager::class)->extend('stripe', function ($config) {
+            return new class($config) implements PaymentGatewayInterface {
+                public function __construct(protected array $config) {}
+                public function processPayment(array $data): array {
+                    // Lógica de processamento do Stripe
+                    return ['transaction_id' => 'stripe_txn_123', 'status' => \UendelSilveira\PaymentModuleManager\Enums\PaymentStatus::APPROVED];
+                }
+                public function refundPayment(string $paymentId, ?float $amount = null): array { return []; }
+                public function getPaymentStatus(string $paymentId): \UendelSilveira\PaymentModuleManager\Enums\PaymentStatus { return \UendelSilveira\PaymentModuleManager\Enums\PaymentStatus::UNKNOWN; }
+                public function cancelPayment(string $paymentId): array { return []; }
+                public function createWebhook(array $data): array { return []; }
+                public function processWebhook(array $data): array { return []; }
+                public function getConfig(): array { return $this->config; }
+            };
+        });
+    }
+}
+```
+
+Certifique-se de que a configuração para o novo gateway (`stripe` neste exemplo) esteja presente em `config/payment.php`:
+
+```php
+// config/payment.php
+return [
+    'default_gateway' => env('PAYMENT_DEFAULT_GATEWAY', 'default_gateway_name'),
+
+    'gateways' => [
+        'default_gateway_name' => [
+            // ... configurações do gateway padrão
+        ],
+        'stripe' => [
+            'api_key' => env('STRIPE_API_KEY'),
+            'secret_key' => env('STRIPE_SECRET_KEY'),
+        ],
+    ],
+    // ...
+];
+```
 
 ### Documentação da API (OpenAPI)
 
@@ -147,7 +226,6 @@ curl -X POST "http://localhost/api/payment/process" \
      -H "Authorization: Bearer SEU_API_TOKEN" \
      -d '{
            "amount": 199.90,
-           "method": "mercadopago",
            "description": "Assinatura Premium",
            "payer_email": "cliente@example.com",
            "payment_method_id": "credit_card",
@@ -165,7 +243,6 @@ curl -X POST "http://localhost/api/payment/process" \
      -H "Authorization: Bearer SEU_API_TOKEN" \
      -d '{
            "amount": 100.00,
-           "method": "mercadopago",
            "description": "Pagamento de Fatura",
            "payer_email": "cliente@example.com",
            "payment_method_id": "boleto",
@@ -290,16 +367,16 @@ sequenceDiagram
     participant Client
     participant Your Application
     participant Payment Module
-    participant Mercado Pago
+    participant Payment Gateway
 
     Client->>Your Application: 1. Request Payment (e.g., PIX)
     Your Application->>Payment Module: 2. Process Payment
-    Payment Module->>Mercado Pago: 3. Create Payment
-    Mercado Pago-->>Payment Module: 4. Return PIX Code
+    Payment Module->>Payment Gateway: 3. Create Payment
+    Payment Gateway-->>Payment Module: 4. Return PIX Code
     Payment Module-->>Your Application: 5. Return Transaction ID & PIX Code
     Your Application-->>Client: 6. Display PIX Code
-    Client->>Mercado Pago: 7. Pays PIX
-    Mercado Pago->>Payment Module: 8. Webhook Notification (payment approved)
+    Client->>Payment Gateway: 7. Pays PIX
+    Payment Gateway->>Payment Module: 8. Webhook Notification (payment approved)
     Payment Module->>Your Application: 9. Dispatch Event (PaymentProcessed)
 ```
 
@@ -307,9 +384,13 @@ sequenceDiagram
 
 ## 🤔 Troubleshooting (Problemas Comuns)
 
+-   **Erro `InvalidArgumentException` ao obter gateway:**
+    -   **Causa:** O nome do gateway solicitado não está configurado em `config/payment.php` ou não foi estendido.
+    -   **Solução:** Verifique se o nome do gateway está correto e se suas configurações estão presentes no array `payment.gateways` ou se você o estendeu corretamente.
+
 -   **Erro `InvalidConfigurationException`:**
-    -   **Causa:** As credenciais do Mercado Pago não foram configuradas corretamente.
-    -   **Solução:** Verifique se as variáveis `MERCADOPAGO_*` estão definidas no seu arquivo `.env` ou se foram salvas via API.
+    -   **Causa:** As credenciais do gateway de pagamento não foram configuradas corretamente.
+    -   **Solução:** Verifique se as variáveis de ambiente do gateway estão definidas no seu arquivo `.env` ou se foram salvas via API.
 
 -   **Pagamentos falham com `401 Unauthorized`:**
     -   **Causa:** O middleware de autenticação está bloqueando a requisição.
@@ -348,7 +429,7 @@ Este projeto utiliza **versionamento semântico automático** baseado em [Conven
    git commit -m "fix(webhook): corrigir validação de assinatura"
    
    # Breaking change (major bump)
-   git commit -m "feat!: migrar para API v2 do Mercado Pago"
+   git commit -m "feat!: migrar para nova API do Gateway"
    ```
 
 📖 **[Ver guia completo de commits convencionais](.github/COMMIT_CONVENTION.md)**

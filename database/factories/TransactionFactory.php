@@ -10,7 +10,6 @@
 namespace UendelSilveira\PaymentModuleManager\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use UendelSilveira\PaymentModuleManager\Enums\PaymentGateway;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 
 class TransactionFactory extends Factory
@@ -31,7 +30,7 @@ class TransactionFactory extends Factory
             'description' => $description,
             'status' => $status,
             'metadata' => [
-                'method' => PaymentGateway::MERCADOPAGO,
+                'method' => config('PAYMENT_DEFAULT_GATEWAY', 'mercadopago'),
                 'description' => $description,
                 'payer_email' => $payerEmail,
                 'payment_method_id' => $paymentMethodId,

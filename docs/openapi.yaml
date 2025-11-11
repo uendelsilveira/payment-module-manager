@@ -20,7 +20,7 @@ paths:
   /payment/process:
     post:
       summary: Processa um novo pagamento
-      description: Cria uma nova transação e a processa através do gateway do Mercado Pago.
+      description: Cria uma nova transação e a processa através do gateway de pagamento configurado.
       tags:
         - Pagamentos
       requestBody:
@@ -73,87 +73,6 @@ paths:
           description: Transação não encontrada.
         '500':
           description: Erro interno do servidor.
-
-  /mercadopago/webhook:
-    post:
-      summary: Recebe notificações de webhook do Mercado Pago
-      description: Endpoint para receber e processar atualizações de status de pagamento do Mercado Pago. Lida com diversos eventos como aprovação, reembolso, etc.
-      tags:
-        - Webhooks
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MercadoPagoWebhook'
-      responses:
-        '200':
-          description: Webhook processado com sucesso.
-        '400':
-          description: "Requisição inválida (ex: tipo de notificação não suportado)."
-        '403':
-          description: "Acesso negado (ex: assinatura inválida)."
-        '404':
-          description: "Transação local não encontrada."
-
-  /settings/mercadopago:
-    get:
-      summary: Obtém as configurações do Mercado Pago
-      description: Retorna as credenciais do Mercado Pago atualmente salvas no banco de dados.
-      tags:
-        - Configurações
-      responses:
-        '200':
-          description: Sucesso.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MercadoPagoSettingsResponse'
-    post:
-      summary: Salva as configurações do Mercado Pago
-      description: Salva ou atualiza as credenciais do Mercado Pago no banco de dados.
-      tags:
-        - Configurações
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MercadoPagoSettings'
-      responses:
-        '200':
-          description: Configurações salvas com sucesso.
-
-  /connect/mercadopago:
-    get:
-      summary: Inicia o fluxo de conexão OAuth 2.0 com o Mercado Pago
-      description: Redireciona o usuário para a página de autorização do Mercado Pago.
-      tags:
-        - Conexão
-      responses:
-        '302':
-          description: "Redirecionamento para a página de autorização do Mercado Pago."
-
-  /connect/mercadopago/callback:
-    get:
-      summary: Callback do fluxo de conexão OAuth 2.0 do Mercado Pago
-      description: Recebe o código de autorização do Mercado Pago, troca-o por um access_token e public_key, e os salva no banco de dados.
-      tags:
-        - Conexão
-      parameters:
-        - in: query
-          name: code
-          schema:
-            type: string
-          required: true
-          description: Código de autorização fornecido pelo Mercado Pago.
-      responses:
-        '302':
-          description: "Redirecionamento para a página de sucesso da aplicação."
-        '400':
-          description: "Erro: Código de autorização não encontrado."
-        '500':
-          description: "Falha ao obter o token de acesso."
 
   /reports/transactions/summary:
     get:
@@ -248,13 +167,13 @@ components:
         - payer_email
         - payment_method_id
       properties:
-        amount: 
+        amount:
           type: number
           format: float
           example: 199.90
         method:
           type: string
-          example: mercadopago
+          example: default_gateway
         description:
           type: string
           example: Assinatura Premium
@@ -320,28 +239,6 @@ components:
                   type: string
                   example: 'SP'
 
-    MercadoPagoSettings:
-      type: object
-      properties:
-        public_key:
-          type: string
-          example: 'APP_USR-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-        access_token:
-          type: string
-          example: 'APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-        webhook_secret:
-          type: string
-          example: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-
-    MercadoPagoSettingsResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          $ref: '#/components/schemas/MercadoPagoSettings'
-
     Transaction:
       type: object
       properties:
@@ -353,7 +250,7 @@ components:
           example: '1342016429'
         gateway:
           type: string
-          example: mercadopago
+          example: default_gateway
         amount:
           type: string
           example: '199.90'
@@ -402,25 +299,6 @@ components:
           example: Falha ao processar pagamento.
         errors:
           type: object
-
-    MercadoPagoWebhook:
-      type: object
-      properties:
-        action:
-          type: string
-          example: payment.updated
-        api_version:
-          type: string
-          example: v1
-        data:
-          type: object
-          properties:
-            id:
-              type: string
-              example: '1342016429'
-        type:
-          type: string
-          example: payment
 
     TransactionSummaryResponse:
       type: object

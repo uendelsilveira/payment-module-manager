@@ -14,15 +14,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
 use UendelSilveira\PaymentModuleManager\Events\PaymentFailed;
 use UendelSilveira\PaymentModuleManager\Events\PaymentProcessed;
 use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
-use UendelSilveira\PaymentModuleManager\Models\Transaction;
-use UendelSilveira\PaymentModuleManager\Support\LogContext;
+use UendelSilveira\PaymentModuleManager\Models\Transaction; // Importar o novo gerenciador
+use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
+use UendelSilveira\PaymentModuleManager\Support\LogContext; // Importar o PaymentStatus enum
 
 class PaymentService
 {
-    public function __construct(protected GatewayManager $gatewayManager, protected TransactionRepositoryInterface $transactionRepository) {}
+    public function __construct(protected PaymentGatewayManager $paymentGatewayManager, protected TransactionRepositoryInterface $transactionRepository) {}
 
     /**
      * @param array<string, mixed> $data
@@ -33,13 +35,13 @@ class PaymentService
         $correlationIdArray = LogContext::create()->withCorrelationId()->toArray();
         $correlationId = is_string($correlationIdArray['correlation_id'] ?? null) ? $correlationIdArray['correlation_id'] : null;
 
-        $gateway = is_string($data['method'] ?? null) ? $data['method'] : '';
+        $gatewayName = is_string($data['gateway'] ?? null) ? $data['gateway'] : $this->paymentGatewayManager->getDefaultGateway();
         $amount = is_float($data['amount'] ?? null) || is_int($data['amount'] ?? null) ? (float) $data['amount'] : 0.0;
-        $paymentMethod = is_string($data['payment_method_id'] ?? null) ? $data['payment_method_id'] : 'unknown';
+        $paymentMethod = is_string($data['payment_method_id'] ?? null) ? $data['payment_method_id'] : 'default'; // Usar 'default' se não especificado
 
         $logContext = LogContext::create()
             ->withCorrelationId($correlationId)
-            ->withGateway($gateway)
+            ->withGateway($gatewayName)
             ->withAmount($amount)
             ->withPaymentMethod($paymentMethod)
             ->withRequestId()
@@ -47,18 +49,19 @@ class PaymentService
 
         Log::channel('payment')->info('Starting payment processing', $logContext->toArray());
 
-        $paymentGateway = $this->gatewayManager->create($gateway);
+        $paymentGateway = $this->paymentGatewayManager->gateway($gatewayName);
 
-        $result = DB::transaction(function () use ($data, $paymentGateway, $startTime, $logContext): Transaction {
-            $gateway = is_string($data['method'] ?? null) ? $data['method'] : '';
-            $amount = is_float($data['amount'] ?? null) || is_int($data['amount'] ?? null) ? (float) $data['amount'] : 0.0;
+        // Validar limites monetários
+        $this->validateMonetaryLimits($gatewayName, $paymentMethod, $amount);
+
+        $result = DB::transaction(function () use ($data, $paymentGateway, $startTime, $logContext, $gatewayName, $amount): Transaction {
             $description = is_string($data['description'] ?? null) ? $data['description'] : '';
 
             $transactionData = [
-                'gateway' => $gateway,
+                'gateway' => $gatewayName,
                 'amount' => $amount,
                 'description' => $description,
-                'status' => 'pending',
+                'status' => PaymentStatus::PENDING->value, // Usar o enum
             ];
 
             // Add idempotency key if provided
@@ -73,10 +76,11 @@ class PaymentService
             Log::channel('transaction')->info('Transaction created', $logContext->toArray());
 
             try {
-                $gatewayResponse = $paymentGateway->charge($amount, $data);
+                // Chamar o método processPayment da interface
+                $gatewayResponse = $paymentGateway->processPayment($data);
 
-                $externalId = is_string($gatewayResponse['id'] ?? null) ? $gatewayResponse['id'] : null;
-                $status = is_string($gatewayResponse['status'] ?? null) ? $gatewayResponse['status'] : 'unknown';
+                $externalId = is_string($gatewayResponse['transaction_id'] ?? null) ? $gatewayResponse['transaction_id'] : null;
+                $status = $gatewayResponse['status'] instanceof PaymentStatus ? $gatewayResponse['status']->value : (is_string($gatewayResponse['status'] ?? null) ? $gatewayResponse['status'] : PaymentStatus::UNKNOWN->value);
 
                 $transaction->external_id = $externalId;
                 $transaction->status = $status;
@@ -91,7 +95,7 @@ class PaymentService
                 PaymentProcessed::dispatch($transaction, $gatewayResponse);
 
             } catch (Throwable $throwable) {
-                $transaction->status = 'failed';
+                $transaction->status = PaymentStatus::FAILED->value; // Usar o enum
                 $transaction->metadata = $data;
                 $transaction->save();
 
@@ -132,14 +136,13 @@ class PaymentService
             return $transaction;
         }
 
-        $paymentGateway = $this->gatewayManager->create($transaction->gateway);
-        $gatewayResponse = $paymentGateway->getPayment($transaction->external_id);
+        $paymentGateway = $this->paymentGatewayManager->gateway($transaction->gateway);
+        // Chamar o método getPaymentStatus da interface
+        $paymentStatus = $paymentGateway->getPaymentStatus($transaction->external_id);
+        $newStatus = $paymentStatus->value;
 
-        $responseStatus = is_string($gatewayResponse['status'] ?? null) ? $gatewayResponse['status'] : 'unknown';
-
-        if ($responseStatus !== $transaction->status) {
+        if ($newStatus !== $transaction->status) {
             $oldStatus = $transaction->status;
-            $newStatus = $responseStatus;
 
             $logContext->with('old_status', $oldStatus)
                 ->with('new_status', $newStatus);
@@ -147,7 +150,8 @@ class PaymentService
             Log::channel('transaction')->info('Transaction status changed in gateway', $logContext->toArray());
 
             $transaction->status = $newStatus;
-            $transaction->metadata = array_merge((array) $transaction->metadata, $gatewayResponse);
+            // Não há um 'gatewayResponse' completo aqui, apenas o status.
+            // Se necessário, o gateway pode retornar mais detalhes no getPaymentStatus.
             $transaction->save();
 
             // Dispatch event
@@ -165,20 +169,19 @@ class PaymentService
      */
     public function getFailedTransactions()
     {
-        return Transaction::where('status', 'failed')
+        return Transaction::where('status', PaymentStatus::FAILED->value) // Usar o enum
             ->where(function ($query): void {
                 $query->whereNull('last_attempt_at')
                     ->orWhere('last_attempt_at', '<', Carbon::now()->subMinutes(5));
             })
-            ->where('retries_count', '<', 3)
+            ->where('retries_count', '<', config('payment.retry.max_attempts', 3)) // Usar config diretamente
             ->get();
     }
 
     public function reprocess(Transaction $transaction): Transaction
     {
         $startTime = microtime(true);
-        $maxAttemptsConfig = config('payment.retry.max_attempts', 3);
-        $maxAttempts = is_int($maxAttemptsConfig) ? $maxAttemptsConfig : 3;
+        $maxAttempts = config('payment.retry.max_attempts', 3);
 
         $logContext = LogContext::create()
             ->withCorrelationId()
@@ -188,14 +191,15 @@ class PaymentService
 
         Log::channel('payment')->info('Reprocessing transaction', $logContext->toArray());
 
-        $paymentGateway = $this->gatewayManager->create($transaction->gateway);
+        $paymentGateway = $this->paymentGatewayManager->gateway($transaction->gateway);
         $chargeData = (array) $transaction->metadata;
 
         try {
-            $gatewayResponse = $paymentGateway->charge($transaction->amount, $chargeData);
+            // Chamar o método processPayment da interface para reprocessar
+            $gatewayResponse = $paymentGateway->processPayment($chargeData);
 
-            $status = is_string($gatewayResponse['status'] ?? null) ? $gatewayResponse['status'] : 'unknown';
-            $externalId = is_string($gatewayResponse['id'] ?? null) ? $gatewayResponse['id'] : null;
+            $status = $gatewayResponse['status'] instanceof PaymentStatus ? $gatewayResponse['status']->value : (is_string($gatewayResponse['status'] ?? null) ? $gatewayResponse['status'] : PaymentStatus::UNKNOWN->value);
+            $externalId = is_string($gatewayResponse['transaction_id'] ?? null) ? $gatewayResponse['transaction_id'] : null;
 
             $transaction->status = $status;
             $transaction->external_id = $externalId;
@@ -250,19 +254,20 @@ class PaymentService
             throw new \Exception('Transação não possui external_id. Não é possível estornar.');
         }
 
-        if ($transaction->status === 'refunded') {
+        if ($transaction->status === PaymentStatus::REFUNDED->value) { // Usar o enum
             throw new \Exception('Esta transação já foi estornada.');
         }
 
-        if ($transaction->status !== 'approved' && $transaction->status !== 'authorized') {
+        if ($transaction->status !== PaymentStatus::APPROVED->value && $transaction->status !== 'authorized') { // Usar o enum
             throw new \Exception('Apenas pagamentos aprovados ou autorizados podem ser estornados. Status atual: '.$transaction->status);
         }
 
         try {
-            $paymentGateway = $this->gatewayManager->create($transaction->gateway);
-            $refundResponse = $paymentGateway->refund($transaction->external_id, $amount);
+            $paymentGateway = $this->paymentGatewayManager->gateway($transaction->gateway);
+            // Chamar o método refundPayment da interface
+            $refundResponse = $paymentGateway->refundPayment($transaction->external_id, $amount);
 
-            $transaction->status = 'refunded';
+            $transaction->status = PaymentStatus::REFUNDED->value; // Usar o enum
             $transaction->metadata = array_merge((array) $transaction->metadata, ['refund' => $refundResponse]);
             $transaction->save();
 
@@ -301,19 +306,20 @@ class PaymentService
             throw new \Exception('Transação não possui external_id. Não é possível cancelar.');
         }
 
-        if ($transaction->status === 'cancelled') {
+        if ($transaction->status === PaymentStatus::CANCELLED->value) { // Usar o enum
             throw new \Exception('Esta transação já foi cancelada.');
         }
 
-        if ($transaction->status !== 'pending' && $transaction->status !== 'in_process') {
+        if ($transaction->status !== PaymentStatus::PENDING->value && $transaction->status !== 'in_process') { // Usar o enum
             throw new \Exception('Apenas pagamentos pendentes ou em processamento podem ser cancelados. Status atual: '.$transaction->status);
         }
 
         try {
-            $paymentGateway = $this->gatewayManager->create($transaction->gateway);
-            $cancelResponse = $paymentGateway->cancel($transaction->external_id);
+            $paymentGateway = $this->paymentGatewayManager->gateway($transaction->gateway);
+            // Chamar o método cancelPayment da interface
+            $cancelResponse = $paymentGateway->cancelPayment($transaction->external_id);
 
-            $transaction->status = 'cancelled';
+            $transaction->status = PaymentStatus::CANCELLED->value; // Usar o enum
             $transaction->metadata = array_merge((array) $transaction->metadata, ['cancellation' => $cancelResponse]);
             $transaction->save();
 
@@ -331,6 +337,44 @@ class PaymentService
             Log::channel('payment')->error('Payment cancellation failed', $logContext->toArray());
 
             throw $throwable;
+        }
+    }
+
+    /**
+     * Validates the transaction amount against configured monetary limits for the given gateway and payment method.
+     *
+     * @throws \Exception If the amount is outside the allowed limits.
+     */
+    protected function validateMonetaryLimits(string $gatewayName, string $paymentMethod, float $amount): void
+    {
+        $config = config('payment.monetary_limits');
+
+        // Try to get limits for the specific gateway and payment method
+        $min = $config[$gatewayName][$paymentMethod]['min'] ?? null;
+        $max = $config[$gatewayName][$paymentMethod]['max'] ?? null;
+
+        // Fallback to gateway default limits
+        if (is_null($min) || is_null($max)) {
+            $min = $config[$gatewayName]['default']['min'] ?? $min;
+            $max = $config[$gatewayName]['default']['max'] ?? $max;
+        }
+
+        // Fallback to global limits
+        if (is_null($min) || is_null($max)) {
+            $min = $config['global']['min'] ?? 0; // Default min to 0 if not set globally
+            $max = $config['global']['max'] ?? PHP_FLOAT_MAX; // Default max to a very large number if not set globally
+        }
+
+        // Convert amount to the smallest currency unit for comparison (e.g., cents)
+        // Assuming all limits in config are already in the smallest unit.
+        $amountInSmallestUnit = (int) round($amount * 100); // Example for BRL/USD
+
+        if ($amountInSmallestUnit < $min) {
+            throw new \Exception(sprintf("O valor do pagamento (%s) está abaixo do limite mínimo permitido ({ %s / 100 }) para o gateway '%s' e método '%s'.", $amount, $min, $gatewayName, $paymentMethod));
+        }
+
+        if ($amountInSmallestUnit > $max) {
+            throw new \Exception(sprintf("O valor do pagamento (%s) excede o limite máximo permitido ({ %s / 100 }) para o gateway '%s' e método '%s'.", $amount, $max, $gatewayName, $paymentMethod));
         }
     }
 }

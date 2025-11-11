@@ -4,43 +4,43 @@ graph TD
     subgraph "Autenticação do Cliente (Laravel Passport)"
         R --> C1{"Middleware: auth:api (Verifica Token do Cliente)"};
     end
-    
+
     subgraph Pacote Gerenciador de Pagamentos
         C1 --> V(Form Request: Validação de Dados - Valor, Método, etc.);
-        
+
         V --> D[Controller do Pacote];
-        
+
         subgraph Camada de Serviço
             D --> E(Serviço de Pagamento - Facade/Manager);
-            
+
             subgraph Lógica de Gateway
                 E --> A1[Configuração de Chave Secreta do Meio de Pagamento];
                 A1 --> F{Strategy Pattern: Seleciona Gateway};
             end
         end
-        
+
         subgraph "Gateways de Pagamento (Estratégias Concretas)"
-            F --> G1(Gateway A: Mercado Pago);
+            F --> G1(Gateway A: Gateway Genérico);
             F --> G2(Gateway B: PagSeguroStrategy);
             F --> G3(Gateway C: PayPalStrategy);
             F --> G4(Gateway D: StripeStrategy);
         end
-        
+
         G1 --> H(Integração com API Externa);
         G2 --> H;
         G3 --> H;
         G4 --> H;
-        
+
         H --> I(Retorno da API Externa);
-        
+
         subgraph Camada de Repositório e Modelo
             I --> J["Persistência (Repositório de Transação)"];
             J --> K(Banco de Dados);
         end
     end
-    
+
     K --> J;
-    J --> D; 
+    J --> D;
     D --> L(Resposta JSON da API);
     L --> A;
 

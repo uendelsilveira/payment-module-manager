@@ -10,6 +10,7 @@
 namespace UendelSilveira\PaymentModuleManager\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Validation\Rule;
 use UendelSilveira\PaymentModuleManager\Services\CurrencyService;
 use UendelSilveira\PaymentModuleManager\Services\MonetaryLimitsValidator;
@@ -29,6 +30,9 @@ class CreatePaymentRequest extends FormRequest
         // Define os métodos de pagamento aceitos
         $paymentMethods = ['pix', 'credit_card', 'boleto'];
 
+        // Obtém a lista de gateways configurados dinamicamente
+        $configuredGateways = array_keys(Config::get('payment.gateways', []));
+
         return [
             'amount' => [
                 'required',
@@ -46,7 +50,7 @@ class CreatePaymentRequest extends FormRequest
                     }
                 },
             ],
-            'method' => ['required', 'string', Rule::in(['mercadopago'])], // Gateway principal
+            'method' => ['required', 'string', Rule::in($configuredGateways)], // Gateway principal, agora dinâmico
             'currency' => [
                 'sometimes',
                 'string',

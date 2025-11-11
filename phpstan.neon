@@ -1,98 +1,51 @@
-#includes:
-   # - ./vendor/larastan/larastan/extension.neon
-   # - ./vendor/nesbot/carbon/extension.neon
 parameters:
-    ignoreErrors:
-        - '#Call to method PHPUnit\\Framework\\Assert::assertTrue\(\) with true will always evaluate to true#'
-        - '#Cannot call method (instance|forgetInstance|expectsOutput)\(\) on#'
-        - '#Call to an undefined method Mockery#'
-        - '#Access to an undefined property (Illuminate\\Database\\Eloquent\\Collection|Illuminate\\Database\\Eloquent\\Model)#'
-        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Collection.*::delete\(\)#'
+    level: 9
+    paths:
+        - src
+        - tests
+    bootstrapFiles:
+        - tests/TestCase.php
 
-        # Mockery dynamic methods in tests (ignore all Mockery errors)
+    ignoreErrors:
+        # Erros dinâmicos comuns em testes com Mockery
         -
             path: tests/
             message: '#Cannot call method .* on mixed#'
-
-        # Test-specific offset access on mixed (API responses, JSON decode)
         -
             path: tests/
             message: '#Cannot access offset .* on mixed#'
 
-        # PHPUnit assertions with mixed
-        -
-            path: tests/
-            message: '#assertArrayHasKey.*expects#'
-
-        # Config::set() in tests
-        -
-            path: tests/TestCase.php
-            message: '#Cannot call method set\(\) on mixed#'
-
-
-        # Array merge with API responses
-        - '#array_merge expects array, mixed given#'
-
-        # Mixed parameters in Middlewares
+        # Acessos mistos em middlewares
         -
             path: src/Http/Middleware/
-            message: '#(Cannot access offset|Binary operation|Parameter .* expects)#'
+            message: '#(Cannot access offset|Parameter .* expects)#'
 
-        # Mixed in Repositories
+        # Mixed e casts em repositories
         -
             path: src/Repositories/
-            message: '#(Cannot cast|should return .* but returns mixed)#'
+            message: '#should return .* but returns mixed#'
 
-        # Mixed in Providers
+        # Mixed em Providers
         -
             path: src/Providers/
             message: '#Cannot call method .* on mixed#'
 
-
-        # Mixed in Listeners
+        # Mixed em Listeners
         -
             path: src/Listeners/
-            message: '#(Parameter .* expects|Cannot access offset|subject of function str_replace)#'
+            message: '#(Parameter .* expects|Cannot access offset)#'
 
-        # Mixed in Jobs
+        # Mixed em Jobs
         -
             path: src/Jobs/
             message: '#Cannot access offset#'
 
-        # Mixed in Http/Requests validation callbacks
+        # Mixed em Requests
         -
             path: src/Http/Requests/
             message: '#(Trying to invoke mixed|Parameter .* expects)#'
 
-        # CurrencyService array types from config
-        -
-            path: src/Services/CurrencyService.php
-            message: '#should return .* but returns (array<mixed, mixed>|array<mixed>|mixed)#'
-
-        # MonetaryLimitsValidator array access
-        -
-            path: src/Services/MonetaryLimitsValidator.php
-            message: '#(Cannot access offset|should return .* but returns array<mixed, mixed>)#'
-
-        # MercadoPagoClient API responses
-        -
-            path: src/Services/MercadoPagoClient.php
-            message: '#(does not accept mixed|should return .* but returns array<mixed>)#'
-
-        # RateLimitPaymentRequests
-        -
-            path: src/Http/Middleware/RateLimitPaymentRequests.php
-            message: '#(Cannot access constant class|Cannot call method getAuthIdentifier|should return int but returns mixed)#'
-
-
-        # LogContext dynamic data handling
+        # LogContext
         -
             path: src/Support/LogContext.php
             message: '#(Cannot access (property|offset)|expects array<string, mixed>, array<mixed, mixed> given)#'
-
-    paths:
-        - src
-        - tests
-    level: 9
-    bootstrapFiles:
-        - tests/TestCase.php

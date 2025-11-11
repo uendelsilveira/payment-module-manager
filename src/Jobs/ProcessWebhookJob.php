@@ -16,6 +16,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use UendelSilveira\PaymentModuleManager\Models\Transaction; // Importar o modelo Transaction
+use UendelSilveira\PaymentModuleManager\PaymentGatewayManager; // Importar o PaymentGatewayManager
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 use UendelSilveira\PaymentModuleManager\Support\LogContext;
 
@@ -52,13 +54,13 @@ class ProcessWebhookJob implements ShouldQueue
     public function __construct(
         public readonly string $gateway,
         public readonly array $webhookData,
-        public readonly ?int $transactionId = null
+        public readonly ?int $transactionId = null // transactionId might be redundant, but keeping for now
     ) {}
 
     /**
      * Execute the job.
      */
-    public function handle(PaymentService $paymentService): void
+    public function handle(PaymentGatewayManager $paymentGatewayManager, PaymentService $paymentService): void
     {
         $logContext = LogContext::create()
             ->withCorrelationId()
@@ -71,10 +73,34 @@ class ProcessWebhookJob implements ShouldQueue
         Log::channel('webhook')->info('Processing webhook asynchronously', $logContext->toArray());
 
         try {
-            // Process based on gateway
-            if ($this->gateway === 'mercadopago') {
-                $this->processMercadoPagoWebhook($paymentService, $logContext);
+            // Get the specific gateway instance
+            $gatewayInstance = $paymentGatewayManager->gateway($this->gateway);
+
+            // Process the webhook data using the gateway's method
+            $processedInfo = $gatewayInstance->processWebhook($this->webhookData);
+
+            $externalPaymentId = $processedInfo['payment_id'] ?? null;
+            // $newStatusEnum = $processedInfo['status'] ?? null; // Not directly used to update, getPaymentDetails will fetch
+
+            if (! $externalPaymentId) {
+                Log::channel('webhook')->error('Processed webhook info missing payment_id', $logContext->toArray());
+
+                return; // Or throw an exception
             }
+
+            // Find the local transaction
+            /** @var Transaction|null $transaction */
+            $transaction = Transaction::where('external_id', $externalPaymentId)->first();
+
+            if (! $transaction) {
+                Log::channel('webhook')->warning('Transaction not found for external ID', $logContext->with('external_id', $externalPaymentId)->toArray());
+
+                return;
+            }
+
+            // Use PaymentService to get and update payment details, which will also dispatch events
+            // This ensures consistency and leverages the existing logic for status updates.
+            $paymentService->getPaymentDetails($transaction);
 
             Log::channel('webhook')->info('Webhook processed successfully', $logContext->toArray());
         } catch (Throwable $throwable) {
@@ -84,41 +110,6 @@ class ProcessWebhookJob implements ShouldQueue
             // Re-throw to trigger retry
             throw $throwable;
         }
-    }
-
-    /**
-     * Process MercadoPago webhook
-     */
-    private function processMercadoPagoWebhook(PaymentService $paymentService, LogContext $logContext): void
-    {
-        $notificationType = $this->webhookData['type'] ?? null;
-
-        if ($notificationType !== 'payment') {
-            Log::channel('webhook')->warning('Unsupported notification type', $logContext->toArray());
-
-            return;
-        }
-
-        $paymentId = $this->webhookData['data']['id'] ?? null;
-
-        if (! $paymentId) {
-            Log::channel('webhook')->error('Payment ID missing from webhook', $logContext->toArray());
-
-            return;
-        }
-
-        // Find transaction by external_id and update status
-        /** @var \UendelSilveira\PaymentModuleManager\Models\Transaction|null $transaction */
-        $transaction = \UendelSilveira\PaymentModuleManager\Models\Transaction::where('external_id', $paymentId)->first();
-
-        if (! $transaction) {
-            Log::channel('webhook')->warning('Transaction not found for payment ID', $logContext->with('payment_id', $paymentId)->toArray());
-
-            return;
-        }
-
-        // Refresh transaction status from gateway
-        $paymentService->getPaymentDetails($transaction);
     }
 
     /**

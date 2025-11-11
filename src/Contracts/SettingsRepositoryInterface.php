@@ -11,10 +11,7 @@ namespace UendelSilveira\PaymentModuleManager\Contracts;
 
 interface SettingsRepositoryInterface
 {
-    /**
-     * @param mixed $default
-     */
-    public function get(string $key, $default = null): ?string;
+    public function get(string $key, mixed $default = null): ?string;
 
     public function set(string $key, ?string $value): void;
 }

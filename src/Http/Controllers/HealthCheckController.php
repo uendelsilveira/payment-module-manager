@@ -11,8 +11,9 @@ namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
-use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoClientInterface;
+use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
 class HealthCheckController
@@ -20,7 +21,7 @@ class HealthCheckController
     use ApiResponseTrait;
 
     public function __construct(
-        private readonly MercadoPagoClientInterface $mercadoPagoClient
+        private readonly PaymentGatewayManager $paymentGatewayManager
     ) {}
 
     public function check(): JsonResponse
@@ -28,8 +29,14 @@ class HealthCheckController
         $checks = [
             'database' => $this->checkDatabase(),
             'cache' => $this->checkCache(),
-            'mercadopago_api' => $this->checkMercadoPagoApi(),
         ];
+
+        // Check all configured gateways dynamically
+        $configuredGateways = Config::get('payment.gateways', []);
+
+        foreach ($configuredGateways as $gatewayName => $gatewayConfig) {
+            $checks[$gatewayName.'_api'] = $this->checkGatewayApi($gatewayName);
+        }
 
         $allHealthy = collect($checks)->every(fn ($check): bool => $check['status'] === 'healthy');
         $status = $allHealthy ? 'healthy' : 'degraded';
@@ -97,23 +104,32 @@ class HealthCheckController
     }
 
     /**
+     * Checks the API connectivity for a given payment gateway.
+     *
+     * @param string $gatewayName The name of the gateway to check (e.g., 'mercadopago').
+     *
      * @return array<string, mixed>
      */
-    private function checkMercadoPagoApi(): array
+    private function checkGatewayApi(string $gatewayName): array
     {
         try {
-            // Test API connectivity by making a simple request
-            // This is a lightweight check that doesn't create any transactions
-            $this->mercadoPagoClient->getPaymentMethods();
+            $gatewayInstance = $this->paymentGatewayManager->gateway($gatewayName);
+
+            if ($gatewayInstance->checkConnection()) {
+                return [
+                    'status' => 'healthy',
+                    'message' => sprintf('%s API is reachable', ucfirst($gatewayName)),
+                ];
+            }
 
             return [
-                'status' => 'healthy',
-                'message' => 'MercadoPago API is reachable',
+                'status' => 'unhealthy',
+                'message' => sprintf('%s API connection failed (checkConnection returned false)', ucfirst($gatewayName)),
             ];
         } catch (\Exception $exception) {
             return [
                 'status' => 'unhealthy',
-                'message' => 'MercadoPago API connection failed',
+                'message' => sprintf('%s API connection failed', ucfirst($gatewayName)),
                 'error' => $exception->getMessage(),
             ];
         }

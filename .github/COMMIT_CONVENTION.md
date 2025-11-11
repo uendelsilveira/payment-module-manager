@@ -114,7 +114,7 @@ git commit -m "feat(pix): adicionar QR code dinâmico"
 git commit -m "fix(webhook): corrigir validação de timestamp"
 
 # Breaking change (major bump)
-git commit -m "feat!: migrar para nova API do Mercado Pago v2"
+git commit -m "feat!: migrar para nova API do Gateway"
 
 # Sem release
 git commit -m "docs: atualizar guia de instalação"
