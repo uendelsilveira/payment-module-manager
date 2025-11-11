@@ -39,6 +39,11 @@ return [
             // Credenciais para o fluxo OAuth 2.0 (Mercado Pago Connect)
             'client_id' => env('MERCADOPAGO_CLIENT_ID', ''),
             'client_secret' => env('MERCADOPAGO_CLIENT_SECRET', ''),
+
+            // Configurações opcionais
+            'sandbox' => env('APP_ENV') !== 'production',
+            'timeout' => 30, // segundos
+            'max_retries' => 3,
         ],
 
         // Stripe configuration
