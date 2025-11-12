@@ -21,6 +21,9 @@ class PaymentGatewayManager
      */
     protected array $customCreators = [];
 
+    /**
+     * @param array<string, mixed> $config
+     */
     public function __construct(protected array $config) {}
 
     /**
@@ -52,14 +55,29 @@ class PaymentGatewayManager
 
         // 1. Tenta usar um criador customizado (definido via extend)
         if (isset($this->customCreators[$name])) {
-            return $this->customCreators[$name]($config);
+            $creator = $this->customCreators[$name];
+            $result = $creator($config);
+
+            if (! $result instanceof PaymentGatewayInterface) {
+                throw new InvalidArgumentException(sprintf('Custom creator for gateway [%s] did not return a PaymentGatewayInterface instance.', $name));
+            }
+
+            /** @var PaymentGatewayInterface $result */
+            return $result;
         }
 
         // 2. Tenta instanciar a classe definida na configuração do gateway
-        if (isset($config['class']) && class_exists($config['class'])) {
+        if (isset($config['class']) && is_string($config['class']) && class_exists($config['class'])) {
             $gatewayClass = $config['class'];
 
-            return new $gatewayClass($config);
+            $instance = new $gatewayClass($config);
+
+            if (! $instance instanceof PaymentGatewayInterface) {
+                throw new InvalidArgumentException(sprintf('Gateway class [%s] does not implement PaymentGatewayInterface.', $gatewayClass));
+            }
+
+            /** @var PaymentGatewayInterface $instance */
+            return $instance;
         }
 
         // 3. Se nada funcionar, o gateway não é suportado ou configurado corretamente
@@ -70,15 +88,20 @@ class PaymentGatewayManager
      * Get the configuration for a gateway.
      *
      * @throws InvalidArgumentException
+     *
+     * @return array<string, mixed>
      */
     protected function getGatewayConfig(string $name): array
     {
-        $config = $this->config['gateways'][$name] ?? null;
+        $gateways = is_array($this->config['gateways'] ?? null) ? $this->config['gateways'] : [];
+        $config = $gateways[$name] ?? null;
 
-        if (is_null($config)) {
+        if (! is_array($config)) {
             throw new InvalidArgumentException(sprintf('Gateway [%s] is not configured.', $name));
         }
 
+        // Garantir que é array<string, mixed>
+        /** @var array<string, mixed> $config */
         return $config;
     }
 
@@ -91,7 +114,7 @@ class PaymentGatewayManager
     {
         $default = $this->config['default_gateway'] ?? null;
 
-        if (is_null($default)) {
+        if (! is_string($default) || $default === '') {
             throw new InvalidArgumentException('No default payment gateway has been specified.');
         }
 

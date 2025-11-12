@@ -7,12 +7,15 @@ use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 
 class SettingsRepository implements SettingsRepositoryInterface
 {
+    /**
+     * @var array<string, mixed>
+     */
     protected array $cache = [];
 
     /**
      * Obtém uma configuração, seja do banco, do config() ou de variáveis .env
      */
-    public function get(string $key, mixed $default = null): mixed
+    public function get(string $key, mixed $default = null): ?string
     {
         // 1️⃣ Prioriza cache local
         if (array_key_exists($key, $this->cache)) {

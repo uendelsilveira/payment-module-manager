@@ -11,6 +11,11 @@ namespace UendelSilveira\PaymentModuleManager\Gateways;
 
 class RefundClient
 {
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
     public function refund(int $transactionId, array $data): array
     {
         return [

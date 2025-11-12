@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('gateway'); // Usar o enum PaymentGateway
             $table->decimal('amount', 10, 2);
             $table->string('currency')->default('BRL');
-            $table->enum('status', PaymentStatus::values())
+            $table->enum('status', array_map(static fn (PaymentStatus $s) => $s->value, PaymentStatus::cases()))
                 ->default(PaymentStatus::PENDING->value);
             $table->text('description')->nullable();
             $table->json('metadata')->nullable();

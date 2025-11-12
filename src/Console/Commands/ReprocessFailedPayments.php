@@ -10,7 +10,10 @@
 namespace UendelSilveira\PaymentModuleManager\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\Console\Command\Command as CommandAlias;
+use Throwable;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 use UendelSilveira\PaymentModuleManager\Support\LogContext;
@@ -54,7 +57,7 @@ class ReprocessFailedPayments extends Command
             $this->info('✅ No failed transactions found matching the criteria');
             Log::channel('payment')->info('No failed transactions found for reprocessing', $logContext->toArray());
 
-            return Command::SUCCESS;
+            return CommandAlias::SUCCESS;
         }
 
         $logContext->with('total_transactions', $transactions->count());
@@ -68,13 +71,13 @@ class ReprocessFailedPayments extends Command
         if ($dryRun) {
             $this->info('✅ Dry run completed - no changes were made');
 
-            return Command::SUCCESS;
+            return CommandAlias::SUCCESS;
         }
 
         if (! $this->option('force') && ! $this->confirm('Do you want to proceed with reprocessing?', true)) {
             $this->warn('⚠️  Operation cancelled by user');
 
-            return Command::SUCCESS;
+            return CommandAlias::SUCCESS;
         }
 
         $this->line('');
@@ -96,7 +99,7 @@ class ReprocessFailedPayments extends Command
 
                 $statusIcon = $result->status === 'approved' ? '✅' : '⏳';
                 $this->info(sprintf('%s Transaction #%s reprocessed - Status: %s', $statusIcon, $transaction->id, $result->status));
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $hasFailures = true;
                 $failureCount++;
                 $txContext->withError($e);
@@ -114,15 +117,15 @@ class ReprocessFailedPayments extends Command
 
         Log::channel('payment')->info('Failed payments reprocessing command completed', $logContext->toArray());
 
-        return $hasFailures ? Command::FAILURE : Command::SUCCESS;
+        return $hasFailures ? CommandAlias::FAILURE : CommandAlias::SUCCESS;
     }
 
     /**
      * Build query with filters from options
      *
-     * @return \Illuminate\Support\Collection<int, Transaction>
+     * @return Collection<int, Transaction>
      */
-    private function buildQuery(): \Illuminate\Support\Collection
+    private function buildQuery(): Collection
     {
         $builder = Transaction::query()->where('status', 'failed');
 
@@ -153,21 +156,21 @@ class ReprocessFailedPayments extends Command
         // Apply limit
         $limit = $this->option('limit');
 
-        if ($limit !== null && is_numeric($limit)) {
+        if (is_numeric($limit)) {
             $builder->limit((int) $limit);
             $this->line(sprintf('🔍 Limiting to %d transaction(s)', (int) $limit));
         }
 
-        /** @var \Illuminate\Support\Collection<int, Transaction> */
-        return $builder->orderBy('created_at', 'asc')->get();
+        /** @var Collection<int, Transaction> */
+        return $builder->orderBy('created_at')->get();
     }
 
     /**
      * Display transaction summary table
      *
-     * @param \Illuminate\Support\Collection<int, Transaction> $transactions
+     * @param Collection<int, Transaction> $transactions
      */
-    private function displayTransactionSummary(\Illuminate\Support\Collection $transactions): void
+    private function displayTransactionSummary(Collection $transactions): void
     {
         $headers = ['ID', 'Gateway', 'Amount', 'Retries', 'Last Attempt', 'Created At'];
         $rows = [];

@@ -60,12 +60,15 @@ class RateLimitPaymentRequests
     {
         $user = $request->user();
 
-        if ($user) {
+        if ($user !== null && is_object($user)) {
+            $userClass = $user::class;
+            $userId = method_exists($user, 'getAuthIdentifier') ? $user->getAuthIdentifier() : '';
+
             return sprintf(
                 'payment_rate_limit:%s:%s:%s',
                 $limitType,
-                sha1($user::class),
-                $user->getAuthIdentifier()
+                sha1($userClass),
+                is_string($userId) || is_int($userId) ? (string) $userId : ''
             );
         }
 
@@ -88,7 +91,9 @@ class RateLimitPaymentRequests
             'settings' => Config::get('payment.rate_limiting.settings', 20),
         ];
 
-        return $limits[$limitType] ?? 60;
+        $limit = $limits[$limitType] ?? 60;
+
+        return is_int($limit) ? $limit : (is_numeric($limit) ? (int) $limit : 60);
     }
 
     /**

@@ -12,6 +12,11 @@ use UendelSilveira\PaymentModuleManager\Exceptions\PaymentGatewayException;
 
 class MercadoPagoGateway implements PaymentGatewayInterface
 {
+    /**
+     * @var PaymentClient|object
+     *
+     * @phpstan-var PaymentClient|object{create: callable, get: callable, cancel: callable}
+     */
     public $paymentClient;
 
     /**
@@ -29,7 +34,8 @@ class MercadoPagoGateway implements PaymentGatewayInterface
 
     protected function initializeSDK(): void
     {
-        MercadoPagoConfig::setAccessToken($this->config['access_token']);
+        $accessToken = is_string($this->config['access_token'] ?? null) ? $this->config['access_token'] : '';
+        MercadoPagoConfig::setAccessToken($accessToken);
 
         if ($this->config['sandbox'] ?? false) {
             MercadoPagoConfig::setRuntimeEnviroment(MercadoPagoConfig::LOCAL);
@@ -110,17 +116,17 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             $refund = $refundClient->refund((int) $transactionId, $refundData);
 
             Log::channel('payment')->info('MP: Refund processed', [
-                'refund_id' => $refund->id,
+                'refund_id' => $refund['id'],
                 'payment_id' => $transactionId,
-                'amount' => $refund->amount,
+                'amount' => $refund['amount'],
             ]);
 
             return [
-                'id' => $refund->id,
-                'payment_id' => $refund->payment_id,
-                'amount' => $refund->amount,
-                'status' => $refund->status,
-                'date_created' => $refund->date_created,
+                'id' => $refund['id'],
+                'payment_id' => $refund['payment_id'],
+                'amount' => $refund['amount'],
+                'status' => $refund['status'],
+                'date_created' => $refund['date_created'],
             ];
 
         } catch (MPApiException $mpApiException) {
@@ -185,7 +191,9 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         $this->validateWebhookSignature($data);
 
         // Mercado Pago envia o ID no body
-        $paymentId = $data['data']['id'] ?? null;
+        $dataData = is_array($data['data'] ?? null) ? $data['data'] : [];
+        $paymentIdData = $dataData['id'] ?? null;
+        $paymentId = is_int($paymentIdData) || is_string($paymentIdData) ? (string) $paymentIdData : null;
 
         if (! $paymentId) {
             throw new PaymentGatewayException('Invalid webhook data: missing payment ID');
@@ -193,12 +201,15 @@ class MercadoPagoGateway implements PaymentGatewayInterface
 
         // Buscar dados completos do pagamento
         try {
-            $payment = $this->paymentClient->get((int) $paymentId);
+            $paymentIdInt = is_numeric($paymentId) ? (int) $paymentId : 0;
+            $payment = $this->paymentClient->get($paymentIdInt);
+
+            $paymentStatus = is_string($payment->status ?? null) ? $payment->status : null;
 
             return [
                 'transaction_id' => (string) $payment->id,
-                'status' => $this->mapStatus($payment->status),
-                'payment_method' => $payment->payment_method_id,
+                'status' => $this->mapStatus($paymentStatus),
+                'payment_method' => is_string($payment->payment_method_id ?? null) ? $payment->payment_method_id : '',
                 'amount' => $payment->transaction_amount,
                 'metadata' => $payment->metadata ?? [],
             ];
@@ -212,12 +223,18 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         }
     }
 
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
     private function buildPaymentData(array $data): array
     {
         $paymentMethod = $data['payment_method_id'] ?? 'pix';
 
+        $amount = is_float($data['amount'] ?? null) || is_int($data['amount'] ?? null) ? (float) $data['amount'] : 0.0;
         $baseData = [
-            'transaction_amount' => (float) $data['amount'],
+            'transaction_amount' => $amount,
             'description' => $data['description'] ?? 'Payment',
             'payment_method_id' => $paymentMethod,
             'payer' => [
@@ -234,6 +251,12 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         };
     }
 
+    /**
+     * @param array<string, mixed> $base
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
     private function buildPixPayment(array $base, array $data): array
     {
         return array_merge($base, [
@@ -241,72 +264,113 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $base
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
     private function buildCreditCardPayment(array $base, array $data): array
     {
+        $payer = is_array($base['payer'] ?? null) ? $base['payer'] : [];
+        $dataPayer = is_array($data['payer'] ?? null) ? $data['payer'] : [];
+        $dataPayerIdentification = is_array($dataPayer['identification'] ?? null) ? $dataPayer['identification'] : [];
+
         return array_merge($base, [
-            'token' => $data['token'],
+            'token' => $data['token'] ?? '',
             'installments' => $data['installments'] ?? 1,
             'issuer_id' => $data['issuer_id'] ?? null,
-            'payer' => array_merge($base['payer'], [
-                'first_name' => $data['payer']['first_name'] ?? '',
-                'last_name' => $data['payer']['last_name'] ?? '',
+            'payer' => array_merge($payer, [
+                'first_name' => $dataPayer['first_name'] ?? '',
+                'last_name' => $dataPayer['last_name'] ?? '',
                 'identification' => [
-                    'type' => $data['payer']['identification']['type'] ?? 'CPF',
-                    'number' => $data['payer']['identification']['number'] ?? '',
+                    'type' => $dataPayerIdentification['type'] ?? 'CPF',
+                    'number' => $dataPayerIdentification['number'] ?? '',
                 ],
             ]),
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $base
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
     private function buildBoletoPayment(array $base, array $data): array
     {
+        $payer = is_array($base['payer'] ?? null) ? $base['payer'] : [];
+        $dataPayer = is_array($data['payer'] ?? null) ? $data['payer'] : [];
+        $dataPayerIdentification = is_array($dataPayer['identification'] ?? null) ? $dataPayer['identification'] : [];
+        $dataPayerAddress = is_array($dataPayer['address'] ?? null) ? $dataPayer['address'] : [];
+
         return array_merge($base, [
             'date_of_expiration' => $data['expiration_date'] ?? now()->addDays(3)->toIso8601String(),
-            'payer' => array_merge($base['payer'], [
-                'first_name' => $data['payer']['first_name'] ?? '',
-                'last_name' => $data['payer']['last_name'] ?? '',
+            'payer' => array_merge($payer, [
+                'first_name' => $dataPayer['first_name'] ?? '',
+                'last_name' => $dataPayer['last_name'] ?? '',
                 'identification' => [
-                    'type' => $data['payer']['identification']['type'] ?? 'CPF',
-                    'number' => $data['payer']['identification']['number'] ?? '',
+                    'type' => $dataPayerIdentification['type'] ?? 'CPF',
+                    'number' => $dataPayerIdentification['number'] ?? '',
                 ],
                 'address' => [
-                    'zip_code' => $data['payer']['address']['zip_code'] ?? '',
-                    'street_name' => $data['payer']['address']['street_name'] ?? '',
-                    'street_number' => $data['payer']['address']['street_number'] ?? '',
-                    'neighborhood' => $data['payer']['address']['neighborhood'] ?? '',
-                    'city' => $data['payer']['address']['city'] ?? '',
-                    'federal_unit' => $data['payer']['address']['federal_unit'] ?? '',
+                    'zip_code' => $dataPayerAddress['zip_code'] ?? '',
+                    'street_name' => $dataPayerAddress['street_name'] ?? '',
+                    'street_number' => $dataPayerAddress['street_number'] ?? '',
+                    'neighborhood' => $dataPayerAddress['neighborhood'] ?? '',
+                    'city' => $dataPayerAddress['city'] ?? '',
+                    'federal_unit' => $dataPayerAddress['federal_unit'] ?? '',
                 ],
             ]),
         ]);
     }
 
-    private function formatResponse($payment): array
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatResponse(object $payment): array
     {
+        $paymentStatus = is_string($payment->status ?? null) ? $payment->status : null;
+        $paymentMethodId = is_string($payment->payment_method_id ?? null) ? $payment->payment_method_id : '';
         $response = [
-            'transaction_id' => (string) $payment->id,
-            'status' => $this->mapStatus($payment->status),
+            'transaction_id' => (string) ($payment->id ?? ''),
+            'status' => $this->mapStatus($paymentStatus),
             'provider' => 'mercadopago',
-            'payment_method' => $payment->payment_method_id,
-            'amount' => $payment->transaction_amount,
-            'created_at' => $payment->date_created,
+            'payment_method' => $paymentMethodId,
+            'amount' => is_float($payment->transaction_amount ?? null) || is_int($payment->transaction_amount ?? null) ? (float) $payment->transaction_amount : 0.0,
+            'created_at' => is_string($payment->date_created ?? null) ? $payment->date_created : '',
         ];
 
         // Adicionar dados específicos por método
-        if ($payment->payment_method_id === 'pix' && isset($payment->point_of_interaction)) {
-            $response['pix_qr_code'] = $payment->point_of_interaction->transaction_data->qr_code ?? null;
-            $response['pix_qr_code_base64'] = $payment->point_of_interaction->transaction_data->qr_code_base64 ?? null;
+        if ($paymentMethodId === 'pix' && isset($payment->point_of_interaction)) {
+            $pointOfInteraction = $payment->point_of_interaction;
+
+            if (is_object($pointOfInteraction) && isset($pointOfInteraction->transaction_data)) {
+                $transactionData = $pointOfInteraction->transaction_data;
+
+                if (is_object($transactionData)) {
+                    $response['pix_qr_code'] = is_string($transactionData->qr_code ?? null) ? $transactionData->qr_code : null;
+                    $response['pix_qr_code_base64'] = is_string($transactionData->qr_code_base64 ?? null) ? $transactionData->qr_code_base64 : null;
+                }
+            }
         }
 
-        if ($payment->payment_method_id === 'boleto' && isset($payment->transaction_details)) {
-            $response['boleto_url'] = $payment->transaction_details->external_resource_url ?? null;
-            $response['boleto_barcode'] = $payment->barcode->content ?? null;
+        if ($paymentMethodId === 'boleto' && isset($payment->transaction_details)) {
+            $transactionDetails = $payment->transaction_details;
+
+            if (is_object($transactionDetails)) {
+                $response['boleto_url'] = is_string($transactionDetails->external_resource_url ?? null) ? $transactionDetails->external_resource_url : null;
+            }
+
+            if (isset($payment->barcode) && is_object($payment->barcode)) {
+                $response['boleto_barcode'] = is_string($payment->barcode->content ?? null) ? $payment->barcode->content : null;
+            }
         }
 
         return $response;
     }
 
-    private function mapStatus(string $mpStatus): PaymentStatus
+    private function mapStatus(?string $mpStatus): PaymentStatus
     {
         return match ($mpStatus) {
             'pending' => PaymentStatus::PENDING,
@@ -321,6 +385,9 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         };
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     private function validateWebhookSignature(array $data): void
     {
         // Em produção, validar sempre
@@ -331,14 +398,14 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         $signature = request()->header('x-signature');
         $requestId = request()->header('x-request-id');
 
-        if (! $signature || ! $requestId) {
+        if (! is_string($signature) || ! is_string($requestId)) {
             throw new PaymentGatewayException('Missing webhook signature headers');
         }
 
         // Extrair timestamp e hash
         preg_match('/ts=(\d+),v1=([a-f0-9]+)/', $signature, $matches);
-        $timestamp = $matches[1] ?? null;
-        $hash = $matches[2] ?? null;
+        $timestamp = isset($matches[1]) && is_string($matches[1]) ? (int) $matches[1] : null;
+        $hash = isset($matches[2]) && is_string($matches[2]) ? $matches[2] : null;
 
         if (! $timestamp || ! $hash) {
             throw new PaymentGatewayException('Invalid signature format');
@@ -350,9 +417,11 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         }
 
         // Calcular hash esperado
-        $secret = $this->config['webhook_secret'];
-        $dataString = sprintf('id=%s;request-id=%s;ts=%s;', $data['data']['id'], $requestId, $timestamp);
-        $expectedHash = hash_hmac('sha256', $dataString, (string) $secret);
+        $secret = $this->config['webhook_secret'] ?? '';
+        $dataData = is_array($data['data'] ?? null) ? $data['data'] : [];
+        $paymentId = is_string($dataData['id'] ?? null) || is_int($dataData['id'] ?? null) ? (string) ($dataData['id']) : '';
+        $dataString = sprintf('id=%s;request-id=%s;ts=%d;', $paymentId, $requestId, $timestamp);
+        $expectedHash = hash_hmac('sha256', $dataString, is_string($secret) ? $secret : '');
 
         if (! hash_equals($expectedHash, $hash)) {
             throw new PaymentGatewayException('Invalid webhook signature');

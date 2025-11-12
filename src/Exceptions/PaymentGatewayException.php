@@ -13,9 +13,9 @@ class PaymentGatewayException extends PaymentModuleException
 {
     protected int $statusCode;
 
-    public function __construct(string $message = '', int $statusCode = 400)
+    public function __construct(string $message = '', int $statusCode = 400, ?\Throwable $previous = null)
     {
-        parent::__construct($message, $statusCode);
+        parent::__construct($message, $statusCode, $previous);
         $this->statusCode = $statusCode;
     }
 

@@ -61,24 +61,31 @@ class MonetaryLimitsValidator
     public function getLimits(string $gateway, ?string $paymentMethod = null): array
     {
         $config = config('payment.monetary_limits', []);
-
-        if (! is_array($config)) {
-            return ['min' => 100, 'max' => 10000000];
-        }
+        $config = is_array($config) ? $config : [];
 
         // Try to get specific gateway + payment method limits
-        if ($paymentMethod && isset($config[$gateway][$paymentMethod]) && is_array($config[$gateway][$paymentMethod])) {
-            return $config[$gateway][$paymentMethod];
+        if ($paymentMethod && is_string($paymentMethod)) {
+            $gatewayConfig = is_array($config[$gateway] ?? null) ? $config[$gateway] : [];
+            $methodConfig = is_array($gatewayConfig[$paymentMethod] ?? null) ? $gatewayConfig[$paymentMethod] : [];
+
+            if ($methodConfig !== []) {
+                return $methodConfig;
+            }
         }
 
         // Fall back to gateway default
-        if (isset($config[$gateway]['default']) && is_array($config[$gateway]['default'])) {
-            return $config[$gateway]['default'];
+        $gatewayConfig = is_array($config[$gateway] ?? null) ? $config[$gateway] : [];
+        $defaultConfig = is_array($gatewayConfig['default'] ?? null) ? $gatewayConfig['default'] : [];
+
+        if ($defaultConfig !== []) {
+            return $defaultConfig;
         }
 
         // Fall back to global limits
-        if (isset($config['global']) && is_array($config['global'])) {
-            return $config['global'];
+        $globalConfig = is_array($config['global'] ?? null) ? $config['global'] : [];
+
+        if ($globalConfig !== []) {
+            return $globalConfig;
         }
 
         return ['min' => 100, 'max' => 10000000];

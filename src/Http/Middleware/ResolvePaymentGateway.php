@@ -17,15 +17,19 @@ class ResolvePaymentGateway
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $gateways = (array) config('payment.gateways', []);
+        $gateways = config('payment.gateways', []);
+        $gateways = is_array($gateways) ? $gateways : [];
+
         $supported = array_keys($gateways);
 
-        $default = (string) config('payment.default_gateway');
-        $chosen = (string) ($request->input('method')
-            ?? $request->input('gateway')
-            ?? $default);
+        $defaultConfig = config('payment.default_gateway');
+        $default = is_string($defaultConfig) ? $defaultConfig : '';
+        $methodInput = $request->input('method');
+        $gatewayInput = $request->input('gateway');
+        $chosenInput = is_string($methodInput) ? $methodInput : (is_string($gatewayInput) ? $gatewayInput : $default);
+        $chosen = is_string($chosenInput) ? $chosenInput : '';
 
-        if ($chosen === '' || $chosen === null) {
+        if ($chosen === '') {
             return response()->json([
                 'message' => 'No default payment gateway configured. Set PAYMENT_DEFAULT_GATEWAY or provide method/gateway in the request.',
             ], 500);

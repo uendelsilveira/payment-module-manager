@@ -181,7 +181,8 @@ class PaymentService
     public function reprocess(Transaction $transaction): Transaction
     {
         $startTime = microtime(true);
-        $maxAttempts = config('payment.retry.max_attempts', 3);
+        $maxAttemptsConfig = config('payment.retry.max_attempts', 3);
+        $maxAttempts = is_int($maxAttemptsConfig) ? $maxAttemptsConfig : (int) $maxAttemptsConfig;
 
         $logContext = LogContext::create()
             ->withCorrelationId()
@@ -348,21 +349,26 @@ class PaymentService
     protected function validateMonetaryLimits(string $gatewayName, string $paymentMethod, float $amount): void
     {
         $config = config('payment.monetary_limits');
+        $config = is_array($config) ? $config : [];
 
         // Try to get limits for the specific gateway and payment method
-        $min = $config[$gatewayName][$paymentMethod]['min'] ?? null;
-        $max = $config[$gatewayName][$paymentMethod]['max'] ?? null;
+        $gatewayConfig = is_array($config[$gatewayName] ?? null) ? $config[$gatewayName] : [];
+        $methodConfig = is_array($gatewayConfig[$paymentMethod] ?? null) ? $gatewayConfig[$paymentMethod] : [];
+        $min = is_int($methodConfig['min'] ?? null) || is_float($methodConfig['min'] ?? null) ? (int) $methodConfig['min'] : null;
+        $max = is_int($methodConfig['max'] ?? null) || is_float($methodConfig['max'] ?? null) ? (int) $methodConfig['max'] : null;
 
         // Fallback to gateway default limits
         if (is_null($min) || is_null($max)) {
-            $min = $config[$gatewayName]['default']['min'] ?? $min;
-            $max = $config[$gatewayName]['default']['max'] ?? $max;
+            $defaultConfig = is_array($gatewayConfig['default'] ?? null) ? $gatewayConfig['default'] : [];
+            $min = is_int($defaultConfig['min'] ?? null) || is_float($defaultConfig['min'] ?? null) ? (int) $defaultConfig['min'] : $min;
+            $max = is_int($defaultConfig['max'] ?? null) || is_float($defaultConfig['max'] ?? null) ? (int) $defaultConfig['max'] : $max;
         }
 
         // Fallback to global limits
         if (is_null($min) || is_null($max)) {
-            $min = $config['global']['min'] ?? 0; // Default min to 0 if not set globally
-            $max = $config['global']['max'] ?? PHP_FLOAT_MAX; // Default max to a very large number if not set globally
+            $globalConfig = is_array($config['global'] ?? null) ? $config['global'] : [];
+            $min = is_int($globalConfig['min'] ?? null) || is_float($globalConfig['min'] ?? null) ? (int) $globalConfig['min'] : 0;
+            $max = is_int($globalConfig['max'] ?? null) || is_float($globalConfig['max'] ?? null) ? (int) $globalConfig['max'] : PHP_INT_MAX;
         }
 
         // Convert amount to the smallest currency unit for comparison (e.g., cents)
@@ -370,11 +376,15 @@ class PaymentService
         $amountInSmallestUnit = (int) round($amount * 100); // Example for BRL/USD
 
         if ($amountInSmallestUnit < $min) {
-            throw new \Exception(sprintf("O valor do pagamento (%s) está abaixo do limite mínimo permitido ({ %s / 100 }) para o gateway '%s' e método '%s'.", $amount, $min, $gatewayName, $paymentMethod));
+            $minFormatted = is_int($min) ? ($min / 100) : $min;
+
+            throw new \Exception(sprintf("O valor do pagamento (%s) está abaixo do limite mínimo permitido (%s) para o gateway '%s' e método '%s'.", $amount, $minFormatted, $gatewayName, $paymentMethod));
         }
 
         if ($amountInSmallestUnit > $max) {
-            throw new \Exception(sprintf("O valor do pagamento (%s) excede o limite máximo permitido ({ %s / 100 }) para o gateway '%s' e método '%s'.", $amount, $max, $gatewayName, $paymentMethod));
+            $maxFormatted = is_int($max) ? ($max / 100) : $max;
+
+            throw new \Exception(sprintf("O valor do pagamento (%s) excede o limite máximo permitido (%s) para o gateway '%s' e método '%s'.", $amount, $maxFormatted, $gatewayName, $paymentMethod));
         }
     }
 }

@@ -74,7 +74,13 @@ class CurrencyService
     {
         $config = config('payment.currencies.supported.'.$currency);
 
-        return is_array($config) ? $config : null;
+        if (! is_array($config)) {
+            return null;
+        }
+
+        // Garantir que é array<string, mixed>
+        /** @var array<string, mixed> $config */
+        return $config;
     }
 
     /**
@@ -128,7 +134,7 @@ class CurrencyService
         $cacheTTLConfig = config('payment.currencies.conversion.cache_ttl', 60);
         $cacheTTL = is_int($cacheTTLConfig) ? $cacheTTLConfig : 60;
 
-        return Cache::remember($cacheKey, $cacheTTL * 60, function () use ($from, $to): float {
+        return (float) Cache::remember($cacheKey, $cacheTTL * 60, function () use ($from, $to): float {
             // Simplified static rates for demonstration
             // In production, call external API here
             $rates = [
