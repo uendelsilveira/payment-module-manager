@@ -30,17 +30,16 @@ class PaymentServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../../config/payment.php', 'payment');
-        $this->app->singleton(PaymentGatewayManager::class);
+
+        // Registrar o PaymentGatewayManager como singleton, injetando a configuração.
+        $this->app->singleton(PaymentGatewayManager::class, fn ($app): \UendelSilveira\PaymentModuleManager\PaymentGatewayManager => new PaymentGatewayManager($app['config']['payment']));
+
+        // Bind das interfaces às suas implementações concretas.
         $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, SettingsRepository::class);
 
-        // Registrar o PaymentGatewayManager
-        $this->app->singleton(
-            PaymentGatewayManager::class,
-            fn ($app): PaymentGatewayManager => new PaymentGatewayManager($app['config']['payment'])
-        );
-
-        $this->app->singleton(PaymentService::class, fn ($app): PaymentService => new PaymentService(
+        // Registrar o PaymentService, que depende do Manager e do Repository.
+        $this->app->singleton(PaymentService::class, fn ($app): \UendelSilveira\PaymentModuleManager\Services\PaymentService => new PaymentService(
             $app->make(PaymentGatewayManager::class),
             $app->make(TransactionRepositoryInterface::class)
         ));
@@ -48,7 +47,16 @@ class PaymentServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->publishes([__DIR__.'/../config/payment.php' => config_path('payment.php')], 'config');
+        // Publicar o arquivo de configuração.
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../../config/payment.php' => config_path('payment.php'),
+            ], 'config');
+
+            $this->commands([ReprocessFailedPayments::class]);
+        }
+
+        // Registrar eventos e listeners.
         Event::listen(PaymentProcessed::class, LogPaymentProcessed::class);
         Event::listen(PaymentFailed::class, LogPaymentFailed::class);
         Event::listen(PaymentStatusChanged::class, [
@@ -56,10 +64,12 @@ class PaymentServiceProvider extends ServiceProvider
             SendPaymentStatusNotification::class,
         ]);
 
+        // Carregar factories para testes.
         if ($this->app->runningUnitTests()) {
             $this->loadFactoriesFrom(__DIR__.'/../../database/factories');
         }
 
+        // Registrar middlewares.
         $router = $this->app->make('router');
         $router->aliasMiddleware('payment.resolve', ResolvePaymentGateway::class);
         $router->aliasMiddleware('payment.auth', AuthenticatePaymentRequest::class);
@@ -67,22 +77,11 @@ class PaymentServiceProvider extends ServiceProvider
         $router->aliasMiddleware('payment.rate_limit', RateLimitPaymentRequests::class);
         $router->aliasMiddleware('payment.idempotency', EnsureIdempotency::class);
 
-        if ($this->app->runningInConsole()) {
-            $this->commands([ReprocessFailedPayments::class]);
-        }
-
+        // Carregar rotas e migrações.
         Route::prefix('api')
             ->middleware('api')
             ->group(fn () => $this->loadRoutesFrom(__DIR__.'/../../routes/api.php'));
 
         $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
-
-        $configPath = function_exists('config_path')
-            ? config_path('payment.php')
-            : __DIR__.'/../../config/payment.php';
-
-        $this->publishes([
-            __DIR__.'/../../config/payment.php' => $configPath,
-        ], 'config');
     }
 }
