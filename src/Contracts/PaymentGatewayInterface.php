@@ -2,31 +2,41 @@
 
 namespace UendelSilveira\PaymentModuleManager\Contracts;
 
+use UendelSilveira\PaymentModuleManager\DTOs\CancelPaymentResponse;
+use UendelSilveira\PaymentModuleManager\DTOs\ProcessPaymentResponse;
+use UendelSilveira\PaymentModuleManager\DTOs\RefundPaymentResponse;
 use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
+use UendelSilveira\PaymentModuleManager\Exceptions\PaymentFailedException;
+use UendelSilveira\PaymentModuleManager\Exceptions\RefundFailedException;
+use UendelSilveira\PaymentModuleManager\Exceptions\TransactionNotFoundException;
+use UendelSilveira\PaymentModuleManager\Exceptions\WebhookProcessingException;
 
 interface PaymentGatewayInterface
 {
     /**
      * @param array<string, mixed> $data
      *
-     * @return array<string, mixed>
+     * @throws PaymentFailedException
      */
-    public function processPayment(array $data): array;
+    public function processPayment(array $data): ProcessPaymentResponse;
 
     /**
      * Retorna o status do pagamento no provedor.
+     *
+     * @throws TransactionNotFoundException
      */
     public function getPaymentStatus(string $transactionId): PaymentStatus;
 
     /**
-     * @return array<string, mixed>
+     * @throws RefundFailedException
+     * @throws TransactionNotFoundException
      */
-    public function refundPayment(string $transactionId, ?float $amount = null): array;
+    public function refundPayment(string $transactionId, ?float $amount = null): RefundPaymentResponse;
 
     /**
-     * @return array<string, mixed>
+     * @throws TransactionNotFoundException
      */
-    public function cancelPayment(string $transactionId): array;
+    public function cancelPayment(string $transactionId): CancelPaymentResponse;
 
     /**
      * @param array<string, mixed> $data
@@ -37,6 +47,8 @@ interface PaymentGatewayInterface
 
     /**
      * @param array<string, mixed> $data
+     *
+     * @throws WebhookProcessingException
      *
      * @return array<string, mixed>
      */

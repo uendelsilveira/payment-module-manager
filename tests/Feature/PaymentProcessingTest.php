@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Mockery;
 use Mockery\MockInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
+use UendelSilveira\PaymentModuleManager\DTOs\ProcessPaymentResponse;
 use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
 use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
 use UendelSilveira\PaymentModuleManager\Tests\TestCase;
@@ -29,7 +30,6 @@ class PaymentProcessingTest extends TestCase
         $this->gatewayManagerMock = Mockery::mock(PaymentGatewayManager::class);
 
         // Substituir a instância do PaymentGatewayManager no container de serviços do Laravel
-        // Isso deve ser feito antes que qualquer serviço dependente seja resolvido
         $this->app->instance(PaymentGatewayManager::class, $this->gatewayManagerMock);
 
         // Forçar a recriação do PaymentService para usar o mock do PaymentGatewayManager
@@ -53,16 +53,17 @@ class PaymentProcessingTest extends TestCase
             ->with('mercadopago') // ou o gateway que você espera que seja chamado
             ->andReturn($this->gatewayMock);
 
-        // Configurar o mock do Gateway para simular uma resposta de sucesso
-        $gatewayResponse = [
-            'transaction_id' => 'mock_transaction_12345',
-            'status' => PaymentStatus::APPROVED,
-            'original_response' => ['id' => 'mock_transaction_12345', 'status' => 'approved'],
-        ];
+        // Configurar o mock do Gateway para simular uma resposta de sucesso com o DTO
+        $processPaymentResponse = new ProcessPaymentResponse(
+            transactionId: 'mock_transaction_12345',
+            status: PaymentStatus::APPROVED,
+            details: ['original_response' => ['id' => 'mock_transaction_12345', 'status' => 'approved']]
+        );
+
         $this->gatewayMock
             ->shouldReceive('processPayment')
             ->once()
-            ->andReturn($gatewayResponse);
+            ->andReturn($processPaymentResponse);
 
         // Dados da requisição (mínimo válido segundo CreatePaymentRequest)
         $requestData = [

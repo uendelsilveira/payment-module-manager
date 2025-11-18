@@ -7,8 +7,14 @@ use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Exceptions\MPApiException;
 use MercadoPago\MercadoPagoConfig;
 use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
+use UendelSilveira\PaymentModuleManager\DTOs\CancelPaymentResponse;
+use UendelSilveira\PaymentModuleManager\DTOs\ProcessPaymentResponse;
+use UendelSilveira\PaymentModuleManager\DTOs\RefundPaymentResponse;
 use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
-use UendelSilveira\PaymentModuleManager\Exceptions\PaymentGatewayException;
+use UendelSilveira\PaymentModuleManager\Exceptions\PaymentFailedException;
+use UendelSilveira\PaymentModuleManager\Exceptions\RefundFailedException;
+use UendelSilveira\PaymentModuleManager\Exceptions\TransactionNotFoundException;
+use UendelSilveira\PaymentModuleManager\Exceptions\WebhookProcessingException;
 
 class MercadoPagoGateway implements PaymentGatewayInterface
 {
@@ -27,6 +33,9 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         $this->initializeSDK();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getConfig(): array
     {
         return $this->config;
@@ -46,10 +55,8 @@ class MercadoPagoGateway implements PaymentGatewayInterface
 
     /**
      * @param array<string, mixed> $data
-     *
-     * @return array<string, mixed>
      */
-    public function processPayment(array $data): array
+    public function processPayment(array $data): ProcessPaymentResponse
     {
         try {
             $paymentData = $this->buildPaymentData($data);
@@ -66,7 +73,13 @@ class MercadoPagoGateway implements PaymentGatewayInterface
                 'status' => $payment->status,
             ]);
 
-            return $this->formatResponse($payment);
+            $responseArray = $this->formatResponse($payment);
+
+            return new ProcessPaymentResponse(
+                transactionId: $responseArray['transaction_id'],
+                status: $responseArray['status'],
+                details: $responseArray
+            );
 
         } catch (MPApiException $mpApiException) {
             Log::channel('payment')->error('MP: API error', [
@@ -75,7 +88,7 @@ class MercadoPagoGateway implements PaymentGatewayInterface
                 'api_response' => $mpApiException->getApiResponse(),
             ]);
 
-            throw new PaymentGatewayException(
+            throw new PaymentFailedException(
                 'Mercado Pago error: '.$mpApiException->getMessage(),
                 $mpApiException->getStatusCode(),
                 $mpApiException
@@ -96,41 +109,40 @@ class MercadoPagoGateway implements PaymentGatewayInterface
                 'error' => $mpApiException->getMessage(),
             ]);
 
+            if ($mpApiException->getStatusCode() === 404) {
+                throw new TransactionNotFoundException('Payment not found in Mercado Pago: '.$transactionId);
+            }
+
             return PaymentStatus::UNKNOWN;
         }
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function refundPayment(string $transactionId, ?float $amount = null): array
+    public function refundPayment(string $transactionId, ?float $amount = null): RefundPaymentResponse
     {
         try {
-            $refundData = [];
-
-            if ($amount !== null) {
-                $refundData['amount'] = $amount;
-            }
-
             $refundClient = new RefundClient;
-            $refund = $refundClient->refund((int) $transactionId, $refundData);
+            $refund = $refundClient->create((int) $transactionId, $amount);
 
             Log::channel('payment')->info('MP: Refund processed', [
-                'refund_id' => $refund['id'],
+                'refund_id' => $refund->id,
                 'payment_id' => $transactionId,
-                'amount' => $refund['amount'],
+                'amount' => $refund->amount,
             ]);
 
-            return [
-                'id' => $refund['id'],
-                'payment_id' => $refund['payment_id'],
-                'amount' => $refund['amount'],
-                'status' => $refund['status'],
-                'date_created' => $refund['date_created'],
-            ];
+            return new RefundPaymentResponse(
+                refundId: (string) $refund->id,
+                transactionId: (string) $refund->payment_id,
+                status: $this->mapStatus($refund->status),
+                amount: (float) $refund->amount,
+                details: (array) $refund
+            );
 
         } catch (MPApiException $mpApiException) {
-            throw new PaymentGatewayException(
+            if ($mpApiException->getStatusCode() === 404) {
+                throw new TransactionNotFoundException('Payment not found for refund in Mercado Pago: '.$transactionId);
+            }
+
+            throw new RefundFailedException(
                 'Failed to refund payment: '.$mpApiException->getMessage(),
                 $mpApiException->getStatusCode(),
                 $mpApiException
@@ -138,13 +150,9 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         }
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function cancelPayment(string $transactionId): array
+    public function cancelPayment(string $transactionId): CancelPaymentResponse
     {
         try {
-            // Mercado Pago usa o mesmo client para cancelamento
             $payment = $this->paymentClient->cancel((int) $transactionId);
 
             Log::channel('payment')->info('MP: Payment cancelled', [
@@ -152,14 +160,18 @@ class MercadoPagoGateway implements PaymentGatewayInterface
                 'status' => $payment->status,
             ]);
 
-            return [
-                'id' => $payment->id,
-                'status' => $payment->status,
-                'transaction_amount' => $payment->transaction_amount,
-            ];
+            return new CancelPaymentResponse(
+                transactionId: (string) $payment->id,
+                status: $this->mapStatus($payment->status),
+                details: (array) $payment
+            );
 
         } catch (MPApiException $mpApiException) {
-            throw new PaymentGatewayException(
+            if ($mpApiException->getStatusCode() === 404) {
+                throw new TransactionNotFoundException('Payment not found for cancellation in Mercado Pago: '.$transactionId);
+            }
+
+            throw new PaymentFailedException(
                 'Failed to cancel payment: '.$mpApiException->getMessage(),
                 $mpApiException->getStatusCode(),
                 $mpApiException
@@ -174,10 +186,7 @@ class MercadoPagoGateway implements PaymentGatewayInterface
      */
     public function createWebhook(array $data): array
     {
-        // TODO: criação/config de webhook se aplicável
-        return [
-            'success' => true,
-        ];
+        return ['success' => true];
     }
 
     /**
@@ -187,19 +196,16 @@ class MercadoPagoGateway implements PaymentGatewayInterface
      */
     public function processWebhook(array $data): array
     {
-        // Validar assinatura do webhook
         $this->validateWebhookSignature($data);
 
-        // Mercado Pago envia o ID no body
         $dataData = is_array($data['data'] ?? null) ? $data['data'] : [];
         $paymentIdData = $dataData['id'] ?? null;
         $paymentId = is_int($paymentIdData) || is_string($paymentIdData) ? (string) $paymentIdData : null;
 
         if (! $paymentId) {
-            throw new PaymentGatewayException('Invalid webhook data: missing payment ID');
+            throw new WebhookProcessingException('Invalid webhook data: missing payment ID');
         }
 
-        // Buscar dados completos do pagamento
         try {
             $paymentIdInt = is_numeric($paymentId) ? (int) $paymentId : 0;
             $payment = $this->paymentClient->get($paymentIdInt);
@@ -215,7 +221,7 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             ];
 
         } catch (MPApiException $mpApiException) {
-            throw new PaymentGatewayException(
+            throw new WebhookProcessingException(
                 'Failed to process webhook: '.$mpApiException->getMessage(),
                 $mpApiException->getStatusCode(),
                 $mpApiException
@@ -242,7 +248,6 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             ],
         ];
 
-        // Adicionar campos específicos por método
         return match ($paymentMethod) {
             'pix' => $this->buildPixPayment($baseData, $data),
             'credit_card' => $this->buildCreditCardPayment($baseData, $data),
@@ -326,12 +331,13 @@ class MercadoPagoGateway implements PaymentGatewayInterface
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{transaction_id: string, status: PaymentStatus, provider: string, payment_method: string, amount: float, created_at: string, pix_qr_code?: string|null, pix_qr_code_base64?: string|null, boleto_url?: string|null, boleto_barcode?: string|null}
      */
     private function formatResponse(object $payment): array
     {
         $paymentStatus = is_string($payment->status ?? null) ? $payment->status : null;
         $paymentMethodId = is_string($payment->payment_method_id ?? null) ? $payment->payment_method_id : '';
+        /** @var array{transaction_id: string, status: PaymentStatus, provider: string, payment_method: string, amount: float, created_at: string, pix_qr_code?: string|null, pix_qr_code_base64?: string|null, boleto_url?: string|null, boleto_barcode?: string|null} $response */
         $response = [
             'transaction_id' => (string) ($payment->id ?? ''),
             'status' => $this->mapStatus($paymentStatus),
@@ -341,7 +347,6 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             'created_at' => is_string($payment->date_created ?? null) ? $payment->date_created : '',
         ];
 
-        // Adicionar dados específicos por método
         if ($paymentMethodId === 'pix' && isset($payment->point_of_interaction)) {
             $pointOfInteraction = $payment->point_of_interaction;
 
@@ -390,7 +395,6 @@ class MercadoPagoGateway implements PaymentGatewayInterface
      */
     private function validateWebhookSignature(array $data): void
     {
-        // Em produção, validar sempre
         if (config('app.env') !== 'production') {
             return;
         }
@@ -399,24 +403,21 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         $requestId = request()->header('x-request-id');
 
         if (! is_string($signature) || ! is_string($requestId)) {
-            throw new PaymentGatewayException('Missing webhook signature headers');
+            throw new WebhookProcessingException('Missing webhook signature headers');
         }
 
-        // Extrair timestamp e hash
         preg_match('/ts=(\d+),v1=([a-f0-9]+)/', $signature, $matches);
         $timestamp = isset($matches[1]) && is_string($matches[1]) ? (int) $matches[1] : null;
         $hash = isset($matches[2]) && is_string($matches[2]) ? $matches[2] : null;
 
         if (! $timestamp || ! $hash) {
-            throw new PaymentGatewayException('Invalid signature format');
+            throw new WebhookProcessingException('Invalid signature format');
         }
 
-        // Verificar replay attack (max 5 minutos)
         if (abs(time() - $timestamp) > 300) {
-            throw new PaymentGatewayException('Webhook signature expired');
+            throw new WebhookProcessingException('Webhook signature expired');
         }
 
-        // Calcular hash esperado
         $secret = $this->config['webhook_secret'] ?? '';
         $dataData = is_array($data['data'] ?? null) ? $data['data'] : [];
         $paymentId = is_string($dataData['id'] ?? null) || is_int($dataData['id'] ?? null) ? (string) ($dataData['id']) : '';
@@ -424,7 +425,7 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         $expectedHash = hash_hmac('sha256', $dataString, is_string($secret) ? $secret : '');
 
         if (! hash_equals($expectedHash, $hash)) {
-            throw new PaymentGatewayException('Invalid webhook signature');
+            throw new WebhookProcessingException('Invalid webhook signature');
         }
     }
 }

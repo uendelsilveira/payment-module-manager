@@ -5,8 +5,10 @@ namespace UendelSilveira\PaymentModuleManager\Tests\Unit;
 use MercadoPago\Exceptions\MPApiException;
 use MercadoPago\Net\MPResponse;
 use Mockery;
+use UendelSilveira\PaymentModuleManager\DTOs\ProcessPaymentResponse;
 use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
-use UendelSilveira\PaymentModuleManager\Exceptions\PaymentGatewayException;
+use UendelSilveira\PaymentModuleManager\Exceptions\PaymentFailedException;
+use UendelSilveira\PaymentModuleManager\Exceptions\TransactionNotFoundException;
 use UendelSilveira\PaymentModuleManager\Gateways\MercadoPagoGateway;
 use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
@@ -112,15 +114,15 @@ class MercadoPagoGatewayTest extends TestCase
         $this->paymentClientStub->createResponse = $sdkResponse;
 
         // 2. Act
-        $result = $mercadoPagoGateway->processPayment($paymentData);
+        $processPaymentResponse = $mercadoPagoGateway->processPayment($paymentData);
 
         // 3. Assert
-        $this->assertIsArray($result);
-        $this->assertEquals('123456789', $result['transaction_id']);
-        $this->assertEquals(PaymentStatus::PENDING, $result['status']);
-        $this->assertEquals('pix', $result['payment_method']);
-        $this->assertArrayHasKey('pix_qr_code', $result);
-        $this->assertArrayHasKey('pix_qr_code_base64', $result);
+        $this->assertInstanceOf(ProcessPaymentResponse::class, $processPaymentResponse);
+        $this->assertEquals('123456789', $processPaymentResponse->transactionId);
+        $this->assertEquals(PaymentStatus::PENDING, $processPaymentResponse->status);
+        $this->assertEquals('pix', $processPaymentResponse->details['payment_method']);
+        $this->assertArrayHasKey('pix_qr_code', $processPaymentResponse->details);
+        $this->assertArrayHasKey('pix_qr_code_base64', $processPaymentResponse->details);
 
         // Verifica request enviado ao stub
         $sent = $this->paymentClientStub->lastCreateRequest;
@@ -142,16 +144,13 @@ class MercadoPagoGatewayTest extends TestCase
             'webhook_url' => 'https://example.test/webhook',
         ];
 
-        // Simular uma MPApiException (sem invocar construtor real) E com métodos esperados
         $mpResponse = new MPResponse(400, ['message' => 'Invalid payment data']);
-        $mock = Mockery::mock(MPApiException::class);
-        $mock->shouldReceive('getMessage')->andReturn('Invalid payment data');
-        $mock->shouldReceive('getStatusCode')->andReturn(400);
-        $mock->shouldReceive('getApiResponse')->andReturn($mpResponse);
-        $this->paymentClientStub->createException = $mock;
+        $mpApiException = new MPApiException('Invalid payment data', $mpResponse);
+
+        $this->paymentClientStub->createException = $mpApiException;
 
         // 2. Assert
-        $this->expectException(PaymentGatewayException::class);
+        $this->expectException(PaymentFailedException::class);
         $this->expectExceptionMessageMatches('/mercado pago error/i');
 
         // 3. Act
@@ -178,7 +177,7 @@ class MercadoPagoGatewayTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function it_returns_unknown_status_when_fetching_status_fails(): void
+    public function it_throws_exception_when_fetching_status_for_nonexistent_transaction(): void
     {
         // 1. Arrange
         $mercadoPagoGateway = new MercadoPagoGateway($this->config);
@@ -186,16 +185,13 @@ class MercadoPagoGatewayTest extends TestCase
 
         $transactionId = 'invalid-id';
         $mpResponse = new MPResponse(404, ['message' => 'Not found']);
-        $mock = Mockery::mock(MPApiException::class);
-        $mock->shouldReceive('getMessage')->andReturn('Not found');
-        $mock->shouldReceive('getStatusCode')->andReturn(404);
-        $mock->shouldReceive('getApiResponse')->andReturn($mpResponse);
-        $this->paymentClientStub->getException = $mock;
+        $mpApiException = new MPApiException('Not found', $mpResponse);
+        $this->paymentClientStub->getException = $mpApiException;
 
-        // 2. Act
-        $paymentStatus = $mercadoPagoGateway->getPaymentStatus($transactionId);
+        // 2. Assert
+        $this->expectException(TransactionNotFoundException::class);
 
-        // 3. Assert
-        $this->assertEquals(PaymentStatus::UNKNOWN, $paymentStatus);
+        // 3. Act
+        $mercadoPagoGateway->getPaymentStatus($transactionId);
     }
 }
