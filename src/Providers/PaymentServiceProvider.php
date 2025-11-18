@@ -6,8 +6,10 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use UendelSilveira\PaymentModuleManager\Console\Commands\ReprocessFailedPayments;
+use UendelSilveira\PaymentModuleManager\Contracts\GatewayRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Contracts\WebhookLogRepositoryInterface; // Adicionado
 use UendelSilveira\PaymentModuleManager\Events\PaymentFailed;
 use UendelSilveira\PaymentModuleManager\Events\PaymentProcessed;
 use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
@@ -21,8 +23,10 @@ use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentProcessed;
 use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentStatusChanged;
 use UendelSilveira\PaymentModuleManager\Listeners\SendPaymentStatusNotification;
 use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
+use UendelSilveira\PaymentModuleManager\Repositories\GatewayRepository;
 use UendelSilveira\PaymentModuleManager\Repositories\SettingsRepository;
 use UendelSilveira\PaymentModuleManager\Repositories\TransactionRepository;
+use UendelSilveira\PaymentModuleManager\Repositories\WebhookLogRepository; // Adicionado
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 
 class PaymentServiceProvider extends ServiceProvider
@@ -37,6 +41,8 @@ class PaymentServiceProvider extends ServiceProvider
         // Bind das interfaces às suas implementações concretas.
         $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, SettingsRepository::class);
+        $this->app->bind(GatewayRepositoryInterface::class, GatewayRepository::class);
+        $this->app->bind(WebhookLogRepositoryInterface::class, WebhookLogRepository::class); // Adicionado
 
         // Registrar o PaymentService, que depende do Manager e do Repository.
         $this->app->singleton(PaymentService::class, fn ($app): \UendelSilveira\PaymentModuleManager\Services\PaymentService => new PaymentService(
