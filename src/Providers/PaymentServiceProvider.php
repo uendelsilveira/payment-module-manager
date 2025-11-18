@@ -30,7 +30,7 @@ class PaymentServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../../config/payment.php', 'payment');
-
+        $this->app->singleton(PaymentGatewayManager::class);
         $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, SettingsRepository::class);
 
@@ -48,6 +48,7 @@ class PaymentServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->publishes([__DIR__.'/../config/payment.php' => config_path('payment.php')], 'config');
         Event::listen(PaymentProcessed::class, LogPaymentProcessed::class);
         Event::listen(PaymentFailed::class, LogPaymentFailed::class);
         Event::listen(PaymentStatusChanged::class, [
