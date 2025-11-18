@@ -273,9 +273,10 @@
             "description": "Implement the WebhookLogRepository class with methods for logging incoming webhooks and marking them as processed to prevent duplicate processing.",
             "dependencies": [],
             "details": "Create WebhookLogRepository.php in PaymentModule/Repositories namespace. Implement logWebhook() method to create webhook log entries with payload, headers, and timestamp. Implement markAsProcessed() to update is_processed flag and processed_at timestamp. Add getUnprocessedWebhooks() method for retry mechanisms. Include query methods for filtering by gateway, status, and date range.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests: Test logWebhook() creates entries with all required fields. Test markAsProcessed() updates flags and timestamps correctly. Test getUnprocessedWebhooks() returns only unprocessed entries. Verify idempotency of markAsProcessed(). Mock WebhookLog model to test query builder interactions.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-18T22:57:20.486Z"
           },
           {
             "id": 4,
@@ -304,7 +305,7 @@
             "parentId": "undefined"
           }
         ],
-        "updatedAt": "2025-11-18T22:53:10.126Z"
+        "updatedAt": "2025-11-18T22:57:20.486Z"
       },
       {
         "id": "5",
@@ -392,7 +393,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-18T22:53:10.129Z",
+      "lastModified": "2025-11-18T22:57:20.488Z",
       "taskCount": 10,
       "completedCount": 3,
       "tags": [
