@@ -243,8 +243,67 @@
           "2",
           "3"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create TransactionRepository.php with core transaction management methods",
+            "description": "Implement the TransactionRepository class with methods for creating transactions, finding by correlation ID, updating status, and retrieving failed transactions with optimized queries.",
+            "dependencies": [],
+            "details": "Create TransactionRepository.php in PaymentModule/Repositories namespace. Implement create() method that generates UUID correlation_id and sets default status to 'pending'. Implement findByCorrelationId() for transaction lookup. Implement updateStatus() to update transaction status and gateway_response. Implement getFailedTransactions() with query optimization to retrieve failed transactions within 24 hours. Ensure proper type hints and return types for all methods.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test create() generates valid UUID and sets correct defaults. Test findByCorrelationId() returns correct transaction or null. Test updateStatus() updates fields correctly. Test getFailedTransactions() filters and limits results properly. Mock PaymentTransaction model to verify query builder calls.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-18T21:54:57.309Z"
+          },
+          {
+            "id": 2,
+            "title": "Create GatewayRepository.php for gateway configuration management",
+            "description": "Implement the GatewayRepository class to handle CRUD operations for payment gateway configurations including retrieval, creation, updates, and activation status management.",
+            "dependencies": [],
+            "details": "Create GatewayRepository.php in PaymentModule/Repositories namespace. Implement methods: findById(), findByName(), getActiveGateways(), create(), update(), and toggleStatus(). Include query optimization for frequently accessed gateway configurations. Add caching considerations for gateway credentials. Implement proper error handling for missing or inactive gateways.",
+            "status": "pending",
+            "testStrategy": "Unit tests: Test all CRUD operations return expected results. Test getActiveGateways() filters correctly. Test toggleStatus() changes gateway activation state. Test findByName() handles case sensitivity. Mock Gateway model and verify query optimization with proper indexes.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Create WebhookLogRepository.php for webhook event tracking",
+            "description": "Implement the WebhookLogRepository class with methods for logging incoming webhooks and marking them as processed to prevent duplicate processing.",
+            "dependencies": [],
+            "details": "Create WebhookLogRepository.php in PaymentModule/Repositories namespace. Implement logWebhook() method to create webhook log entries with payload, headers, and timestamp. Implement markAsProcessed() to update is_processed flag and processed_at timestamp. Add getUnprocessedWebhooks() method for retry mechanisms. Include query methods for filtering by gateway, status, and date range.",
+            "status": "pending",
+            "testStrategy": "Unit tests: Test logWebhook() creates entries with all required fields. Test markAsProcessed() updates flags and timestamps correctly. Test getUnprocessedWebhooks() returns only unprocessed entries. Verify idempotency of markAsProcessed(). Mock WebhookLog model to test query builder interactions.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Create Eloquent models with relationships, casts, and accessors",
+            "description": "Implement PaymentTransaction, Gateway, and WebhookLog Eloquent models with proper relationships, attribute casting, accessors/mutators, and fillable/guarded properties.",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Create PaymentTransaction model with casts for metadata (array), amount (decimal), processed_at (datetime). Define relationships: belongsTo Gateway, hasMany Refunds. Create Gateway model with casts for credentials (encrypted), is_active (boolean). Create WebhookLog model with casts for payload (array), headers (array), is_processed (boolean). Add accessors for formatted amounts and dates. Define fillable/guarded properties for mass assignment protection. Add database table names if non-standard.",
+            "status": "pending",
+            "testStrategy": "Unit tests: Test attribute casting works correctly (arrays, decimals, booleans, encrypted). Test relationships return correct related models. Test accessors/mutators transform data properly. Test mass assignment protection with fillable/guarded. Integration tests: Verify models interact correctly with database and relationships load properly.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement query scopes for common filters across all models",
+            "description": "Add Eloquent query scopes to models for common filtering operations including status, date ranges, gateway filtering, and payment method filtering to improve code reusability.",
+            "dependencies": [
+              4
+            ],
+            "details": "Add scopes to PaymentTransaction model: scopeByStatus(), scopeByDateRange(), scopeByGateway(), scopeByPaymentMethod(), scopePending(), scopeCompleted(), scopeFailed(). Add scopes to WebhookLog model: scopeUnprocessed(), scopeByGateway(), scopeByDateRange(). Add scopes to Gateway model: scopeActive(), scopeByType(). Ensure scopes are chainable and accept optional parameters. Add index hints for optimized query performance.",
+            "status": "pending",
+            "testStrategy": "Unit tests: Test each scope filters correctly with various parameters. Test scope chaining works properly. Test scopes with null/empty parameters handle gracefully. Integration tests: Verify scopes generate optimized SQL queries. Test performance with large datasets. Verify proper index usage with EXPLAIN queries.",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2025-11-18T21:54:57.309Z"
       },
       {
         "id": "5",
@@ -332,7 +391,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-18T19:41:41.965Z",
+      "lastModified": "2025-11-18T21:54:57.311Z",
       "taskCount": 10,
       "completedCount": 3,
       "tags": [
