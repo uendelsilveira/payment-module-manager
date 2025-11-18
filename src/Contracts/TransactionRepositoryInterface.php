@@ -1,14 +1,8 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 28/10/2025 20:43:21
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Contracts;
 
+use Illuminate\Database\Eloquent\Collection;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 
 interface TransactionRepositoryInterface
@@ -19,4 +13,30 @@ interface TransactionRepositoryInterface
      * @param array<string, mixed> $data
      */
     public function create(array $data): Transaction;
+
+    /**
+     * Encontra uma transação pelo seu ID.
+     */
+    public function find(int $id): ?Transaction;
+
+    /**
+     * Encontra uma transação por uma coluna e valor específicos.
+     *
+     * @param mixed $value
+     */
+    public function findBy(string $column, $value): ?Transaction;
+
+    /**
+     * Atualiza uma transação.
+     *
+     * @param array<string, mixed> $data
+     */
+    public function update(int $id, array $data): bool;
+
+    /**
+     * Retorna transações falhadas que podem ser reprocessadas.
+     *
+     * @return Collection<int, Transaction>
+     */
+    public function getFailedToReprocess(): Collection;
 }

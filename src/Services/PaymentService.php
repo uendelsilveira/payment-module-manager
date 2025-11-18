@@ -9,7 +9,6 @@
 
 namespace UendelSilveira\PaymentModuleManager\Services;
 
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -78,10 +77,13 @@ class PaymentService
             try {
                 $gatewayResponse = $paymentGateway->processPayment($data);
 
-                $transaction->external_id = $gatewayResponse->transactionId;
-                $transaction->status = $gatewayResponse->status->value;
-                $transaction->metadata = array_merge($data, $gatewayResponse->details);
-                $transaction->save();
+                $this->transactionRepository->update($transaction->id, [
+                    'external_id' => $gatewayResponse->transactionId,
+                    'status' => $gatewayResponse->status->value,
+                    'metadata' => array_merge($data, $gatewayResponse->details),
+                ]);
+
+                $transaction->refresh();
 
                 $logContext->withTransaction($transaction)->withDuration($startTime);
 
@@ -90,9 +92,12 @@ class PaymentService
                 PaymentProcessed::dispatch($transaction, $gatewayResponse->details);
 
             } catch (Throwable $throwable) {
-                $transaction->status = PaymentStatus::FAILED->value;
-                $transaction->metadata = $data;
-                $transaction->save();
+                $this->transactionRepository->update($transaction->id, [
+                    'status' => PaymentStatus::FAILED->value,
+                    'metadata' => $data,
+                ]);
+
+                $transaction->refresh();
 
                 $logContext->withTransaction($transaction)
                     ->withError($throwable)
@@ -142,8 +147,8 @@ class PaymentService
 
             Log::channel('transaction')->info('Transaction status changed in gateway', $logContext->toArray());
 
-            $transaction->status = $newStatus;
-            $transaction->save();
+            $this->transactionRepository->update($transaction->id, ['status' => $newStatus]);
+            $transaction->refresh();
 
             PaymentStatusChanged::dispatch($transaction, $oldStatus, $newStatus);
         }
@@ -157,15 +162,9 @@ class PaymentService
     /**
      * @return \Illuminate\Database\Eloquent\Collection<int, Transaction>
      */
-    public function getFailedTransactions()
+    public function getFailedTransactions(): \Illuminate\Database\Eloquent\Collection
     {
-        return Transaction::where('status', PaymentStatus::FAILED->value)
-            ->where(function ($query): void {
-                $query->whereNull('last_attempt_at')
-                    ->orWhere('last_attempt_at', '<', Carbon::now()->subMinutes(5));
-            })
-            ->where('retries_count', '<', config('payment.retry.max_attempts', 3))
-            ->get();
+        return $this->transactionRepository->getFailedToReprocess();
     }
 
     public function reprocess(Transaction $transaction): Transaction
@@ -188,12 +187,15 @@ class PaymentService
         try {
             $gatewayResponse = $paymentGateway->processPayment($chargeData);
 
-            $transaction->status = $gatewayResponse->status->value;
-            $transaction->external_id = $gatewayResponse->transactionId;
-            $transaction->metadata = array_merge($chargeData, $gatewayResponse->details);
-            $transaction->retries_count++;
-            $transaction->last_attempt_at = now();
-            $transaction->save();
+            $this->transactionRepository->update($transaction->id, [
+                'status' => $gatewayResponse->status->value,
+                'external_id' => $gatewayResponse->transactionId,
+                'metadata' => array_merge($chargeData, $gatewayResponse->details),
+                'retries_count' => $transaction->retries_count + 1,
+                'last_attempt_at' => now(),
+            ]);
+
+            $transaction->refresh();
 
             $logContext->withTransaction($transaction)
                 ->withDuration($startTime)
@@ -202,9 +204,12 @@ class PaymentService
             Log::channel('payment')->info('Transaction reprocessed successfully', $logContext->toArray());
 
         } catch (Throwable $throwable) {
-            $transaction->retries_count++;
-            $transaction->last_attempt_at = now();
-            $transaction->save();
+            $this->transactionRepository->update($transaction->id, [
+                'retries_count' => $transaction->retries_count + 1,
+                'last_attempt_at' => now(),
+            ]);
+
+            $transaction->refresh();
 
             $logContext->withTransaction($transaction)
                 ->withError($throwable)
@@ -250,9 +255,12 @@ class PaymentService
             $paymentGateway = $this->paymentGatewayManager->gateway($transaction->gateway);
             $refundResponse = $paymentGateway->refundPayment($transaction->external_id, $amount);
 
-            $transaction->status = PaymentStatus::REFUNDED->value;
-            $transaction->metadata = array_merge((array) $transaction->metadata, ['refund' => $refundResponse->details]);
-            $transaction->save();
+            $this->transactionRepository->update($transaction->id, [
+                'status' => PaymentStatus::REFUNDED->value,
+                'metadata' => array_merge((array) $transaction->metadata, ['refund' => $refundResponse->details]),
+            ]);
+
+            $transaction->refresh();
 
             $logContext->withTransaction($transaction)
                 ->withDuration($startTime)
@@ -298,9 +306,12 @@ class PaymentService
             $paymentGateway = $this->paymentGatewayManager->gateway($transaction->gateway);
             $cancelResponse = $paymentGateway->cancelPayment($transaction->external_id);
 
-            $transaction->status = PaymentStatus::CANCELLED->value;
-            $transaction->metadata = array_merge((array) $transaction->metadata, ['cancellation' => $cancelResponse->details]);
-            $transaction->save();
+            $this->transactionRepository->update($transaction->id, [
+                'status' => PaymentStatus::CANCELLED->value,
+                'metadata' => array_merge((array) $transaction->metadata, ['cancellation' => $cancelResponse->details]),
+            ]);
+
+            $transaction->refresh();
 
             $logContext->withTransaction($transaction)
                 ->withDuration($startTime)
