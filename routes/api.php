@@ -30,7 +30,7 @@ Route::post('payments/{transaction}/cancel', [PaymentController::class, 'cancel'
 
 // Webhook Route
 Route::post('payment/webhook/{gateway}', [PaymentController::class, 'handleWebhook'])
-    ->middleware(WebhookValidationMiddleware::class)
+    ->middleware([WebhookValidationMiddleware::class, 'payment.rate_limit:webhook'])
     ->name('payment.webhook');
 
 // Settings Routes
