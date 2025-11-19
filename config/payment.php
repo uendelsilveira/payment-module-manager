@@ -118,4 +118,50 @@ return [
             ],
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Refund Rules Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure refund eligibility rules for different gateways and payment methods.
+    | This includes time windows, supported payment methods, and business rules.
+    |
+    */
+    'refund_rules' => [
+        'mercadopago' => [
+            'time_window_days' => 180, // 180 days refund window
+            'supported_methods' => ['credit_card', 'debit_card', 'pix'],
+            'requires_settlement' => false,
+        ],
+
+        'stripe' => [
+            'time_window_days' => 180, // 180 days refund window
+            'supported_methods' => ['credit_card', 'debit_card'],
+            'requires_settlement' => false,
+        ],
+
+        'paypal' => [
+            'time_window_days' => 180, // 180 days refund window
+            'supported_methods' => ['credit_card', 'paypal_account'],
+            'requires_settlement' => false,
+        ],
+
+        // Global refund rules (fallback)
+        'global' => [
+            'time_window_days' => 90, // Default 90 days
+            'supported_methods' => ['credit_card', 'debit_card'],
+            'requires_settlement' => false,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Retry Configuration
+    |--------------------------------------------------------------------------
+    */
+    'retry' => [
+        'max_attempts' => env('PAYMENT_MAX_RETRY_ATTEMPTS', 3),
+        'retry_interval_minutes' => env('PAYMENT_RETRY_INTERVAL_MINUTES', 5),
+    ],
 ];

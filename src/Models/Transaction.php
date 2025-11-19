@@ -12,6 +12,7 @@ namespace UendelSilveira\PaymentModuleManager\Models;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory;
 
@@ -29,8 +30,9 @@ use UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory;
  * @property \Illuminate\Support\Carbon|null $last_attempt_at
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property \Illuminate\Support\Carbon|null $deleted_at
  * @property-read PaymentGateway $paymentGateway
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Refund> $refunds
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, AuditLog> $auditLogs
  *
  * @method static \Illuminate\Database\Eloquent\Builder<Transaction> where(string|array<int|string, mixed> $column, mixed $operator = null, mixed $value = null, string $boolean = 'and')
  * @method static Transaction create(array<string, mixed> $attributes = [])
@@ -49,7 +51,7 @@ use UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory;
  */
 class Transaction extends Model
 {
-    /** @use HasFactory<\UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory> */
+    /** @use HasFactory<TransactionFactory> */
     use HasFactory;
     use SoftDeletes;
 
@@ -75,11 +77,29 @@ class Transaction extends Model
     ];
 
     /**
-     * Cria uma nova instância da factory para o modelo.
+     * Get the refunds for the transaction.
      *
-     * @return \UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory
+     * @return HasMany<Refund, $this>
      */
-    protected static function newFactory(): Factory
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class);
+    }
+
+    /**
+     * Get the audit logs for the transaction.
+     *
+     * @return HasMany<AuditLog, $this>
+     */
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    /**
+     * Cria uma nova instância da factory para o modelo.
+     */
+    protected static function newFactory(): TransactionFactory
     {
         return TransactionFactory::new();
     }
