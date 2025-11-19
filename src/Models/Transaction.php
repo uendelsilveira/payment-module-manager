@@ -18,7 +18,10 @@ use UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory;
 
 /**
  * @property int $id
+ * @property string $correlation_id
  * @property string $gateway
+ * @property string $payment_method
+ * @property int $installments
  * @property float $amount
  * @property string $currency
  * @property string $status
@@ -57,7 +60,10 @@ class Transaction extends Model
 
     /** @var array<int, string> */
     protected $fillable = [
+        'correlation_id',
         'gateway',
+        'payment_method',
+        'installments',
         'amount',
         'currency',
         'status',
