@@ -561,10 +561,10 @@
             "description": "Implement the WebhookController that receives incoming webhooks, logs them to the database, and dispatches them to a queue for asynchronous processing.",
             "dependencies": [],
             "details": "Create WebhookController.php in PaymentModule/Http/Controllers namespace. Implement handle() method that accepts Request and gateway string parameter. Use WebhookLogRepository to log incoming webhooks with gateway_id, event_type, payload, and signature. Extract signature from X-Signature or Stripe-Signature headers. Dispatch ProcessWebhookJob to 'webhooks' queue with webhook log ID and gateway name. Return JSON response with status 'received' and 200 status code. Implement getGatewayId() helper method to resolve gateway ID from gateway name.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Unit tests: Mock WebhookLogRepository and verify logWebhook is called with correct parameters. Mock ProcessWebhookJob dispatch and verify it's called with correct parameters and queue name. Test signature extraction from different header formats. Test response format and status code. Integration tests: Test full webhook receipt flow with database logging.",
             "parentId": "undefined",
-            "updatedAt": "2025-11-19T14:17:16.017Z"
+            "updatedAt": "2025-11-19T14:20:59.828Z"
           },
           {
             "id": 2,
@@ -574,10 +574,10 @@
               1
             ],
             "details": "Create ProcessWebhookJob.php in PaymentModule/Jobs namespace. Implement ShouldQueue interface and use Dispatchable, InteractsWithQueue, Queueable, SerializesModels traits. Add properties for webhookLogId (int) and gateway (string). Set tries to 3 and backoff to 60 seconds. Implement handle() method that accepts WebhookService via dependency injection. Call webhookService->process() with webhookLogId and gateway parameters. Add constructor to accept and store webhookLogId and gateway parameters.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Unit tests: Test job can be instantiated with correct parameters. Test job implements ShouldQueue interface. Mock WebhookService and verify process() is called with correct parameters. Test retry configuration (tries and backoff). Integration tests: Test job is dispatched to correct queue and processes webhooks. Test retry logic on failures.",
             "parentId": "undefined",
-            "updatedAt": "2025-11-19T14:17:16.021Z"
+            "updatedAt": "2025-11-19T14:20:59.832Z"
           },
           {
             "id": 3,
@@ -587,10 +587,10 @@
               2
             ],
             "details": "Create WebhookService.php in PaymentModule/Services namespace. Inject WebhookLogRepository and PaymentGatewayManager. Implement process() method that retrieves webhook log, validates signature using gateway->validateWebhook(), checks for replay attacks, and handles webhook events. Implement isReplayAttack() method that generates SHA256 hash of payload and checks if hash exists in cache with key 'webhook_hash:{hash}'. Store hash in cache with appropriate TTL (e.g., 5 minutes) after processing. Update webhook log with is_valid flag and processing_error on validation failures. Call markAsProcessed() on successful processing. Implement handleWebhookEvent() method to route events to appropriate handlers.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Unit tests: Test signature validation with valid and invalid signatures. Test replay attack detection with duplicate payloads. Test webhook log updates on validation failures. Mock gateway and repository dependencies. Integration tests: Test full webhook processing flow. Test cache-based replay protection. Test webhook log status updates correctly.",
             "parentId": "undefined",
-            "updatedAt": "2025-11-19T14:17:16.025Z"
+            "updatedAt": "2025-11-19T14:20:59.835Z"
           },
           {
             "id": 4,
@@ -613,13 +613,13 @@
               4
             ],
             "details": "Create WebhookEventHandler.php in PaymentModule/Services namespace with methods for each event type: handlePaymentApproved(), handlePaymentFailed(), handlePaymentRefunded(), handlePaymentCancelled(). Each handler should update transaction status, trigger appropriate events, and log actions. Add webhook routes to api.php: POST /webhooks/{gateway} pointing to WebhookController@handle. Apply ValidateWebhook middleware and throttle middleware to webhook routes. Exclude webhook routes from CSRF protection. Update WebhookService->handleWebhookEvent() to dispatch to appropriate event handler based on event_type. Implement event type mapping for different gateway event naming conventions.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Unit tests: Test each event handler updates transaction status correctly. Test event type mapping for different gateways. Test event handlers trigger appropriate domain events. Integration tests: Test full webhook flow from receipt to transaction update. Test routes are properly protected by middleware. Test CSRF exclusion for webhook routes. Test different webhook event types process correctly.",
             "parentId": "undefined",
-            "updatedAt": "2025-11-19T14:17:16.030Z"
+            "updatedAt": "2025-11-19T14:20:59.838Z"
           }
         ],
-        "updatedAt": "2025-11-19T14:17:16.030Z"
+        "updatedAt": "2025-11-19T14:20:59.838Z"
       },
       {
         "id": "9",
@@ -714,7 +714,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-19T14:17:16.031Z",
+      "lastModified": "2025-11-19T14:20:59.839Z",
       "taskCount": 10,
       "completedCount": 6,
       "tags": [
