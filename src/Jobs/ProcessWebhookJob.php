@@ -32,19 +32,57 @@ class ProcessWebhookJob implements ShouldQueue
         public array $payload
     ) {}
 
-    public function handle(): void
-    {
+    public function handle(
+        \UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface $transactionRepository
+    ): void {
         try {
-            /** @phpstan-ignore-next-line */
+            /** @var array{transaction_id: string, status: string, payment_method: string, amount: float, metadata: array<string, mixed>} $processedData */
             $processedData = PaymentGateway::gateway($this->gateway)->processWebhook($this->payload);
 
-            // TODO: Implement logic to update the application's database with the processed data.
-            // For example, find the transaction by `transaction_id` and update its status.
+            $externalId = $processedData['transaction_id'];
+
+            $transaction = $transactionRepository->findBy('external_id', $externalId);
+
+            if (! $transaction instanceof \UendelSilveira\PaymentModuleManager\Models\Transaction) {
+                Log::channel('payment')->error('Transaction not found for webhook', [
+                    'gateway' => $this->gateway,
+                    'external_id' => $externalId,
+                ]);
+
+                return;
+            }
+
+            // Idempotency check: if status is already final, skip
+            if (in_array($transaction->status, ['completed', 'failed', 'refunded', 'cancelled'])) {
+                Log::channel('payment')->info('Transaction already in final state, skipping webhook', [
+                    'transaction_id' => $transaction->id,
+                    'current_status' => $transaction->status,
+                    'new_status' => $processedData['status'],
+                ]);
+
+                return;
+            }
+
+            $oldStatus = $transaction->status;
+            $transaction->status = $processedData['status'];
+            $transaction->metadata = array_merge($transaction->metadata ?? [], ['webhook_processed_at' => now()->toIso8601String()]);
+
+            $transactionRepository->update($transaction->id, [
+                'status' => $processedData['status'],
+                'metadata' => $transaction->metadata,
+            ]);
 
             Log::channel('payment')->info('Webhook processed successfully', [
                 'gateway' => $this->gateway,
-                'data' => $processedData,
+                'transaction_id' => $transaction->id,
+                'old_status' => $oldStatus,
+                'new_status' => $transaction->status,
             ]);
+
+            // Dispatch events
+            if ($oldStatus !== $transaction->status) {
+                event(new \UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged($transaction, $oldStatus, $transaction->status));
+            }
 
         } catch (\Exception $exception) {
             Log::channel('payment')->error('Error processing webhook', [
@@ -53,7 +91,6 @@ class ProcessWebhookJob implements ShouldQueue
                 'payload' => $this->payload,
             ]);
 
-            // Optionally, re-throw the exception to let the queue handle retries.
             throw $exception;
         }
     }

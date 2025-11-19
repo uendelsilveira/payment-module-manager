@@ -11,9 +11,9 @@ namespace UendelSilveira\PaymentModuleManager\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
+use UendelSilveira\PaymentModuleManager\Services\IdempotencyService;
 use UendelSilveira\PaymentModuleManager\Support\LogContext;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
@@ -25,6 +25,8 @@ use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 class EnsureIdempotency
 {
     use ApiResponseTrait;
+
+    public function __construct(protected IdempotencyService $idempotencyService) {}
 
     /**
      * Handle an incoming request.
@@ -62,8 +64,7 @@ class EnsureIdempotency
 
         // Check cache first (faster than DB)
         $idempotencyKeyStr = is_string($idempotencyKey) ? $idempotencyKey : '';
-        $cacheKey = 'idempotency:'.$idempotencyKeyStr;
-        $cachedResult = Cache::get($cacheKey);
+        $cachedResult = $this->idempotencyService->check($idempotencyKeyStr);
 
         if ($cachedResult) {
             $context = LogContext::create()
@@ -100,11 +101,11 @@ class EnsureIdempotency
             $statusCode = $existingTransaction->status === 'failed' ? 400 : 201;
 
             // Cache the result for 24 hours
-            Cache::put($cacheKey, [
+            $this->idempotencyService->record($idempotencyKeyStr, [
                 'response' => $response,
                 'status_code' => $statusCode,
                 'transaction_id' => $existingTransaction->id,
-            ], now()->addHours(24));
+            ], 86400);
 
             return response()->json($response, $statusCode);
         }
@@ -119,11 +120,11 @@ class EnsureIdempotency
             $responseData = json_decode((string) $response->getContent(), true);
 
             if (isset($responseData['data']['id'])) {
-                Cache::put($cacheKey, [
+                $this->idempotencyService->record($idempotencyKeyStr, [
                     'response' => $responseData,
                     'status_code' => 201,
                     'transaction_id' => $responseData['data']['id'],
-                ], now()->addHours(24));
+                ], 86400);
             }
         }
 

@@ -20,7 +20,6 @@ class WebhookValidationMiddleware
     public function handle(Request $request, Closure $next, string $gateway): Response
     {
         try {
-            /** @phpstan-ignore-next-line */
             PaymentGateway::gateway($gateway)->processWebhook($request->all());
         } catch (WebhookProcessingException $webhookProcessingException) {
             return response()->json(['error' => $webhookProcessingException->getMessage()], 400);

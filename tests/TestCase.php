@@ -73,4 +73,9 @@ abstract class TestCase extends OrchestraTestCase
         // Rota dummy para webhooks usada em tests
         $app['router']->post('/__test/webhook', fn () => response()->json(['ok' => true]))->name('payment.webhook');
     }
+
+    protected function defineDatabaseMigrations()
+    {
+        $this->loadLaravelMigrations();
+    }
 }
