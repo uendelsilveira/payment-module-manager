@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * @property int $id
  * @property string $key
- * @property string|null $value
+ * @property array<string, mixed>|null $value
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  *
@@ -36,5 +36,10 @@ class PaymentSetting extends Model
     protected $fillable = [
         'key',
         'value',
+    ];
+
+    /** @var array<string, string> */
+    protected $casts = [
+        'value' => 'array', // Assumindo que 'value' armazenará dados JSON
     ];
 }

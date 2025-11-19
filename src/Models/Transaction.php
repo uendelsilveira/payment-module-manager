@@ -12,6 +12,7 @@ namespace UendelSilveira\PaymentModuleManager\Models;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory;
 
@@ -30,6 +31,7 @@ use UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory;
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property-read PaymentGateway $paymentGateway
  *
  * @method static \Illuminate\Database\Eloquent\Builder<Transaction> where(string|array<int|string, mixed> $column, mixed $operator = null, mixed $value = null, string $boolean = 'and')
  * @method static Transaction create(array<string, mixed> $attributes = [])
@@ -37,6 +39,12 @@ use UendelSilveira\PaymentModuleManager\Database\Factories\TransactionFactory;
  * @method static \Illuminate\Database\Eloquent\Builder<Transaction> newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<Transaction> query()
  * @method static Transaction|null first()
+ * @method static \Illuminate\Database\Eloquent\Builder<Transaction> onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<Transaction> withTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<Transaction> withoutTrashed()
+ * @method static bool|null restore()
+ * @method static bool|null forceDelete()
+ * @method static int|null delete()
  *
  * @mixin \Illuminate\Database\Eloquent\Builder<Transaction>
  */
