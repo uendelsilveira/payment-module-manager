@@ -483,9 +483,9 @@
             "description": "Create the StripeGateway class implementing PaymentGatewayInterface with support for PIX, credit card, and boleto payment methods including proper method mapping and client initialization. [Updated: 11/19/2025]",
             "dependencies": [],
             "details": "Create StripeGateway.php in PaymentModule\\Gateways namespace. Implement constructor accepting credentials array and initializing StripeClient. Implement processPayment method that creates payment intents with proper amount conversion (cents), currency handling, and payment method mapping. Create mapPaymentMethod private method to convert internal payment method names (credit_card, pix, boleto) to Stripe-specific types (card, pix, boleto). Handle metadata passing and implement extractPaymentData method to extract payment-specific data like QR codes for PIX, installment info for credit cards, and boleto URLs.\n<info added on 2025-11-19T14:09:18.409Z>\nAdd NotImplementedException throws for webhook validation and status mapping methods. Throw NotImplementedException in validateWebhook method with message indicating Stripe webhook signature validation is not yet implemented. Throw NotImplementedException in getTransactionStatus method with message indicating Stripe status retrieval is not yet implemented. Add private mapStripeStatus method stub that throws NotImplementedException for converting Stripe payment intent statuses to internal status enum values.\n</info added on 2025-11-19T14:09:18.409Z>",
-            "status": "in-progress",
+            "status": "deferred",
             "testStrategy": "Unit tests: Mock StripeClient and test processPayment with different payment methods. Verify amount conversion to cents. Test mapPaymentMethod throws UnsupportedPaymentMethodException for invalid methods. Test metadata is properly passed to Stripe API.",
-            "updatedAt": "2025-11-19T14:15:09.385Z",
+            "updatedAt": "2025-11-19T18:23:11.689Z",
             "parentId": "undefined"
           },
           {
@@ -496,10 +496,10 @@
               1
             ],
             "details": "Implement validateWebhook method using Stripe\\Webhook::constructEvent to verify webhook signatures against configured webhook secret. Create mapStatus private method to convert Stripe payment intent statuses (requires_payment_method, requires_confirmation, requires_action, processing, succeeded, canceled) to standardized statuses (pending, processing, completed, failed, cancelled). Implement getTransactionStatus, refund, and cancel methods using Stripe API. Add proper exception handling wrapping Stripe\\Exception\\ApiErrorException into GatewayException.",
-            "status": "in-progress",
+            "status": "deferred",
             "testStrategy": "Unit tests: Test validateWebhook with valid and invalid signatures. Test mapStatus converts all Stripe statuses correctly. Mock Stripe API responses for getTransactionStatus, refund, and cancel methods. Verify GatewayException wrapping.",
             "parentId": "undefined",
-            "updatedAt": "2025-11-19T14:15:09.395Z"
+            "updatedAt": "2025-11-19T18:23:11.693Z"
           },
           {
             "id": 3,
@@ -540,7 +540,7 @@
             "updatedAt": "2025-11-19T14:15:43.858Z"
           }
         ],
-        "updatedAt": "2025-11-19T14:15:43.858Z"
+        "updatedAt": "2025-11-19T18:23:11.693Z"
       },
       {
         "id": "8",
@@ -640,9 +640,10 @@
             "description": "Define all RESTful API routes in routes/api.php with proper middleware for authentication (Sanctum) and rate limiting for payment operations, reports, and health check endpoints.",
             "dependencies": [],
             "details": "Create route groups in routes/api.php with prefix 'api/payments' and 'api/reports'. Apply middleware: 'api', 'auth:sanctum', and 'throttle:60,1' for payment routes. Define routes for payment creation, retrieval, refund, cancellation, and status checking. Add report routes for transactions and metrics. Include a public health check endpoint without authentication.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests: Test route definitions are registered correctly. Test middleware is applied to correct routes. Integration tests: Test authenticated requests pass through. Test unauthenticated requests are blocked with 401. Test rate limiting blocks requests exceeding 60 per minute.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T18:28:18.265Z"
           },
           {
             "id": 2,
@@ -652,9 +653,10 @@
               1
             ],
             "details": "Create PaymentController.php in PaymentModule/Http/Controllers namespace. Implement create() method with idempotency key handling, show() method to retrieve transactions by correlation ID, refund() and cancel() methods for payment operations, and status() method for checking payment status. Inject PaymentService and TransactionRepository dependencies. Return appropriate HTTP status codes (201 for creation, 404 for not found, etc.).",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests: Test each controller method with mocked services and repositories. Test idempotency key extraction from headers. Test 404 responses for non-existent transactions. Integration tests: Test full request/response cycle with database. Test validation errors return 422 status codes.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T18:28:18.270Z"
           },
           {
             "id": 3,
@@ -664,9 +666,10 @@
               2
             ],
             "details": "Create CreatePaymentRequest with validation rules for amount (required, numeric, positive), payment_method (required, in allowed list), gateway_id (required, exists in database), and customer data. Create RefundRequest with validation for amount (optional, numeric, less than or equal to original), and reason (optional, string). Create CancelRequest if needed. Include authorization logic in authorize() method to check user permissions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests: Test validation rules pass with valid data. Test validation fails with invalid data (negative amounts, invalid payment methods, missing required fields). Test custom validation messages. Integration tests: Test form requests are automatically applied to controller methods.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T18:28:18.273Z"
           },
           {
             "id": 4,
@@ -676,9 +679,10 @@
               2
             ],
             "details": "Create TransactionResource extending JsonResource with toArray() method that returns correlation_id, status, amount, payment_method, created_at, and other safe fields. Explicitly exclude sensitive data like gateway credentials, internal database IDs, and raw gateway responses. Create PaymentResource for payment creation responses. Create ReportResource for report data formatting. Use resource collections for list endpoints.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests: Test resources format data correctly. Test sensitive fields are never exposed in output. Test resource collections work with pagination. Integration tests: Test API responses match expected JSON structure. Test nested relationships are properly formatted.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T18:28:18.276Z"
           },
           {
             "id": 5,
@@ -689,12 +693,13 @@
               4
             ],
             "details": "Create ReportController with transactions() method supporting filters (date range, status, payment method, gateway), pagination, and sorting. Implement metrics() method with aggregations (total volume, success rate, average transaction value). Create HealthController with check() method that tests database connection, queue connectivity, cache availability, and gateway API reachability. Return appropriate status codes (200 for healthy, 503 for unhealthy) with detailed component status.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Unit tests: Test report filtering logic with mocked repositories. Test health check detects component failures. Integration tests: Test reports return correct data with various filters. Test pagination works correctly. Test health endpoint accurately reflects system status. Test metrics calculations are accurate.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T18:28:44.316Z"
           }
         ],
-        "updatedAt": "2025-11-19T13:16:43.560Z"
+        "updatedAt": "2025-11-19T18:28:44.316Z"
       },
       {
         "id": "10",
@@ -708,13 +713,74 @@
           "8"
         ],
         "status": "in-progress",
-        "subtasks": [],
-        "updatedAt": "2025-11-19T13:16:51.194Z"
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create CorrelationIdMiddleware for request tracking",
+            "description": "Implement middleware to generate and propagate correlation IDs across all payment-related requests for distributed tracing and debugging.",
+            "dependencies": [],
+            "details": "Create CorrelationIdMiddleware.php in PaymentModule/Http/Middleware namespace. The middleware should extract X-Correlation-ID from request headers or generate a new UUID if not present. Use Log::withContext() to attach correlation_id to all log entries within the request lifecycle. Add the correlation ID to response headers. Register the middleware in the HTTP kernel for payment routes.",
+            "status": "done",
+            "testStrategy": "Unit tests: Test correlation ID generation when header is missing. Test correlation ID extraction from existing header. Test correlation ID is added to response headers. Test log context is properly set. Integration tests: Verify correlation ID propagates through entire request lifecycle and appears in all log entries.",
+            "updatedAt": "2025-11-19T18:26:04.122Z",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement HealthCheckController with system checks",
+            "description": "Create health check endpoint that monitors database, queue, cache, and payment gateway connectivity to ensure system reliability.",
+            "dependencies": [],
+            "details": "Create HealthCheckController.php with a check() method that performs health checks for: database connectivity (simple query), queue system (check connection), cache (read/write test), and payment gateways (API connectivity test). Return JSON response with status for each component and overall health status. Use HTTP 200 for healthy and 503 for unhealthy states. Include timestamp in response. Add route for /health endpoint.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test each health check method individually with mocked dependencies. Test response format and status codes. Test partial failure scenarios. Integration tests: Test health check endpoint returns correct status when all systems are operational. Test endpoint returns 503 when any critical system fails.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T18:27:18.623Z"
+          },
+          {
+            "id": 3,
+            "title": "Create MetricsService for payment analytics",
+            "description": "Implement service to collect and calculate key payment metrics including transaction counts, success rates, processing times, and revenue statistics.",
+            "dependencies": [],
+            "details": "Create MetricsService.php in PaymentModule/Services namespace. Implement methods to calculate: total transactions grouped by status (pending, completed, failed), average processing time per transaction, success rate by gateway, revenue metrics (total, by gateway, by payment method), and transaction volume over time periods. Use efficient database queries with proper aggregations. Cache metrics for performance. Provide methods for real-time and historical metrics.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test metric calculations with sample data. Test date range filtering. Test caching behavior. Integration tests: Verify metrics match actual transaction data in database. Test performance with large datasets. Test metrics update correctly after new transactions.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T18:27:18.632Z"
+          },
+          {
+            "id": 4,
+            "title": "Implement ReprocessFailedPaymentsCommand Artisan command",
+            "description": "Create Artisan command to identify and reprocess failed payment transactions with support for dry-run mode and configurable limits.",
+            "dependencies": [],
+            "details": "Create ReprocessFailedPaymentsCommand.php in PaymentModule/Console/Commands namespace. Define signature 'payment:reprocess-failed' with options: --limit (default 100) and --dry-run. Inject PaymentService and TransactionRepository. Retrieve failed transactions using repository method. Iterate through transactions and attempt reprocessing via PaymentService->retryTransaction(). Display progress with colored output (success/failure). In dry-run mode, only display what would be processed. Handle exceptions gracefully and log errors. Register command in service provider.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test command options parsing. Test dry-run mode doesn't modify data. Test output formatting. Integration tests: Test command successfully reprocesses failed transactions. Test limit option restricts number of transactions. Test error handling when reprocessing fails. Verify database updates after command execution.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T18:27:18.634Z"
+          },
+          {
+            "id": 5,
+            "title": "Configure structured logging and performance monitoring",
+            "description": "Set up comprehensive logging infrastructure with custom payment log channel, structured logging throughout the application, and performance monitoring for critical operations.",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Create custom log channel 'payment' in config/logging.php with dedicated file and formatting. Implement structured logging in PaymentService, RefundService, webhook handlers, and gateway adapters using correlation IDs from context. Add performance monitoring using Laravel's built-in tools or custom timing for: payment processing duration, webhook processing time, gateway API response times, and database query performance. Log key events: payment initiated, gateway request/response, status changes, refunds, and errors. Include contextual data: user_id, transaction_id, gateway, amount, payment_method.",
+            "status": "done",
+            "testStrategy": "Unit tests: Test log channel configuration. Test log entries contain required context fields. Integration tests: Verify logs are written to correct channels. Test correlation IDs appear in all related log entries. Test performance metrics are captured accurately. Review log output for completeness and readability during end-to-end payment flows.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T18:26:36.039Z"
+          }
+        ],
+        "updatedAt": "2025-11-19T18:27:18.634Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-19T14:23:23.198Z",
+      "lastModified": "2025-11-19T18:28:44.318Z",
       "taskCount": 10,
       "completedCount": 7,
       "tags": [
