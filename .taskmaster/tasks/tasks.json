@@ -288,9 +288,10 @@
               3
             ],
             "details": "Create PaymentTransaction model with casts for metadata (array), amount (decimal), processed_at (datetime). Define relationships: belongsTo Gateway, hasMany Refunds. Create Gateway model with casts for credentials (encrypted), is_active (boolean). Create WebhookLog model with casts for payload (array), headers (array), is_processed (boolean). Add accessors for formatted amounts and dates. Define fillable/guarded properties for mass assignment protection. Add database table names if non-standard.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Unit tests: Test attribute casting works correctly (arrays, decimals, booleans, encrypted). Test relationships return correct related models. Test accessors/mutators transform data properly. Test mass assignment protection with fillable/guarded. Integration tests: Verify models interact correctly with database and relationships load properly.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-18T22:58:00.718Z"
           },
           {
             "id": 5,
@@ -300,12 +301,13 @@
               4
             ],
             "details": "Add scopes to PaymentTransaction model: scopeByStatus(), scopeByDateRange(), scopeByGateway(), scopeByPaymentMethod(), scopePending(), scopeCompleted(), scopeFailed(). Add scopes to WebhookLog model: scopeUnprocessed(), scopeByGateway(), scopeByDateRange(). Add scopes to Gateway model: scopeActive(), scopeByType(). Ensure scopes are chainable and accept optional parameters. Add index hints for optimized query performance.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": "Unit tests: Test each scope filters correctly with various parameters. Test scope chaining works properly. Test scopes with null/empty parameters handle gracefully. Integration tests: Verify scopes generate optimized SQL queries. Test performance with large datasets. Verify proper index usage with EXPLAIN queries.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T00:38:54.042Z"
           }
         ],
-        "updatedAt": "2025-11-18T22:57:20.486Z"
+        "updatedAt": "2025-11-19T00:38:54.042Z"
       },
       {
         "id": "5",
@@ -318,8 +320,69 @@
           "3",
           "4"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create PaymentService.php with core payment processing logic",
+            "description": "Implement the main PaymentService class with processPayment method that orchestrates payment validation, transaction creation, gateway processing, and database transaction management.",
+            "dependencies": [],
+            "details": "Create PaymentService.php in PaymentModule/Services namespace. Implement constructor with dependency injection for PaymentGatewayManager, TransactionRepository, and IdempotencyService. Implement processPayment method with database transaction wrapping, error handling, and logging. Include validatePaymentData private method with Laravel validation rules for payment_method, amount, installments, and customer data. Add prepareGatewayData method to format data for gateway consumption.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Mock all dependencies (gatewayManager, transactionRepo, idempotency). Test validatePaymentData with valid and invalid inputs. Test processPayment flow with successful gateway response. Test database rollback on exceptions. Verify PaymentProcessingException is thrown with proper error context.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T00:41:17.994Z"
+          },
+          {
+            "id": 2,
+            "title": "Implement IdempotencyService using Laravel Cache",
+            "description": "Create IdempotencyService to prevent duplicate payment processing by caching payment responses using idempotency keys with configurable TTL.",
+            "dependencies": [],
+            "details": "Create IdempotencyService.php in PaymentModule/Services namespace. Implement get method to retrieve cached responses by idempotency key. Implement store method to cache PaymentResponse objects with TTL (default 3600 seconds). Use Laravel Cache facade with appropriate cache driver. Add exists method to check if idempotency key is already used. Implement clear method for testing purposes. Use proper cache key prefixing to avoid collisions.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test store and get methods with various PaymentResponse objects. Test TTL expiration behavior. Test cache key uniqueness and prefixing. Test exists method returns correct boolean. Mock Laravel Cache facade to verify proper cache operations without actual cache dependency.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T00:42:42.377Z"
+          },
+          {
+            "id": 3,
+            "title": "Implement payment method specific validation",
+            "description": "Create validation classes for credit card, PIX, and boleto payment methods with method-specific rules and data sanitization.",
+            "dependencies": [],
+            "details": "Create PaymentValidators directory under PaymentModule/Services. Implement CreditCardValidator with rules for card number (Luhn algorithm), CVV, expiry date, installments (1-12), and cardholder name. Implement PixValidator with rules for PIX key types (CPF, CNPJ, email, phone, random key). Implement BoletoValidator with rules for due date, instructions, and customer document. Create PaymentValidatorFactory to return appropriate validator based on payment method. Integrate validators into PaymentService validatePaymentData method.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test each validator with valid and invalid data for their specific payment method. Test credit card Luhn algorithm validation. Test PIX key format validation for all key types. Test boleto due date must be future date. Test PaymentValidatorFactory returns correct validator instance. Integration test: Verify validators work within PaymentService flow.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T00:42:47.806Z"
+          },
+          {
+            "id": 4,
+            "title": "Add correlation ID generation and comprehensive logging",
+            "description": "Implement correlation ID generation for payment tracking and add structured logging throughout the payment processing flow for observability and debugging.",
+            "dependencies": [
+              1
+            ],
+            "details": "Add correlation ID generation using Str::uuid() at the start of processPayment method. Store correlation ID in transaction record and pass through all service calls. Implement CorrelationIdContext helper to maintain correlation ID in current request context. Add structured logging at key points: payment initiation, validation completion, gateway request/response, transaction status updates, and error scenarios. Include correlation_id, transaction_id, gateway, payment_method, amount, and status in all log entries. Use appropriate log levels (info, warning, error). Add correlation ID to PaymentResponse object for client tracking.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test correlation ID is generated as valid UUID. Test correlation ID is included in all log entries. Mock Log facade to verify log calls with correct context data. Integration tests: Test correlation ID persists through entire payment flow. Test correlation ID appears in transaction record. Test correlation ID is returned in PaymentResponse. Verify log entries can be filtered by correlation ID.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T00:42:53.025Z"
+          },
+          {
+            "id": 5,
+            "title": "Implement retry logic with exponential backoff for gateway failures",
+            "description": "Add retry mechanism with exponential backoff for transient gateway communication failures to improve payment processing reliability.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create RetryService.php in PaymentModule/Services namespace. Implement retry method with configurable max attempts (default 3), initial delay (default 1 second), and backoff multiplier (default 2). Wrap gateway processPayment calls with retry logic. Only retry on transient errors (network timeouts, 5xx responses, connection failures). Do not retry on validation errors or 4xx responses. Implement exponential backoff: delay = initial_delay * (multiplier ^ attempt). Add jitter to prevent thundering herd. Log each retry attempt with correlation ID. Update PaymentService to use RetryService for gateway communication. Add circuit breaker pattern consideration for future enhancement.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test retry logic executes correct number of attempts. Test exponential backoff timing (mock sleep). Test only retries on transient errors. Test succeeds on retry after initial failure. Test throws exception after max retries exhausted. Mock gateway to simulate transient failures. Integration tests: Test retry behavior with actual gateway timeout simulation. Verify transaction status reflects retry attempts in logs.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T00:42:57.845Z"
+          }
+        ],
+        "updatedAt": "2025-11-19T00:42:57.845Z"
       },
       {
         "id": "6",
@@ -393,7 +456,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-18T22:57:20.488Z",
+      "lastModified": "2025-11-19T00:42:57.846Z",
       "taskCount": 10,
       "completedCount": 3,
       "tags": [
