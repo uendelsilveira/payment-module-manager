@@ -712,7 +712,7 @@
           "5",
           "8"
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -742,10 +742,10 @@
             "description": "Implement service to collect and calculate key payment metrics including transaction counts, success rates, processing times, and revenue statistics.",
             "dependencies": [],
             "details": "Create MetricsService.php in PaymentModule/Services namespace. Implement methods to calculate: total transactions grouped by status (pending, completed, failed), average processing time per transaction, success rate by gateway, revenue metrics (total, by gateway, by payment method), and transaction volume over time periods. Use efficient database queries with proper aggregations. Cache metrics for performance. Provide methods for real-time and historical metrics.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Unit tests: Test metric calculations with sample data. Test date range filtering. Test caching behavior. Integration tests: Verify metrics match actual transaction data in database. Test performance with large datasets. Test metrics update correctly after new transactions.",
             "parentId": "undefined",
-            "updatedAt": "2025-11-19T18:27:18.632Z"
+            "updatedAt": "2025-11-19T22:30:39.133Z"
           },
           {
             "id": 4,
@@ -753,10 +753,10 @@
             "description": "Create Artisan command to identify and reprocess failed payment transactions with support for dry-run mode and configurable limits.",
             "dependencies": [],
             "details": "Create ReprocessFailedPaymentsCommand.php in PaymentModule/Console/Commands namespace. Define signature 'payment:reprocess-failed' with options: --limit (default 100) and --dry-run. Inject PaymentService and TransactionRepository. Retrieve failed transactions using repository method. Iterate through transactions and attempt reprocessing via PaymentService->retryTransaction(). Display progress with colored output (success/failure). In dry-run mode, only display what would be processed. Handle exceptions gracefully and log errors. Register command in service provider.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": "Unit tests: Test command options parsing. Test dry-run mode doesn't modify data. Test output formatting. Integration tests: Test command successfully reprocesses failed transactions. Test limit option restricts number of transactions. Test error handling when reprocessing fails. Verify database updates after command execution.",
             "parentId": "undefined",
-            "updatedAt": "2025-11-19T18:27:18.634Z"
+            "updatedAt": "2025-11-19T22:30:39.137Z"
           },
           {
             "id": 5,
@@ -775,14 +775,14 @@
             "updatedAt": "2025-11-19T18:26:36.039Z"
           }
         ],
-        "updatedAt": "2025-11-19T18:43:55.993Z"
+        "updatedAt": "2025-11-19T22:30:39.137Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-19T18:43:55.995Z",
+      "lastModified": "2025-11-19T22:30:39.138Z",
       "taskCount": 10,
-      "completedCount": 8,
+      "completedCount": 9,
       "tags": [
         "master"
       ]
