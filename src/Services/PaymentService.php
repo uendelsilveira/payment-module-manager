@@ -26,7 +26,11 @@ use UendelSilveira\PaymentModuleManager\Support\LogContext;
 
 class PaymentService
 {
-    public function __construct(protected PaymentGatewayManager $paymentGatewayManager, protected TransactionRepositoryInterface $transactionRepository) {}
+    public function __construct(
+        protected PaymentGatewayManager $paymentGatewayManager,
+        protected TransactionRepositoryInterface $transactionRepository,
+        protected RetryService $retryService
+    ) {}
 
     /**
      * @param array<string, mixed> $data
@@ -179,6 +183,13 @@ class PaymentService
             ->withTransaction($transaction)
             ->withRetry($transaction->retries_count + 1, $maxAttempts)
             ->withRequestId();
+
+        // Check if eligible for retry
+        if (! $this->retryService->isEligibleForRetry($transaction, $maxAttempts)) {
+            Log::channel('payment')->warning('Transaction not eligible for retry', $logContext->toArray());
+
+            throw new \Exception('Transaction is not eligible for retry');
+        }
 
         Log::channel('payment')->info('Reprocessing transaction', $logContext->toArray());
 

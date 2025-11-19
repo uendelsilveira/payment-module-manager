@@ -9,14 +9,12 @@
 
 namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use UendelSilveira\PaymentModuleManager\Http\Requests\CreatePaymentRequest;
 use UendelSilveira\PaymentModuleManager\Http\Requests\RefundRequest;
 use UendelSilveira\PaymentModuleManager\Http\Resources\TransactionResource; // Import the new TransactionResource
-use UendelSilveira\PaymentModuleManager\Jobs\ProcessWebhookJob;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
@@ -149,14 +147,5 @@ class PaymentController extends Controller
                 500
             );
         }
-    }
-
-    public function handleWebhook(Request $request, string $gateway): \Illuminate\Http\JsonResponse
-    {
-        Log::info('Webhook received', ['gateway' => $gateway]);
-
-        ProcessWebhookJob::dispatch($gateway, $request->all());
-
-        return $this->successResponse([], 'Webhook received and queued for processing.');
     }
 }

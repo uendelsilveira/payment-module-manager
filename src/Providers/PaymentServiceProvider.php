@@ -35,6 +35,7 @@ use UendelSilveira\PaymentModuleManager\Repositories\SettingsRepository;
 use UendelSilveira\PaymentModuleManager\Repositories\TransactionRepository;
 use UendelSilveira\PaymentModuleManager\Repositories\WebhookLogRepository; // Adicionado
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
+use UendelSilveira\PaymentModuleManager\Services\RetryService;
 
 class PaymentServiceProvider extends ServiceProvider
 {
@@ -54,7 +55,8 @@ class PaymentServiceProvider extends ServiceProvider
         // Registrar o PaymentService, que depende do Manager e do Repository.
         $this->app->singleton(PaymentService::class, fn ($app): \UendelSilveira\PaymentModuleManager\Services\PaymentService => new PaymentService(
             $app->make(PaymentGatewayManager::class),
-            $app->make(TransactionRepositoryInterface::class)
+            $app->make(TransactionRepositoryInterface::class),
+            $app->make(RetryService::class)
         ));
     }
 

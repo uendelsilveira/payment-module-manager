@@ -12,6 +12,7 @@ use UendelSilveira\PaymentModuleManager\Http\Controllers\HealthCheckController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\PaymentController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\ReportController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\SettingsController;
+use UendelSilveira\PaymentModuleManager\Http\Controllers\WebhookController;
 use UendelSilveira\PaymentModuleManager\Http\Middleware\WebhookValidationMiddleware;
 
 // Health Check - Publicly accessible
@@ -19,7 +20,7 @@ Route::get('health', [HealthCheckController::class, 'check'])
     ->name('health.check');
 
 // Webhook Route - Publicly accessible, authenticated by signature
-Route::post('payment/webhook/{gateway}', [PaymentController::class, 'handleWebhook'])
+Route::post('payment/webhook/{gateway}', [WebhookController::class, 'handle'])
     ->middleware([WebhookValidationMiddleware::class, 'payment.rate_limit:webhook'])
     ->name('payment.webhook');
 
