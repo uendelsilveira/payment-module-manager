@@ -1,7 +1,6 @@
 {
   "name": "uendelsilveira/payment-module-manager",
   "description": "Um gerenciador de módulos de pagamento para Laravel.",
-    "version": "1.4.0",
   "type": "library",
   "license": "MIT",
   "authors": [
