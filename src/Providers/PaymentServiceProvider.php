@@ -12,7 +12,7 @@ namespace UendelSilveira\PaymentModuleManager\Providers;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use UendelSilveira\PaymentModuleManager\Console\Commands\ReprocessFailedPayments;
+use UendelSilveira\PaymentModuleManager\Console\Commands\ReprocessFailedPaymentsCommand;
 use UendelSilveira\PaymentModuleManager\Contracts\GatewayRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
@@ -66,7 +66,7 @@ class PaymentServiceProvider extends ServiceProvider
                 __DIR__.'/../../config/payment.php' => config_path('payment.php'),
             ], 'config');
 
-            $this->commands([ReprocessFailedPayments::class]);
+            $this->commands([ReprocessFailedPaymentsCommand::class]);
         }
 
         // Registrar eventos e listeners.

@@ -26,7 +26,8 @@
     "rector/rector": "^2.2",
     "phpstan/phpstan": "^2.1",
     "phpstan/extension-installer": "^1.4",
-    "laravel/legacy-factories": "^1.4"
+    "laravel/legacy-factories": "^1.4",
+    "laravel/sanctum": "^4.2"
   },
   "autoload": {
     "psr-4": {

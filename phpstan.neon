@@ -57,6 +57,7 @@ parameters:
             path: src/Services/PaymentService.php
             message: '#Cannot cast mixed to int#'
 
+
         # MercadoPagoGateway - paymentClient pode ser mock em testes
         -
             path: src/Gateways/MercadoPagoGateway.php

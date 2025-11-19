@@ -35,6 +35,7 @@ class HealthCheckController
         $configuredGateways = Config::get('payment.gateways', []);
         $configuredGateways = is_array($configuredGateways) ? $configuredGateways : [];
 
+        // Check all configured gateways dynamically
         foreach (array_keys($configuredGateways) as $gatewayName) {
             $gatewayNameStr = is_string($gatewayName) ? $gatewayName : '';
             $checks[$gatewayNameStr.'_api'] = $this->checkGatewayApi($gatewayNameStr);

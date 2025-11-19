@@ -14,6 +14,8 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use UendelSilveira\PaymentModuleManager\Http\Requests\CreatePaymentRequest;
+use UendelSilveira\PaymentModuleManager\Http\Requests\RefundRequest;
+use UendelSilveira\PaymentModuleManager\Http\Resources\TransactionResource; // Import the new TransactionResource
 use UendelSilveira\PaymentModuleManager\Jobs\ProcessWebhookJob;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
@@ -44,7 +46,7 @@ class PaymentController extends Controller
             $transaction = $this->paymentService->processPayment($validatedData);
 
             return $this->successResponse(
-                $transaction->toArray(),
+                new TransactionResource($transaction), // Use TransactionResource
                 'Pagamento processado com sucesso.',
                 201
             );
@@ -72,7 +74,7 @@ class PaymentController extends Controller
             $updatedTransaction = $this->paymentService->getPaymentDetails($transaction);
 
             return $this->successResponse(
-                $updatedTransaction->toArray(),
+                new TransactionResource($updatedTransaction), // Use TransactionResource
                 'Detalhes da transação obtidos com sucesso.'
             );
         } catch (Throwable $throwable) {
@@ -90,7 +92,7 @@ class PaymentController extends Controller
 
     public function refund(
         Transaction $transaction,
-        \Illuminate\Http\Request $request
+        RefundRequest $refundRequest
     ): \Illuminate\Http\JsonResponse {
         Log::info(
             '[PaymentController] Requisição para estornar pagamento.',
@@ -98,13 +100,12 @@ class PaymentController extends Controller
         );
 
         try {
-            $amount = $request->input('amount');
+            $validated = $refundRequest->validated();
+            assert(is_array($validated));
+            $amountValue = $validated['amount'] ?? null;
+            $amount = (is_int($amountValue) || is_float($amountValue)) ? (float) $amountValue : null;
 
-            if ($amount !== null && ! is_numeric($amount)) {
-                return $this->errorResponse('O valor do estorno deve ser um número.', 422);
-            }
-
-            $refundData = $this->paymentService->refundPayment($transaction, $amount ? (float) $amount : null);
+            $refundData = $this->paymentService->refundPayment($transaction, $amount);
 
             return $this->successResponse(
                 $refundData,

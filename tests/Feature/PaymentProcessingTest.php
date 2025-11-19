@@ -10,12 +10,14 @@
 namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Laravel\Sanctum\Sanctum;
 use Mockery;
 use Mockery\MockInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
 use UendelSilveira\PaymentModuleManager\DTOs\ProcessPaymentResponse;
 use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
 use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
+use UendelSilveira\PaymentModuleManager\Tests\Models\User;
 use UendelSilveira\PaymentModuleManager\Tests\TestCase;
 
 class PaymentProcessingTest extends TestCase
@@ -52,6 +54,10 @@ class PaymentProcessingTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_successfully_processes_a_payment_request(): void
     {
+        $user = new User;
+        $user->id = 1;
+        Sanctum::actingAs($user);
+
         // 1. Arrange (Organizar)
 
         // Configurar o mock do Gateway Manager para retornar nosso gateway mockado
@@ -107,6 +113,10 @@ class PaymentProcessingTest extends TestCase
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_returns_a_validation_error_if_amount_is_missing(): void
     {
+        $user = new User;
+        $user->id = 1;
+        Sanctum::actingAs($user);
+
         // 1. Arrange (mantém campos obrigatórios exceto amount)
         $requestData = [
             'method' => 'mercadopago',

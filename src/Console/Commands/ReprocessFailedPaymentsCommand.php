@@ -10,18 +10,19 @@
 namespace UendelSilveira\PaymentModuleManager\Console\Commands;
 
 use Illuminate\Console\Command;
-use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
-use UendelSilveira\PaymentModuleManager\Models\Transaction;
+use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 
 class ReprocessFailedPaymentsCommand extends Command
 {
-    protected $signature = 'payments:reprocess-failed';
+    protected $signature = 'payment:reprocess-failed {--limit=100} {--dry-run}';
 
     protected $description = 'Reprocess failed payment transactions.';
 
-    public function __construct(protected PaymentService $paymentService)
-    {
+    public function __construct(
+        protected PaymentService $paymentService,
+        protected TransactionRepositoryInterface $transactions
+    ) {
         parent::__construct();
     }
 
@@ -29,7 +30,11 @@ class ReprocessFailedPaymentsCommand extends Command
     {
         $this->info('Starting to reprocess failed payments...');
 
-        $failedTransactions = Transaction::where('status', PaymentStatus::FAILED)->get();
+        $limitOption = $this->option('limit');
+        $limit = is_numeric($limitOption) ? (int) $limitOption : 100;
+        $dryRun = (bool) $this->option('dry-run');
+
+        $failedTransactions = $this->transactions->getFailedToReprocess();
 
         if ($failedTransactions->isEmpty()) {
             $this->info('No failed transactions to reprocess.');
@@ -37,16 +42,23 @@ class ReprocessFailedPaymentsCommand extends Command
             return 0;
         }
 
-        $this->info(sprintf('Found %d failed transactions to reprocess.', $failedTransactions->count()));
+        $failedTransactions = $failedTransactions->take($limit);
+
+        $this->info(sprintf('Found %d failed transactions to reprocess (limit: %d).', $failedTransactions->count(), $limit));
 
         foreach ($failedTransactions as $failedTransaction) {
             $this->info('Reprocessing transaction ID: '.$failedTransaction->id);
+
+            if ($dryRun) {
+                $this->line('Dry-run: would reprocess transaction '.$failedTransaction->id);
+                continue;
+            }
 
             try {
                 $payload = is_array($failedTransaction->metadata) ? $failedTransaction->metadata : [];
                 $this->paymentService->processPayment($payload);
                 $this->info(sprintf('Transaction ID: %d reprocessed successfully.', $failedTransaction->id));
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $this->error(sprintf('Failed to reprocess transaction ID: %d. Error: %s', $failedTransaction->id, $e->getMessage()));
             }
         }

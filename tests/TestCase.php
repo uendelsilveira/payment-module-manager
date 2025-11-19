@@ -19,7 +19,10 @@ abstract class TestCase extends OrchestraTestCase
 
     protected function getPackageProviders($app): array
     {
-        return [PaymentServiceProvider::class];
+        return [
+            PaymentServiceProvider::class,
+            \Laravel\Sanctum\SanctumServiceProvider::class,
+        ];
     }
 
     protected function defineEnvironment($app): void
