@@ -1,18 +1,13 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 28/10/2025 20:43:22
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use UendelSilveira\PaymentModuleManager\Http\Requests\CreatePaymentRequest;
+use UendelSilveira\PaymentModuleManager\Jobs\ProcessWebhookJob;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
@@ -23,9 +18,6 @@ class PaymentController extends Controller
 
     public function __construct(protected PaymentService $paymentService) {}
 
-    /**
-     * Processa um novo pagamento.
-     */
     public function process(CreatePaymentRequest $createPaymentRequest): \Illuminate\Http\JsonResponse
     {
         Log::info(
@@ -36,7 +28,6 @@ class PaymentController extends Controller
         try {
             $validated = $createPaymentRequest->validated();
             assert(is_array($validated));
-            /** @var array<string, mixed> $validatedData */
             $validatedData = $validated;
 
             if (isset($validatedData['method']) && ! isset($validatedData['gateway'])) {
@@ -48,7 +39,7 @@ class PaymentController extends Controller
             return $this->successResponse(
                 $transaction->toArray(),
                 'Pagamento processado com sucesso.',
-                201 // Created
+                201
             );
         } catch (Throwable $throwable) {
             Log::error(
@@ -56,17 +47,13 @@ class PaymentController extends Controller
                 ['exception' => $throwable->getMessage()]
             );
 
-            // Em produção, retorna uma resposta de erro padronizada.
             return $this->errorResponse(
                 'Falha ao processar pagamento: '.$throwable->getMessage(),
-                500 // Internal Server Error
+                500
             );
         }
     }
 
-    /**
-     * Exibe os detalhes de uma transação específica.
-     */
     public function show(Transaction $transaction): \Illuminate\Http\JsonResponse
     {
         Log::info(
@@ -89,14 +76,11 @@ class PaymentController extends Controller
 
             return $this->errorResponse(
                 'Falha ao obter detalhes da transação: '.$throwable->getMessage(),
-                500 // Internal Server Error
+                500
             );
         }
     }
 
-    /**
-     * Realiza o estorno total ou parcial de um pagamento.
-     */
     public function refund(
         Transaction $transaction,
         \Illuminate\Http\Request $request
@@ -127,14 +111,11 @@ class PaymentController extends Controller
 
             return $this->errorResponse(
                 'Falha ao processar estorno: '.$throwable->getMessage(),
-                500 // Internal Server Error
+                500
             );
         }
     }
 
-    /**
-     * Cancela um pagamento pendente.
-     */
     public function cancel(Transaction $transaction): \Illuminate\Http\JsonResponse
     {
         Log::info(
@@ -157,8 +138,17 @@ class PaymentController extends Controller
 
             return $this->errorResponse(
                 'Falha ao cancelar pagamento: '.$throwable->getMessage(),
-                500 // Internal Server Error
+                500
             );
         }
+    }
+
+    public function handleWebhook(Request $request, string $gateway): \Illuminate\Http\JsonResponse
+    {
+        Log::info('Webhook received', ['gateway' => $gateway]);
+
+        ProcessWebhookJob::dispatch($gateway, $request->all());
+
+        return $this->successResponse([], 'Webhook received and queued for processing.');
     }
 }

@@ -1,12 +1,5 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 04/11/2025 16:09:38
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Services;
 
 use Illuminate\Support\Facades\DB;
@@ -19,6 +12,7 @@ use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
 use UendelSilveira\PaymentModuleManager\Events\PaymentFailed;
 use UendelSilveira\PaymentModuleManager\Events\PaymentProcessed;
 use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
+use UendelSilveira\PaymentModuleManager\Events\RefundProcessed;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
 use UendelSilveira\PaymentModuleManager\Support\LogContext;
@@ -89,7 +83,7 @@ class PaymentService
 
                 Log::channel('payment')->info('Payment processed successfully', $logContext->toArray());
 
-                PaymentProcessed::dispatch($transaction, $gatewayResponse->details);
+                PaymentProcessed::dispatch($transaction);
 
             } catch (Throwable $throwable) {
                 $this->transactionRepository->update($transaction->id, [
@@ -105,7 +99,7 @@ class PaymentService
 
                 Log::channel('payment')->error('Payment processing failed', $logContext->toArray());
 
-                PaymentFailed::dispatch($transaction, $throwable, $data);
+                PaymentFailed::dispatch($data, $throwable);
 
                 throw $throwable;
             }
@@ -268,6 +262,8 @@ class PaymentService
 
             Log::channel('payment')->info('Refund processed successfully', $logContext->toArray());
 
+            RefundProcessed::dispatch($transaction, $amount ?? $transaction->amount);
+
             return $refundResponse;
         } catch (Throwable $throwable) {
             $logContext->withError($throwable)
@@ -330,11 +326,6 @@ class PaymentService
         }
     }
 
-    /**
-     * Validates the transaction amount against configured monetary limits for the given gateway and payment method.
-     *
-     * @throws \Exception If the amount is outside the allowed limits.
-     */
     protected function validateMonetaryLimits(string $gatewayName, string $paymentMethod, float $amount): void
     {
         $config = config('payment.monetary_limits');
