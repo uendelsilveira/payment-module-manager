@@ -12,6 +12,18 @@
     task-master list --with-subtasks
     task-master list --status=<status> --with-subtasks
 
+## List status
+Lista de status disponíveis para gerenciar tarefas no Task-Master:
+
+- **pending** – Tarefa criada, aguardando início.
+- **in-progress** – Tarefa que já está sendo executada.
+- **done** – Tarefa concluída.
+- **review** – Aguardando revisão antes de ser finalizada.
+- **deferred** – Adiada para mais tarde.
+- **cancelled** – Cancelada e não será executada.
+- **blocked** – Não pode prosseguir devido a dependências ou impedimentos.
+
+
 ## Show next task
 
     task-master next
