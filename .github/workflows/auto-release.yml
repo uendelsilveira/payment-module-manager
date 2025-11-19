@@ -62,29 +62,37 @@ jobs:
       - name: Analyze commits and determine version
         id: version
         run: |
+          # Pega a última tag (ou v0.0.0 se não existir)
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "Last tag: $LAST_TAG"
 
+          # Remove o 'v' da tag e separa em major.minor.patch
           VERSION=${LAST_TAG#v}
           MAJOR=$(echo $VERSION | cut -d. -f1)
           MINOR=$(echo $VERSION | cut -d. -f2)
           PATCH=$(echo $VERSION | cut -d. -f3)
 
+          # Analisa commits desde a última tag
           COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"%s")
 
+          # Determina o tipo de bump
           if echo "$COMMITS" | grep -qE "^(feat!|fix!|refactor!|BREAKING CHANGE)"; then
+            # Breaking change = major bump
             MAJOR=$((MAJOR + 1))
             MINOR=0
             PATCH=0
             BUMP_TYPE="major"
           elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+            # Nova feature = minor bump
             MINOR=$((MINOR + 1))
             PATCH=0
             BUMP_TYPE="minor"
           elif echo "$COMMITS" | grep -qE "^(fix|perf)(\(.+\))?:"; then
+            # Bug fix ou performance = patch bump
             PATCH=$((PATCH + 1))
             BUMP_TYPE="patch"
           else
+            # Sem mudanças relevantes
             echo "No version bump needed"
             echo "should_release=false" >> $GITHUB_OUTPUT
             exit 0
@@ -101,17 +109,20 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           sed -i "s/\*\*Versão:\*\* .*/\*\*Versão:\*\* $VERSION/" README.md || true
+          
 
       - name: Generate Changelog
         if: steps.version.outputs.should_release == 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
           echo "# Release v$VERSION" > RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
           echo "## 🎉 O que há de novo" >> RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
 
+          # Features
           FEATURES=$(git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^feat(\(.+\))?:" || true)
           if [ ! -z "$FEATURES" ]; then
             echo "### ✨ Novas Funcionalidades" >> RELEASE_NOTES.md
@@ -119,6 +130,7 @@ jobs:
             echo "" >> RELEASE_NOTES.md
           fi
 
+          # Fixes
           FIXES=$(git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^fix(\(.+\))?:" || true)
           if [ ! -z "$FIXES" ]; then
             echo "### 🐛 Correções de Bugs" >> RELEASE_NOTES.md
@@ -126,6 +138,7 @@ jobs:
             echo "" >> RELEASE_NOTES.md
           fi
 
+          # Performance
           PERF=$(git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^perf(\(.+\))?:" || true)
           if [ ! -z "$PERF" ]; then
             echo "### ⚡ Performance" >> RELEASE_NOTES.md
@@ -133,6 +146,7 @@ jobs:
             echo "" >> RELEASE_NOTES.md
           fi
 
+          # Refactoring
           REFACTOR=$(git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^refactor(\(.+\))?:" || true)
           if [ ! -z "$REFACTOR" ]; then
             echo "### ♻️ Refatorações" >> RELEASE_NOTES.md
@@ -140,6 +154,7 @@ jobs:
             echo "" >> RELEASE_NOTES.md
           fi
 
+          # Documentation
           DOCS=$(git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^docs(\(.+\))?:" || true)
           if [ ! -z "$DOCS" ]; then
             echo "### 📚 Documentação" >> RELEASE_NOTES.md
@@ -147,14 +162,16 @@ jobs:
             echo "" >> RELEASE_NOTES.md
           fi
 
-      - name: Commit README changes
+          cat RELEASE_NOTES.md
+
+      - name: Commit version changes
         if: steps.version.outputs.should_release == 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "docs: update version in README to v$VERSION [skip ci]"
+          git add README.md composer.json
+          git commit -m "chore(release): v$VERSION [skip ci]"
           git push
 
       - name: Create Git Tag
@@ -178,7 +195,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: steps.version.outputs.should_release == 'true'
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
