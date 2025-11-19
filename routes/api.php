@@ -1,5 +1,12 @@
 <?php
 
+/*
+ By Uendel Silveira
+ Developer Web
+ IDE: PhpStorm
+ Created: 19/11/2025 14:24:12
+*/
+
 use Illuminate\Support\Facades\Route;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\HealthCheckController;
 use UendelSilveira\PaymentModuleManager\Http\Controllers\PaymentController;
