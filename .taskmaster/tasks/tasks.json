@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": 1,
+        "id": "1",
         "title": "Setup Laravel Package Structure and Configuration",
         "description": "Initialize the Laravel package structure with proper service provider, configuration files, and dependency management for the Payment Module Manager.",
         "details": "Create the Laravel package structure following best practices:\n\n1. Create package directory structure:\n   - src/\n   - config/\n   - database/migrations/\n   - routes/\n   - tests/\n\n2. Create PaymentModuleServiceProvider.php:\n   ```php\n   namespace PaymentModule;\n   use Illuminate\\Support\\ServiceProvider;\n   \n   class PaymentModuleServiceProvider extends ServiceProvider {\n       public function register() {\n           $this->mergeConfigFrom(__DIR__.'/../config/payment.php', 'payment');\n           $this->app->singleton(PaymentGatewayManager::class);\n       }\n       \n       public function boot() {\n           $this->publishes([__DIR__.'/../config/payment.php' => config_path('payment.php')], 'config');\n           $this->loadMigrationsFrom(__DIR__.'/../database/migrations');\n           $this->loadRoutesFrom(__DIR__.'/../routes/api.php');\n       }\n   }\n   ```\n\n3. Create config/payment.php with:\n   - Default gateway configuration\n   - Gateway credentials structure (encrypted)\n   - Webhook settings\n   - Rate limiting configuration\n   - Retry strategies\n\n4. Setup composer.json with Laravel dependencies and PSR-4 autoloading\n\n5. Create .env.example with required environment variables for gateway credentials",
@@ -78,7 +78,7 @@
         "updatedAt": "2025-11-18T17:39:26.651Z"
       },
       {
-        "id": 2,
+        "id": "2",
         "title": "Design and Implement Database Schema",
         "description": "Create database migrations for transactions, gateway configurations, webhook logs, and audit trails with proper indexing and optimization.",
         "details": "Create the following migrations:\n\n1. create_payment_gateways_table.php:\n   ```php\n   Schema::create('payment_gateways', function (Blueprint $table) {\n       $table->id();\n       $table->string('name')->unique();\n       $table->string('driver'); // stripe, mercadopago, etc\n       $table->boolean('is_default')->default(false);\n       $table->boolean('is_active')->default(true);\n       $table->text('credentials')->nullable(); // encrypted JSON\n       $table->json('config')->nullable();\n       $table->timestamps();\n       $table->index(['is_active', 'is_default']);\n   });\n   ```\n\n2. create_payment_transactions_table.php:\n   ```php\n   Schema::create('payment_transactions', function (Blueprint $table) {\n       $table->id();\n       $table->uuid('correlation_id')->unique();\n       $table->foreignId('gateway_id')->constrained('payment_gateways');\n       $table->string('gateway_transaction_id')->nullable()->index();\n       $table->string('payment_method'); // pix, credit_card, boleto\n       $table->decimal('amount', 10, 2);\n       $table->string('currency', 3)->default('BRL');\n       $table->string('status')->index(); // pending, approved, failed, refunded, cancelled\n       $table->json('metadata')->nullable();\n       $table->json('gateway_response')->nullable();\n       $table->integer('installments')->default(1);\n       $table->timestamp('processed_at')->nullable();\n       $table->timestamps();\n       $table->index(['status', 'created_at']);\n       $table->index('correlation_id');\n   });\n   ```\n\n3. create_webhook_logs_table.php:\n   ```php\n   Schema::create('webhook_logs', function (Blueprint $table) {\n       $table->id();\n       $table->foreignId('gateway_id')->constrained('payment_gateways');\n       $table->string('event_type');\n       $table->json('payload');\n       $table->string('signature')->nullable();\n       $table->boolean('is_valid')->default(false);\n       $table->boolean('is_processed')->default(false)->index();\n       $table->timestamp('processed_at')->nullable();\n       $table->string('processing_error')->nullable();\n       $table->timestamps();\n       $table->index(['is_processed', 'created_at']);\n   });\n   ```\n\n4. create_payment_refunds_table.php for tracking refunds",
@@ -158,7 +158,7 @@
         "updatedAt": "2025-11-18T18:18:22.651Z"
       },
       {
-        "id": 3,
+        "id": "3",
         "title": "Implement Core Gateway Interface and Manager",
         "description": "Create the PaymentGatewayInterface abstraction and PaymentGatewayManager for managing multiple payment gateway implementations.",
         "details": "1. Create PaymentGatewayInterface.php:\n   ```php\n   namespace PaymentModule\\Contracts;\n   \n   interface PaymentGatewayInterface {\n       public function processPayment(array $data): PaymentResponse;\n       public function refund(string $transactionId, float $amount = null): RefundResponse;\n       public function cancel(string $transactionId): CancelResponse;\n       public function getTransactionStatus(string $transactionId): StatusResponse;\n       public function validateWebhook(array $payload, string $signature): bool;\n       public function getName(): string;\n   }\n   ```\n\n2. Create PaymentGatewayManager.php:\n   ```php\n   namespace PaymentModule\\Services;\n   \n   class PaymentGatewayManager {\n       protected array $gateways = [];\n       protected ?string $defaultGateway = null;\n       \n       public function extend(string $name, Closure $callback): void {\n           $this->gateways[$name] = $callback;\n       }\n       \n       public function gateway(string $name = null): PaymentGatewayInterface {\n           $name = $name ?? $this->getDefaultGateway();\n           if (!isset($this->gateways[$name])) {\n               throw new GatewayNotFoundException(\"Gateway {$name} not found\");\n           }\n           return call_user_func($this->gateways[$name]);\n       }\n       \n       public function setDefaultGateway(string $name): void {\n           $this->defaultGateway = $name;\n       }\n       \n       private function getDefaultGateway(): string {\n           return $this->defaultGateway ?? config('payment.default_gateway');\n       }\n   }\n   ```\n\n3. Create response DTOs (PaymentResponse, RefundResponse, etc.) with standardized structure\n\n4. Create custom exceptions (GatewayNotFoundException, PaymentProcessingException, etc.)\n\n5. Register manager in service provider with gateway discovery from config",
@@ -233,7 +233,7 @@
         "updatedAt": "2025-11-18T19:41:41.964Z"
       },
       {
-        "id": 4,
+        "id": "4",
         "title": "Implement Repository Pattern for Transaction Management",
         "description": "Create repository classes for managing payment transactions, gateways, and webhook logs with optimized database queries.",
         "details": "1. Create TransactionRepository.php:\n   ```php\n   namespace PaymentModule\\Repositories;\n   \n   class TransactionRepository {\n       public function create(array $data): PaymentTransaction {\n           return PaymentTransaction::create([\n               'correlation_id' => Str::uuid(),\n               'gateway_id' => $data['gateway_id'],\n               'payment_method' => $data['payment_method'],\n               'amount' => $data['amount'],\n               'status' => 'pending',\n               'metadata' => $data['metadata'] ?? [],\n               'installments' => $data['installments'] ?? 1,\n           ]);\n       }\n       \n       public function findByCorrelationId(string $correlationId): ?PaymentTransaction {\n           return PaymentTransaction::where('correlation_id', $correlationId)->first();\n       }\n       \n       public function updateStatus(int $id, string $status, array $gatewayResponse = []): bool {\n           return PaymentTransaction::where('id', $id)->update([\n               'status' => $status,\n               'gateway_response' => $gatewayResponse,\n               'processed_at' => now(),\n           ]);\n       }\n       \n       public function getFailedTransactions(int $limit = 100): Collection {\n           return PaymentTransaction::where('status', 'failed')\n               ->whereNull('processed_at')\n               ->orWhere('processed_at', '<', now()->subHours(24))\n               ->limit($limit)\n               ->get();\n       }\n   }\n   ```\n\n2. Create GatewayRepository.php for managing gateway configurations\n\n3. Create WebhookLogRepository.php:\n   ```php\n   public function logWebhook(array $data): WebhookLog {\n       return WebhookLog::create($data);\n   }\n   \n   public function markAsProcessed(int $id): bool {\n       return WebhookLog::where('id', $id)->update([\n           'is_processed' => true,\n           'processed_at' => now(),\n       ]);\n   }\n   ```\n\n4. Create Eloquent models with proper relationships, casts, and accessors\n\n5. Implement query scopes for common filters (by status, date range, gateway)",
@@ -310,7 +310,7 @@
         "updatedAt": "2025-11-19T00:51:33.179Z"
       },
       {
-        "id": 5,
+        "id": "5",
         "title": "Implement Payment Processing Service with Idempotency",
         "description": "Create the core payment processing service that handles payment creation, validation, and idempotency checks across different payment methods.",
         "details": "1. Create PaymentService.php:\n   ```php\n   namespace PaymentModule\\Services;\n   \n   class PaymentService {\n       public function __construct(\n           protected PaymentGatewayManager $gatewayManager,\n           protected TransactionRepository $transactionRepo,\n           protected IdempotencyService $idempotency\n       ) {}\n       \n       public function processPayment(array $data, string $idempotencyKey = null): PaymentResponse {\n           // Check idempotency\n           if ($idempotencyKey && $cached = $this->idempotency->get($idempotencyKey)) {\n               return $cached;\n           }\n           \n           DB::beginTransaction();\n           try {\n               // Validate payment data\n               $validated = $this->validatePaymentData($data);\n               \n               // Create transaction record\n               $transaction = $this->transactionRepo->create($validated);\n               \n               // Get gateway and process\n               $gateway = $this->gatewayManager->gateway($data['gateway'] ?? null);\n               $response = $gateway->processPayment($this->prepareGatewayData($validated));\n               \n               // Update transaction with gateway response\n               $this->transactionRepo->updateStatus(\n                   $transaction->id,\n                   $response->status,\n                   $response->toArray()\n               );\n               \n               DB::commit();\n               \n               // Cache response for idempotency\n               if ($idempotencyKey) {\n                   $this->idempotency->store($idempotencyKey, $response, 3600);\n               }\n               \n               return $response;\n           } catch (\\Exception $e) {\n               DB::rollBack();\n               Log::error('Payment processing failed', [\n                   'correlation_id' => $transaction->correlation_id ?? null,\n                   'error' => $e->getMessage()\n               ]);\n               throw new PaymentProcessingException($e->getMessage(), $e->getCode(), $e);\n           }\n       }\n       \n       private function validatePaymentData(array $data): array {\n           return Validator::make($data, [\n               'payment_method' => 'required|in:pix,credit_card,boleto',\n               'amount' => 'required|numeric|min:0.01',\n               'installments' => 'nullable|integer|min:1|max:12',\n               'customer' => 'required|array',\n           ])->validate();\n       }\n   }\n   ```\n\n2. Create IdempotencyService using Laravel Cache\n\n3. Implement payment method specific validation (credit card, PIX, boleto)\n\n4. Add correlation ID generation and logging throughout the flow\n\n5. Implement retry logic with exponential backoff for gateway communication failures",
@@ -385,7 +385,7 @@
         "updatedAt": "2025-11-19T00:50:46.164Z"
       },
       {
-        "id": 6,
+        "id": "6",
         "title": "Implement Refund and Cancellation Services",
         "description": "Create services for handling payment refunds (full and partial) and cancellations with proper validation and audit trails.",
         "details": "1. Create RefundService.php:\n   ```php\n   namespace PaymentModule\\Services;\n   \n   class RefundService {\n       public function __construct(\n           protected PaymentGatewayManager $gatewayManager,\n           protected TransactionRepository $transactionRepo,\n           protected RefundRepository $refundRepo\n       ) {}\n       \n       public function refund(string $transactionId, float $amount = null, string $reason = null): RefundResponse {\n           $transaction = $this->transactionRepo->findByCorrelationId($transactionId);\n           \n           if (!$transaction) {\n               throw new TransactionNotFoundException(\"Transaction {$transactionId} not found\");\n           }\n           \n           if (!in_array($transaction->status, ['approved', 'partially_refunded'])) {\n               throw new InvalidRefundException(\"Transaction cannot be refunded in current status: {$transaction->status}\");\n           }\n           \n           // Validate refund amount\n           $refundAmount = $amount ?? $transaction->amount;\n           $totalRefunded = $this->refundRepo->getTotalRefunded($transaction->id);\n           \n           if (($totalRefunded + $refundAmount) > $transaction->amount) {\n               throw new InvalidRefundException(\"Refund amount exceeds transaction amount\");\n           }\n           \n           DB::beginTransaction();\n           try {\n               // Process refund with gateway\n               $gateway = $this->gatewayManager->gateway($transaction->gateway->name);\n               $response = $gateway->refund($transaction->gateway_transaction_id, $refundAmount);\n               \n               // Record refund\n               $refund = $this->refundRepo->create([\n                   'transaction_id' => $transaction->id,\n                   'amount' => $refundAmount,\n                   'reason' => $reason,\n                   'status' => $response->status,\n                   'gateway_refund_id' => $response->refundId,\n               ]);\n               \n               // Update transaction status\n               $newStatus = ($totalRefunded + $refundAmount) >= $transaction->amount \n                   ? 'refunded' \n                   : 'partially_refunded';\n               $this->transactionRepo->updateStatus($transaction->id, $newStatus);\n               \n               DB::commit();\n               return $response;\n           } catch (\\Exception $e) {\n               DB::rollBack();\n               throw new RefundProcessingException($e->getMessage(), $e->getCode(), $e);\n           }\n       }\n   }\n   ```\n\n2. Create CancellationService.php for pending payment cancellations\n\n3. Create RefundRepository with methods to track refund history\n\n4. Add validation for refund eligibility based on payment method and gateway rules\n\n5. Implement audit logging for all refund and cancellation operations",
@@ -466,7 +466,7 @@
         "updatedAt": "2025-11-19T01:03:31.107Z"
       },
       {
-        "id": 7,
+        "id": "7",
         "title": "Implement Concrete Gateway Adapters (Stripe/MercadoPago)",
         "description": "Create concrete implementations of PaymentGatewayInterface for at least two popular gateways with support for PIX, credit card, and boleto payment methods.",
         "details": "1. Create StripeGateway.php:\n   ```php\n   namespace PaymentModule\\Gateways;\n   \n   class StripeGateway implements PaymentGatewayInterface {\n       protected StripeClient $client;\n       \n       public function __construct(array $credentials) {\n           $this->client = new StripeClient($credentials['secret_key']);\n       }\n       \n       public function processPayment(array $data): PaymentResponse {\n           try {\n               $intent = $this->client->paymentIntents->create([\n                   'amount' => $data['amount'] * 100, // Convert to cents\n                   'currency' => $data['currency'] ?? 'brl',\n                   'payment_method_types' => [$this->mapPaymentMethod($data['payment_method'])],\n                   'metadata' => $data['metadata'] ?? [],\n               ]);\n               \n               return new PaymentResponse([\n                   'status' => $this->mapStatus($intent->status),\n                   'transaction_id' => $intent->id,\n                   'payment_data' => $this->extractPaymentData($intent, $data['payment_method']),\n               ]);\n           } catch (\\Stripe\\Exception\\ApiErrorException $e) {\n               throw new GatewayException($e->getMessage(), $e->getCode(), $e);\n           }\n       }\n       \n       public function validateWebhook(array $payload, string $signature): bool {\n           try {\n               \\Stripe\\Webhook::constructEvent(\n                   json_encode($payload),\n                   $signature,\n                   config('payment.gateways.stripe.webhook_secret')\n               );\n               return true;\n           } catch (\\Exception $e) {\n               return false;\n           }\n       }\n       \n       private function mapPaymentMethod(string $method): string {\n           return match($method) {\n               'credit_card' => 'card',\n               'pix' => 'pix',\n               'boleto' => 'boleto',\n               default => throw new UnsupportedPaymentMethodException($method)\n           };\n       }\n   }\n   ```\n\n2. Create MercadoPagoGateway.php with similar structure\n\n3. Implement payment method specific logic:\n   - PIX: Return QR code and payment code\n   - Credit Card: Handle installments and tokenization\n   - Boleto: Return boleto URL and barcode\n\n4. Implement status mapping from gateway-specific statuses to standardized statuses\n\n5. Add comprehensive error handling and logging\n\n6. Register gateways in service provider boot method",
@@ -475,11 +475,75 @@
         "dependencies": [
           "3"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement StripeGateway adapter with payment method mapping",
+            "description": "Create the StripeGateway class implementing PaymentGatewayInterface with support for PIX, credit card, and boleto payment methods including proper method mapping and client initialization. [Updated: 11/19/2025]",
+            "dependencies": [],
+            "details": "Create StripeGateway.php in PaymentModule\\Gateways namespace. Implement constructor accepting credentials array and initializing StripeClient. Implement processPayment method that creates payment intents with proper amount conversion (cents), currency handling, and payment method mapping. Create mapPaymentMethod private method to convert internal payment method names (credit_card, pix, boleto) to Stripe-specific types (card, pix, boleto). Handle metadata passing and implement extractPaymentData method to extract payment-specific data like QR codes for PIX, installment info for credit cards, and boleto URLs.\n<info added on 2025-11-19T14:09:18.409Z>\nAdd NotImplementedException throws for webhook validation and status mapping methods. Throw NotImplementedException in validateWebhook method with message indicating Stripe webhook signature validation is not yet implemented. Throw NotImplementedException in getTransactionStatus method with message indicating Stripe status retrieval is not yet implemented. Add private mapStripeStatus method stub that throws NotImplementedException for converting Stripe payment intent statuses to internal status enum values.\n</info added on 2025-11-19T14:09:18.409Z>",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Mock StripeClient and test processPayment with different payment methods. Verify amount conversion to cents. Test mapPaymentMethod throws UnsupportedPaymentMethodException for invalid methods. Test metadata is properly passed to Stripe API.",
+            "updatedAt": "2025-11-19T14:15:09.385Z",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement StripeGateway webhook validation and status mapping",
+            "description": "Add webhook signature validation and status mapping logic to StripeGateway to convert Stripe-specific statuses to standardized payment statuses.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement validateWebhook method using Stripe\\Webhook::constructEvent to verify webhook signatures against configured webhook secret. Create mapStatus private method to convert Stripe payment intent statuses (requires_payment_method, requires_confirmation, requires_action, processing, succeeded, canceled) to standardized statuses (pending, processing, completed, failed, cancelled). Implement getTransactionStatus, refund, and cancel methods using Stripe API. Add proper exception handling wrapping Stripe\\Exception\\ApiErrorException into GatewayException.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test validateWebhook with valid and invalid signatures. Test mapStatus converts all Stripe statuses correctly. Mock Stripe API responses for getTransactionStatus, refund, and cancel methods. Verify GatewayException wrapping.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T14:15:09.395Z"
+          },
+          {
+            "id": 3,
+            "title": "Implement MercadoPagoGateway adapter with payment method support",
+            "description": "Create the MercadoPagoGateway class implementing PaymentGatewayInterface with support for PIX, credit card, and boleto payment methods specific to MercadoPago API.",
+            "dependencies": [],
+            "details": "Create MercadoPagoGateway.php in PaymentModule\\Gateways namespace. Implement constructor accepting credentials (access_token, public_key) and initializing MercadoPago SDK client. Implement processPayment method using MercadoPago payment creation API with proper payment method handling. For PIX: extract QR code data and payment code from response. For credit cards: handle installment configuration and card tokenization. For boleto: extract boleto URL and barcode from response. Implement payment method mapping specific to MercadoPago API requirements. Handle MercadoPago-specific metadata and customer information.",
+            "status": "done",
+            "testStrategy": "Unit tests: Mock MercadoPago SDK client and test processPayment for each payment method. Verify PIX returns QR code and payment code. Test credit card handles installments. Test boleto returns URL and barcode. Test proper error handling for API failures.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T14:15:43.851Z"
+          },
+          {
+            "id": 4,
+            "title": "Implement MercadoPagoGateway webhook validation and complete interface",
+            "description": "Add webhook validation, status mapping, and complete all PaymentGatewayInterface methods for MercadoPagoGateway including refund, cancel, and transaction status retrieval.",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement validateWebhook method using MercadoPago webhook signature validation with x-signature and x-request-id headers. Create status mapping from MercadoPago statuses (pending, approved, authorized, in_process, in_mediation, rejected, cancelled, refunded, charged_back) to standardized statuses. Implement getTransactionStatus using MercadoPago payment retrieval API. Implement refund method supporting full and partial refunds. Implement cancel method for pending payments. Add comprehensive error handling converting MercadoPago exceptions to GatewayException. Add logging for all gateway operations using Laravel Log facade.",
+            "status": "done",
+            "testStrategy": "Unit tests: Test webhook validation with MercadoPago signature format. Test status mapping for all MercadoPago statuses. Mock API calls for refund, cancel, and getTransactionStatus. Integration tests: Test against MercadoPago sandbox environment for all payment methods.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T14:15:43.855Z"
+          },
+          {
+            "id": 5,
+            "title": "Register gateway adapters and add comprehensive error handling",
+            "description": "Register both StripeGateway and MercadoPagoGateway in the service provider, add comprehensive error handling, logging, and configuration management for both gateways.",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Update PaymentServiceProvider boot method to register both gateways with PaymentGatewayManager using configuration from config/payment.php. Add gateway-specific configuration including API credentials, webhook secrets, and environment settings (sandbox/production). Implement GatewayException class if not exists with proper error codes and messages. Add logging throughout both gateway implementations for payment processing, refunds, cancellations, and webhook validations. Create gateway factory methods to instantiate gateways with proper credential injection. Add validation for required configuration keys. Implement graceful degradation when gateway credentials are missing. Add documentation comments for all public methods.",
+            "status": "done",
+            "testStrategy": "Unit tests: Test service provider registers gateways correctly. Test gateway instantiation with valid and invalid credentials. Test configuration validation. Integration tests: Verify both gateways can be retrieved from manager. Test logging output for various operations. Test error handling with missing configuration.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T14:15:43.858Z"
+          }
+        ],
+        "updatedAt": "2025-11-19T14:15:43.858Z"
       },
       {
-        "id": 8,
+        "id": "8",
         "title": "Implement Webhook Processing with Queue and Validation",
         "description": "Create webhook endpoint, validation middleware, and asynchronous processing using Laravel queues with replay attack protection.",
         "details": "1. Create WebhookController.php:\n   ```php\n   namespace PaymentModule\\Http\\Controllers;\n   \n   class WebhookController extends Controller {\n       public function handle(Request $request, string $gateway) {\n           // Log incoming webhook\n           $webhookLog = app(WebhookLogRepository::class)->logWebhook([\n               'gateway_id' => $this->getGatewayId($gateway),\n               'event_type' => $request->input('type') ?? 'unknown',\n               'payload' => $request->all(),\n               'signature' => $request->header('X-Signature') ?? $request->header('Stripe-Signature'),\n           ]);\n           \n           // Dispatch to queue for async processing\n           ProcessWebhookJob::dispatch($webhookLog->id, $gateway)\n               ->onQueue('webhooks');\n           \n           return response()->json(['status' => 'received'], 200);\n       }\n   }\n   ```\n\n2. Create ProcessWebhookJob.php:\n   ```php\n   namespace PaymentModule\\Jobs;\n   \n   class ProcessWebhookJob implements ShouldQueue {\n       use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;\n       \n       public int $tries = 3;\n       public int $backoff = 60;\n       \n       public function handle(WebhookService $webhookService) {\n           $webhookService->process($this->webhookLogId, $this->gateway);\n       }\n   }\n   ```\n\n3. Create WebhookService.php:\n   ```php\n   public function process(int $webhookLogId, string $gatewayName): void {\n       $log = $this->webhookLogRepo->find($webhookLogId);\n       \n       // Validate signature\n       $gateway = $this->gatewayManager->gateway($gatewayName);\n       $isValid = $gateway->validateWebhook($log->payload, $log->signature);\n       \n       if (!$isValid) {\n           $log->update(['is_valid' => false, 'processing_error' => 'Invalid signature']);\n           return;\n       }\n       \n       // Check for replay attack\n       if ($this->isReplayAttack($log)) {\n           $log->update(['processing_error' => 'Replay attack detected']);\n           return;\n       }\n       \n       // Process webhook event\n       $this->handleWebhookEvent($log, $gateway);\n       \n       $this->webhookLogRepo->markAsProcessed($webhookLogId);\n   }\n   \n   private function isReplayAttack(WebhookLog $log): bool {\n       // Check if same payload was processed recently\n       $hash = hash('sha256', json_encode($log->payload));\n       return Cache::has(\"webhook_hash:{$hash}\");\n   }\n   ```\n\n4. Create webhook validation middleware with rate limiting\n\n5. Implement event handlers for different webhook types (payment.approved, payment.failed, etc.)\n\n6. Add webhook routes to api.php with middleware protection",
@@ -489,11 +553,76 @@
           "4",
           "7"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create WebhookController with logging and queue dispatch",
+            "description": "Implement the WebhookController that receives incoming webhooks, logs them to the database, and dispatches them to a queue for asynchronous processing.",
+            "dependencies": [],
+            "details": "Create WebhookController.php in PaymentModule/Http/Controllers namespace. Implement handle() method that accepts Request and gateway string parameter. Use WebhookLogRepository to log incoming webhooks with gateway_id, event_type, payload, and signature. Extract signature from X-Signature or Stripe-Signature headers. Dispatch ProcessWebhookJob to 'webhooks' queue with webhook log ID and gateway name. Return JSON response with status 'received' and 200 status code. Implement getGatewayId() helper method to resolve gateway ID from gateway name.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Mock WebhookLogRepository and verify logWebhook is called with correct parameters. Mock ProcessWebhookJob dispatch and verify it's called with correct parameters and queue name. Test signature extraction from different header formats. Test response format and status code. Integration tests: Test full webhook receipt flow with database logging.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T14:17:16.017Z"
+          },
+          {
+            "id": 2,
+            "title": "Create ProcessWebhookJob for asynchronous webhook processing",
+            "description": "Implement the queued job that processes webhooks asynchronously with retry logic and exponential backoff for failed attempts.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create ProcessWebhookJob.php in PaymentModule/Jobs namespace. Implement ShouldQueue interface and use Dispatchable, InteractsWithQueue, Queueable, SerializesModels traits. Add properties for webhookLogId (int) and gateway (string). Set tries to 3 and backoff to 60 seconds. Implement handle() method that accepts WebhookService via dependency injection. Call webhookService->process() with webhookLogId and gateway parameters. Add constructor to accept and store webhookLogId and gateway parameters.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test job can be instantiated with correct parameters. Test job implements ShouldQueue interface. Mock WebhookService and verify process() is called with correct parameters. Test retry configuration (tries and backoff). Integration tests: Test job is dispatched to correct queue and processes webhooks. Test retry logic on failures.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T14:17:16.021Z"
+          },
+          {
+            "id": 3,
+            "title": "Implement WebhookService with signature validation and replay protection",
+            "description": "Create the WebhookService that validates webhook signatures, detects replay attacks using hash-based caching, and processes webhook events through the gateway.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create WebhookService.php in PaymentModule/Services namespace. Inject WebhookLogRepository and PaymentGatewayManager. Implement process() method that retrieves webhook log, validates signature using gateway->validateWebhook(), checks for replay attacks, and handles webhook events. Implement isReplayAttack() method that generates SHA256 hash of payload and checks if hash exists in cache with key 'webhook_hash:{hash}'. Store hash in cache with appropriate TTL (e.g., 5 minutes) after processing. Update webhook log with is_valid flag and processing_error on validation failures. Call markAsProcessed() on successful processing. Implement handleWebhookEvent() method to route events to appropriate handlers.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test signature validation with valid and invalid signatures. Test replay attack detection with duplicate payloads. Test webhook log updates on validation failures. Mock gateway and repository dependencies. Integration tests: Test full webhook processing flow. Test cache-based replay protection. Test webhook log status updates correctly.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T14:17:16.025Z"
+          },
+          {
+            "id": 4,
+            "title": "Create webhook validation middleware with rate limiting",
+            "description": "Implement middleware to validate incoming webhooks, enforce rate limiting to prevent abuse, and ensure proper authentication before processing.",
+            "dependencies": [
+              3
+            ],
+            "details": "Create ValidateWebhook.php middleware in PaymentModule/Http/Middleware namespace. Implement handle() method that validates request format, checks for required headers (signature headers), and enforces rate limiting using Laravel's RateLimiter. Set rate limit to reasonable threshold (e.g., 100 requests per minute per gateway). Validate that gateway parameter is a supported gateway name. Return 429 Too Many Requests on rate limit exceeded. Return 400 Bad Request on missing required headers or invalid gateway. Log suspicious activity (excessive rate limit hits). Allow request to proceed if all validations pass.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test rate limiting logic with multiple requests. Test validation of required headers. Test gateway name validation. Test proper HTTP status codes returned. Integration tests: Test middleware blocks requests exceeding rate limit. Test middleware allows valid requests through. Security tests: Test middleware prevents abuse scenarios.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T14:17:16.027Z"
+          },
+          {
+            "id": 5,
+            "title": "Implement event handlers and webhook routes",
+            "description": "Create specific event handlers for different webhook types (payment.approved, payment.failed, etc.) and register webhook routes with appropriate middleware protection.",
+            "dependencies": [
+              4
+            ],
+            "details": "Create WebhookEventHandler.php in PaymentModule/Services namespace with methods for each event type: handlePaymentApproved(), handlePaymentFailed(), handlePaymentRefunded(), handlePaymentCancelled(). Each handler should update transaction status, trigger appropriate events, and log actions. Add webhook routes to api.php: POST /webhooks/{gateway} pointing to WebhookController@handle. Apply ValidateWebhook middleware and throttle middleware to webhook routes. Exclude webhook routes from CSRF protection. Update WebhookService->handleWebhookEvent() to dispatch to appropriate event handler based on event_type. Implement event type mapping for different gateway event naming conventions.",
+            "status": "in-progress",
+            "testStrategy": "Unit tests: Test each event handler updates transaction status correctly. Test event type mapping for different gateways. Test event handlers trigger appropriate domain events. Integration tests: Test full webhook flow from receipt to transaction update. Test routes are properly protected by middleware. Test CSRF exclusion for webhook routes. Test different webhook event types process correctly.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-19T14:17:16.030Z"
+          }
+        ],
+        "updatedAt": "2025-11-19T14:17:16.030Z"
       },
       {
-        "id": 9,
+        "id": "9",
         "title": "Implement API Endpoints with Authentication and Rate Limiting",
         "description": "Create RESTful API endpoints for payment operations, transaction queries, and reports with proper authentication, validation, and rate limiting.",
         "details": "1. Create API routes in routes/api.php:\n   ```php\n   Route::prefix('api/payments')->middleware(['api', 'auth:sanctum', 'throttle:60,1'])->group(function () {\n       Route::post('/', [PaymentController::class, 'create']);\n       Route::get('/{correlationId}', [PaymentController::class, 'show']);\n       Route::post('/{correlationId}/refund', [PaymentController::class, 'refund']);\n       Route::post('/{correlationId}/cancel', [PaymentController::class, 'cancel']);\n       Route::get('/{correlationId}/status', [PaymentController::class, 'status']);\n   });\n   \n   Route::prefix('api/reports')->middleware(['api', 'auth:sanctum'])->group(function () {\n       Route::get('/transactions', [ReportController::class, 'transactions']);\n       Route::get('/metrics', [ReportController::class, 'metrics']);\n   });\n   \n   Route::get('api/health', [HealthController::class, 'check']);\n   ```\n\n2. Create PaymentController.php:\n   ```php\n   namespace PaymentModule\\Http\\Controllers;\n   \n   class PaymentController extends Controller {\n       public function create(CreatePaymentRequest $request, PaymentService $paymentService) {\n           $idempotencyKey = $request->header('Idempotency-Key');\n           \n           $response = $paymentService->processPayment(\n               $request->validated(),\n               $idempotencyKey\n           );\n           \n           return response()->json($response, 201);\n       }\n       \n       public function show(string $correlationId, TransactionRepository $repo) {\n           $transaction = $repo->findByCorrelationId($correlationId);\n           \n           if (!$transaction) {\n               return response()->json(['error' => 'Transaction not found'], 404);\n           }\n           \n           return response()->json(new TransactionResource($transaction));\n       }\n   }\n   ```\n\n3. Create Form Requests for validation (CreatePaymentRequest, RefundRequest, etc.)\n\n4. Create API Resources to format responses and mask sensitive data:\n   ```php\n   class TransactionResource extends JsonResource {\n       public function toArray($request) {\n           return [\n               'id' => $this->correlation_id,\n               'status' => $this->status,\n               'amount' => $this->amount,\n               'payment_method' => $this->payment_method,\n               'created_at' => $this->created_at,\n               // Never expose gateway credentials or sensitive data\n           ];\n       }\n   }\n   ```\n\n5. Create ReportController with filtering, pagination, and aggregation\n\n6. Create HealthController to check database, queue, and gateway connectivity\n\n7. Implement custom rate limiting for different endpoint types",
@@ -503,11 +632,72 @@
           "5",
           "6"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create API routes with authentication and rate limiting middleware",
+            "description": "Define all RESTful API routes in routes/api.php with proper middleware for authentication (Sanctum) and rate limiting for payment operations, reports, and health check endpoints.",
+            "dependencies": [],
+            "details": "Create route groups in routes/api.php with prefix 'api/payments' and 'api/reports'. Apply middleware: 'api', 'auth:sanctum', and 'throttle:60,1' for payment routes. Define routes for payment creation, retrieval, refund, cancellation, and status checking. Add report routes for transactions and metrics. Include a public health check endpoint without authentication.",
+            "status": "pending",
+            "testStrategy": "Unit tests: Test route definitions are registered correctly. Test middleware is applied to correct routes. Integration tests: Test authenticated requests pass through. Test unauthenticated requests are blocked with 401. Test rate limiting blocks requests exceeding 60 per minute.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement PaymentController with CRUD operations",
+            "description": "Create PaymentController with methods for creating payments, retrieving transaction details, processing refunds, cancellations, and checking payment status with proper error handling.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create PaymentController.php in PaymentModule/Http/Controllers namespace. Implement create() method with idempotency key handling, show() method to retrieve transactions by correlation ID, refund() and cancel() methods for payment operations, and status() method for checking payment status. Inject PaymentService and TransactionRepository dependencies. Return appropriate HTTP status codes (201 for creation, 404 for not found, etc.).",
+            "status": "pending",
+            "testStrategy": "Unit tests: Test each controller method with mocked services and repositories. Test idempotency key extraction from headers. Test 404 responses for non-existent transactions. Integration tests: Test full request/response cycle with database. Test validation errors return 422 status codes.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Create Form Request classes for API validation",
+            "description": "Implement Laravel Form Request classes (CreatePaymentRequest, RefundRequest, CancelRequest) with validation rules for all API endpoints to ensure data integrity and security.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create CreatePaymentRequest with validation rules for amount (required, numeric, positive), payment_method (required, in allowed list), gateway_id (required, exists in database), and customer data. Create RefundRequest with validation for amount (optional, numeric, less than or equal to original), and reason (optional, string). Create CancelRequest if needed. Include authorization logic in authorize() method to check user permissions.",
+            "status": "pending",
+            "testStrategy": "Unit tests: Test validation rules pass with valid data. Test validation fails with invalid data (negative amounts, invalid payment methods, missing required fields). Test custom validation messages. Integration tests: Test form requests are automatically applied to controller methods.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Create API Resource classes for response formatting",
+            "description": "Implement JsonResource classes (TransactionResource, PaymentResource, ReportResource) to format API responses consistently and mask sensitive data like gateway credentials and internal IDs.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create TransactionResource extending JsonResource with toArray() method that returns correlation_id, status, amount, payment_method, created_at, and other safe fields. Explicitly exclude sensitive data like gateway credentials, internal database IDs, and raw gateway responses. Create PaymentResource for payment creation responses. Create ReportResource for report data formatting. Use resource collections for list endpoints.",
+            "status": "pending",
+            "testStrategy": "Unit tests: Test resources format data correctly. Test sensitive fields are never exposed in output. Test resource collections work with pagination. Integration tests: Test API responses match expected JSON structure. Test nested relationships are properly formatted.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement ReportController and HealthController",
+            "description": "Create ReportController with filtering, pagination, and aggregation for transaction reports and metrics, and HealthController to monitor system health including database, queue, and gateway connectivity.",
+            "dependencies": [
+              1,
+              4
+            ],
+            "details": "Create ReportController with transactions() method supporting filters (date range, status, payment method, gateway), pagination, and sorting. Implement metrics() method with aggregations (total volume, success rate, average transaction value). Create HealthController with check() method that tests database connection, queue connectivity, cache availability, and gateway API reachability. Return appropriate status codes (200 for healthy, 503 for unhealthy) with detailed component status.",
+            "status": "pending",
+            "testStrategy": "Unit tests: Test report filtering logic with mocked repositories. Test health check detects component failures. Integration tests: Test reports return correct data with various filters. Test pagination works correctly. Test health endpoint accurately reflects system status. Test metrics calculations are accurate.",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2025-11-19T13:16:43.560Z"
       },
       {
-        "id": 10,
+        "id": "10",
         "title": "Implement Monitoring, Logging, and Artisan Commands",
         "description": "Create comprehensive logging with correlation IDs, health check endpoint, metrics collection, and Artisan command for reprocessing failed transactions.",
         "details": "1. Create CorrelationIdMiddleware.php:\n   ```php\n   namespace PaymentModule\\Http\\Middleware;\n   \n   class CorrelationIdMiddleware {\n       public function handle(Request $request, Closure $next) {\n           $correlationId = $request->header('X-Correlation-ID') ?? Str::uuid();\n           \n           Log::withContext(['correlation_id' => $correlationId]);\n           \n           $response = $next($request);\n           $response->headers->set('X-Correlation-ID', $correlationId);\n           \n           return $response;\n       }\n   }\n   ```\n\n2. Create ReprocessFailedPaymentsCommand.php:\n   ```php\n   namespace PaymentModule\\Console\\Commands;\n   \n   class ReprocessFailedPaymentsCommand extends Command {\n       protected $signature = 'payment:reprocess-failed {--limit=100} {--dry-run}';\n       protected $description = 'Reprocess failed payment transactions';\n       \n       public function handle(PaymentService $paymentService, TransactionRepository $repo) {\n           $failed = $repo->getFailedTransactions($this->option('limit'));\n           \n           $this->info(\"Found {$failed->count()} failed transactions\");\n           \n           foreach ($failed as $transaction) {\n               if ($this->option('dry-run')) {\n                   $this->line(\"Would reprocess: {$transaction->correlation_id}\");\n                   continue;\n               }\n               \n               try {\n                   $paymentService->retryTransaction($transaction);\n                   $this->info(\"✓ Reprocessed: {$transaction->correlation_id}\");\n               } catch (\\Exception $e) {\n                   $this->error(\"✗ Failed: {$transaction->correlation_id} - {$e->getMessage()}\");\n               }\n           }\n       }\n   }\n   ```\n\n3. Create HealthCheckController.php:\n   ```php\n   public function check() {\n       $checks = [\n           'database' => $this->checkDatabase(),\n           'queue' => $this->checkQueue(),\n           'cache' => $this->checkCache(),\n           'gateways' => $this->checkGateways(),\n       ];\n       \n       $healthy = collect($checks)->every(fn($check) => $check['status'] === 'ok');\n       \n       return response()->json([\n           'status' => $healthy ? 'healthy' : 'unhealthy',\n           'checks' => $checks,\n           'timestamp' => now(),\n       ], $healthy ? 200 : 503);\n   }\n   ```\n\n4. Create MetricsService.php for collecting transaction metrics:\n   - Total transactions by status\n   - Average processing time\n   - Success rate by gateway\n   - Revenue metrics\n\n5. Implement structured logging throughout the application with correlation IDs\n\n6. Create custom log channel for payment operations in config/logging.php\n\n7. Add performance monitoring for critical operations (payment processing, webhook handling)\n\n8. Register commands in service provider",
@@ -517,21 +707,19 @@
           "5",
           "8"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "in-progress",
+        "subtasks": [],
+        "updatedAt": "2025-11-19T13:16:51.194Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-19T01:03:31.108Z",
+      "lastModified": "2025-11-19T14:17:16.031Z",
       "taskCount": 10,
-      "completedCount": 5,
+      "completedCount": 6,
       "tags": [
         "master"
-      ],
-      "created": "2025-11-19T01:15:36.580Z",
-      "description": "Tasks for master context",
-      "updated": "2025-11-19T01:15:49.085Z"
+      ]
     }
   }
 }
