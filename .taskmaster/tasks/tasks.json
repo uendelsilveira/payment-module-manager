@@ -2,14 +2,14 @@
   "master": {
     "tasks": [
       {
-        "id": 11,
+        "id": "11",
         "title": "Implement ProcessWebhookJob Logic",
         "description": "Complete the implementation of ProcessWebhookJob to process webhook payloads, update transaction status in the database, and dispatch domain events",
         "details": "Implementation steps:\n1. Inject TransactionRepository and EventDispatcher dependencies\n2. Extract external_id from webhook payload\n3. Query database to locate corresponding transaction:\n   ```php\n   $transaction = $this->transactionRepository->findByExternalId($payload['external_id']);\n   if (!$transaction) {\n       Log::error('Transaction not found', ['external_id' => $payload['external_id']]);\n       return;\n   }\n   ```\n4. Map gateway status to internal transaction status\n5. Update transaction status and metadata:\n   ```php\n   $transaction->status = $this->mapGatewayStatus($payload['status']);\n   $transaction->gateway_response = json_encode($payload);\n   $transaction->updated_at = now();\n   $this->transactionRepository->save($transaction);\n   ```\n6. Dispatch appropriate domain events based on status:\n   ```php\n   if ($transaction->status === 'completed') {\n       event(new PaymentProcessed($transaction));\n   } elseif ($transaction->status === 'failed') {\n       event(new PaymentFailed($transaction));\n   }\n   ```\n7. Add error handling and logging for each step\n8. Ensure idempotency by checking if transaction is already in final state",
         "testStrategy": "Unit tests: Mock TransactionRepository and EventDispatcher, verify correct status mapping, event dispatching, and error handling. Integration tests: Create test transaction, dispatch job with mock webhook payload, verify database updates and events fired. Test edge cases: missing external_id, transaction not found, duplicate webhooks, various gateway statuses",
         "priority": "high",
         "dependencies": [],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -17,8 +17,10 @@
             "description": "Inject TransactionRepository and EventDispatcher dependencies into ProcessWebhookJob class constructor to enable database operations and event dispatching",
             "dependencies": [],
             "details": "Create constructor for ProcessWebhookJob that accepts TransactionRepository and EventDispatcher as dependencies. Use dependency injection to make these services available throughout the job. Add proper type hints and store dependencies as private properties for use in the handle method.",
-            "status": "pending",
-            "testStrategy": "Unit test: Mock TransactionRepository and EventDispatcher, instantiate ProcessWebhookJob, verify dependencies are properly injected and accessible. Test that constructor accepts correct parameter types."
+            "status": "done",
+            "testStrategy": "Unit test: Mock TransactionRepository and EventDispatcher, instantiate ProcessWebhookJob, verify dependencies are properly injected and accessible. Test that constructor accepts correct parameter types.",
+            "updatedAt": "2025-11-20T00:12:05.564Z",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -28,8 +30,10 @@
               1
             ],
             "details": "In the handle method, extract external_id from the webhook payload array. Use TransactionRepository->findByExternalId() to query the database. If transaction is not found, log an error with the external_id and return early. Add validation to ensure external_id exists in payload before querying. Include try-catch for database exceptions.",
-            "status": "pending",
-            "testStrategy": "Unit test: Mock repository to return null, verify error is logged and job returns early. Mock repository to return transaction, verify it proceeds. Test with missing external_id in payload. Verify proper exception handling for database errors."
+            "status": "done",
+            "testStrategy": "Unit test: Mock repository to return null, verify error is logged and job returns early. Mock repository to return transaction, verify it proceeds. Test with missing external_id in payload. Verify proper exception handling for database errors.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-20T00:12:05.572Z"
           },
           {
             "id": 3,
@@ -39,8 +43,10 @@
               2
             ],
             "details": "Create mapGatewayStatus() private method that maps gateway-specific status values to internal transaction statuses (pending, completed, failed, refunded). Before updating transaction, check if it's already in a final state (completed, failed, refunded) and skip processing if true to ensure idempotency. Log when skipping due to idempotency.",
-            "status": "pending",
-            "testStrategy": "Unit test: Test mapGatewayStatus with various gateway status values, verify correct internal status returned. Test idempotency by providing transaction already in final state, verify no updates occur and appropriate log message. Test all status transitions."
+            "status": "done",
+            "testStrategy": "Unit test: Test mapGatewayStatus with various gateway status values, verify correct internal status returned. Test idempotency by providing transaction already in final state, verify no updates occur and appropriate log message. Test all status transitions.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-20T00:12:05.574Z"
           },
           {
             "id": 4,
@@ -50,8 +56,10 @@
               3
             ],
             "details": "Update transaction object with mapped status from mapGatewayStatus(). Set gateway_response field to JSON-encoded webhook payload. Update updated_at timestamp to current time. Call transactionRepository->save() to persist changes. Wrap in try-catch to handle database exceptions. Log successful updates with transaction ID and new status.",
-            "status": "pending",
-            "testStrategy": "Unit test: Mock repository save method, verify transaction fields are updated correctly (status, gateway_response, updated_at). Test error handling when save fails. Verify JSON encoding of payload. Integration test: Use test database to verify actual persistence."
+            "status": "done",
+            "testStrategy": "Unit test: Mock repository save method, verify transaction fields are updated correctly (status, gateway_response, updated_at). Test error handling when save fails. Verify JSON encoding of payload. Integration test: Use test database to verify actual persistence.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-20T00:12:05.575Z"
           },
           {
             "id": 5,
@@ -61,133 +69,149 @@
               4
             ],
             "details": "After successful transaction update, check transaction status and dispatch corresponding events: PaymentProcessed for 'completed' status, PaymentFailed for 'failed' status. Use event() helper or EventDispatcher to dispatch events with transaction object. Add try-catch around event dispatching to prevent failures from affecting transaction updates. Log all dispatched events with transaction ID and event type.",
-            "status": "pending",
-            "testStrategy": "Unit test: Mock event dispatcher, verify correct events dispatched for each status. Verify PaymentProcessed dispatched for completed status, PaymentFailed for failed status. Test error handling when event dispatching fails. Integration test: Verify events are actually fired and listeners receive them."
+            "status": "done",
+            "testStrategy": "Unit test: Mock event dispatcher, verify correct events dispatched for each status. Verify PaymentProcessed dispatched for completed status, PaymentFailed for failed status. Test error handling when event dispatching fails. Integration test: Verify events are actually fired and listeners receive them.",
+            "parentId": "undefined",
+            "updatedAt": "2025-11-20T00:12:05.577Z"
           }
-        ]
+        ],
+        "updatedAt": "2025-11-20T00:12:05.577Z"
       },
       {
-        "id": 12,
+        "id": "12",
         "title": "Create IdempotencyService",
         "description": "Extract idempotency logic from EnsureIdempotency middleware into a dedicated IdempotencyService for reusability and better testability",
         "details": "Implementation steps:\n1. Create src/Services/IdempotencyService.php\n2. Inject Cache facade dependency\n3. Implement core methods:\n   ```php\n   class IdempotencyService {\n       public function __construct(private Cache $cache) {}\n       \n       public function hasProcessed(string $idempotencyKey): bool {\n           return $this->cache->has(\"idempotency:{$idempotencyKey}\");\n       }\n       \n       public function getStoredResponse(string $idempotencyKey): ?array {\n           return $this->cache->get(\"idempotency:{$idempotencyKey}\");\n       }\n       \n       public function storeResponse(string $idempotencyKey, array $response, int $ttl = 86400): void {\n           $this->cache->put(\"idempotency:{$idempotencyKey}\", $response, $ttl);\n       }\n       \n       public function generateKey(Request $request): string {\n           return $request->header('Idempotency-Key') ?? md5($request->getContent());\n       }\n   }\n   ```\n4. Update EnsureIdempotency middleware to use IdempotencyService:\n   ```php\n   public function handle(Request $request, Closure $next) {\n       $key = $this->idempotencyService->generateKey($request);\n       if ($this->idempotencyService->hasProcessed($key)) {\n           return response()->json($this->idempotencyService->getStoredResponse($key));\n       }\n       $response = $next($request);\n       $this->idempotencyService->storeResponse($key, $response->getData(true));\n       return $response;\n   }\n   ```\n5. Register service in service provider",
         "testStrategy": "Unit tests: Test each method independently with mocked Cache. Verify key generation, storage, retrieval, and expiration. Test with various request types and idempotency keys. Integration tests: Verify middleware integration, test duplicate requests return cached responses. Performance tests: Verify cache operations are efficient",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-11-20T00:14:36.052Z"
       },
       {
-        "id": 13,
+        "id": "13",
         "title": "Extract WebhookController from PaymentController",
         "description": "Move handleWebhook method to a dedicated WebhookController to adhere to Single Responsibility Principle",
         "details": "Implementation steps:\n1. Create src/Http/Controllers/WebhookController.php\n2. Move handleWebhook method from PaymentController:\n   ```php\n   class WebhookController extends Controller {\n       public function __construct(\n           private WebhookSignatureValidator $signatureValidator,\n           private ProcessWebhookJob $webhookJob\n       ) {}\n       \n       public function handle(Request $request, string $gateway): JsonResponse {\n           // Validate webhook signature\n           if (!$this->signatureValidator->validate($request, $gateway)) {\n               return response()->json(['error' => 'Invalid signature'], 401);\n           }\n           \n           // Dispatch job to process webhook asynchronously\n           dispatch(new ProcessWebhookJob($gateway, $request->all()));\n           \n           return response()->json(['status' => 'received'], 200);\n       }\n   }\n   ```\n3. Update routes in routes/api.php:\n   ```php\n   Route::post('/webhooks/{gateway}', [WebhookController::class, 'handle'])\n       ->name('webhooks.handle');\n   ```\n4. Remove handleWebhook method from PaymentController\n5. Update any references or documentation\n6. Ensure webhook signature validation is gateway-specific",
         "testStrategy": "Unit tests: Mock dependencies, test signature validation, job dispatching, error responses. Integration tests: Send test webhooks for each gateway, verify jobs are queued correctly. Test invalid signatures are rejected. Test various gateway-specific webhook formats",
         "priority": "high",
         "dependencies": [
-          11
+          "11"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-11-20T00:14:56.155Z"
       },
       {
-        "id": 14,
+        "id": "14",
         "title": "Implement RetryService with Exponential Backoff",
         "description": "Create a generic RetryService to handle retry logic with exponential backoff and jitter, decoupling resilience strategy from business logic",
         "details": "Implementation steps:\n1. Create src/Services/RetryService.php\n2. Implement retry logic with configurable parameters:\n   ```php\n   class RetryService {\n       public function execute(\n           callable $operation,\n           int $maxAttempts = 3,\n           int $baseDelayMs = 1000,\n           float $multiplier = 2.0,\n           int $maxDelayMs = 30000,\n           bool $useJitter = true\n       ): mixed {\n           $attempt = 0;\n           $lastException = null;\n           \n           while ($attempt < $maxAttempts) {\n               try {\n                   return $operation();\n               } catch (\\Exception $e) {\n                   $lastException = $e;\n                   $attempt++;\n                   \n                   if ($attempt >= $maxAttempts) {\n                       break;\n                   }\n                   \n                   $delay = min(\n                       $baseDelayMs * pow($multiplier, $attempt - 1),\n                       $maxDelayMs\n                   );\n                   \n                   if ($useJitter) {\n                       $delay = $delay * (0.5 + (mt_rand() / mt_getrandmax()) * 0.5);\n                   }\n                   \n                   usleep($delay * 1000);\n                   Log::warning(\"Retry attempt {$attempt}\", ['exception' => $e->getMessage()]);\n               }\n           }\n           \n           throw new MaxRetriesExceededException(\n               \"Operation failed after {$maxAttempts} attempts\",\n               0,\n               $lastException\n           );\n       }\n   }\n   ```\n3. Refactor PaymentService::reprocess to use RetryService:\n   ```php\n   $result = $this->retryService->execute(\n       fn() => $this->gateway->processPayment($transaction),\n       maxAttempts: 3\n   );\n   ```\n4. Create MaxRetriesExceededException custom exception",
         "testStrategy": "Unit tests: Test retry logic with mock callable that fails N times then succeeds. Verify exponential backoff timing, jitter randomization, max attempts respected. Test immediate success (no retries). Test all attempts fail. Mock time functions to avoid slow tests. Integration tests: Test with actual flaky operations",
         "priority": "medium",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-11-20T00:15:06.850Z"
       },
       {
-        "id": 15,
+        "id": "15",
         "title": "Create Payment Method Validators",
         "description": "Centralize payment method validation logic by creating dedicated validator classes for credit cards, PIX, and other payment methods",
         "details": "Implementation steps:\n1. Create src/Validators directory\n2. Create abstract PaymentValidator interface:\n   ```php\n   interface PaymentValidatorInterface {\n       public function validate(array $data): ValidationResult;\n   }\n   ```\n3. Implement CreditCardValidator with Luhn algorithm:\n   ```php\n   class CreditCardValidator implements PaymentValidatorInterface {\n       public function validate(array $data): ValidationResult {\n           $errors = [];\n           \n           // Validate card number with Luhn algorithm\n           if (!$this->luhnCheck($data['card_number'])) {\n               $errors[] = 'Invalid card number';\n           }\n           \n           // Validate expiry date\n           if (!$this->isValidExpiry($data['expiry_month'], $data['expiry_year'])) {\n               $errors[] = 'Card expired or invalid expiry date';\n           }\n           \n           // Validate CVV\n           if (!preg_match('/^\\d{3,4}$/', $data['cvv'])) {\n               $errors[] = 'Invalid CVV';\n           }\n           \n           return new ValidationResult(empty($errors), $errors);\n       }\n       \n       private function luhnCheck(string $number): bool {\n           $sum = 0;\n           $numDigits = strlen($number);\n           $parity = $numDigits % 2;\n           \n           for ($i = 0; $i < $numDigits; $i++) {\n               $digit = (int)$number[$i];\n               if ($i % 2 == $parity) {\n                   $digit *= 2;\n                   if ($digit > 9) $digit -= 9;\n               }\n               $sum += $digit;\n           }\n           \n           return $sum % 10 === 0;\n       }\n   }\n   ```\n4. Implement PixValidator:\n   ```php\n   class PixValidator implements PaymentValidatorInterface {\n       public function validate(array $data): ValidationResult {\n           $key = $data['pix_key'] ?? '';\n           $type = $this->detectKeyType($key);\n           \n           return match($type) {\n               'cpf' => $this->validateCPF($key),\n               'cnpj' => $this->validateCNPJ($key),\n               'email' => $this->validateEmail($key),\n               'phone' => $this->validatePhone($key),\n               'random' => $this->validateRandomKey($key),\n               default => new ValidationResult(false, ['Invalid PIX key'])\n           };\n       }\n   }\n   ```\n5. Create ValidatorFactory to instantiate appropriate validator\n6. Integrate validators into PaymentService",
         "testStrategy": "Unit tests: Test each validator with valid and invalid inputs. For CreditCardValidator: test Luhn algorithm with known valid/invalid numbers, expired cards, invalid CVV. For PixValidator: test all key types (CPF, CNPJ, email, phone, random). Test edge cases and malformed inputs. Integration tests: Verify validators are called correctly in payment flow",
         "priority": "medium",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-11-20T00:15:18.946Z"
       },
       {
-        "id": 16,
+        "id": "16",
         "title": "Implement Domain Events for Payment Lifecycle",
         "description": "Create domain event classes (PaymentProcessed, PaymentFailed, PaymentRefunded) and event listeners to handle payment state changes",
         "details": "Implementation steps:\n1. Create src/Events directory\n2. Create base PaymentEvent class:\n   ```php\n   abstract class PaymentEvent {\n       public function __construct(\n           public readonly Transaction $transaction,\n           public readonly DateTime $occurredAt\n       ) {}\n   }\n   ```\n3. Create specific event classes:\n   ```php\n   class PaymentProcessed extends PaymentEvent {}\n   class PaymentFailed extends PaymentEvent {\n       public function __construct(\n           Transaction $transaction,\n           DateTime $occurredAt,\n           public readonly string $reason\n       ) {\n           parent::__construct($transaction, $occurredAt);\n       }\n   }\n   class PaymentRefunded extends PaymentEvent {}\n   ```\n4. Create event listeners in src/Listeners:\n   ```php\n   class SendPaymentConfirmationEmail {\n       public function handle(PaymentProcessed $event): void {\n           Mail::to($event->transaction->customer_email)\n               ->send(new PaymentConfirmationMail($event->transaction));\n       }\n   }\n   \n   class LogPaymentFailure {\n       public function handle(PaymentFailed $event): void {\n           Log::error('Payment failed', [\n               'transaction_id' => $event->transaction->id,\n               'reason' => $event->reason\n           ]);\n       }\n   }\n   ```\n5. Register events and listeners in EventServiceProvider:\n   ```php\n   protected $listen = [\n       PaymentProcessed::class => [SendPaymentConfirmationEmail::class],\n       PaymentFailed::class => [LogPaymentFailure::class],\n       PaymentRefunded::class => [SendRefundNotification::class],\n   ];\n   ```\n6. Update ProcessWebhookJob to dispatch events after status update",
         "testStrategy": "Unit tests: Test event creation with correct data. Mock listeners and verify they receive events. Integration tests: Trigger payment flow, verify events are dispatched and listeners execute. Test email sending (use Mail::fake()), logging, and other side effects. Verify event data integrity",
         "priority": "high",
         "dependencies": [
-          11
+          "11"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-11-20T00:15:27.041Z"
       },
       {
-        "id": 17,
+        "id": "17",
         "title": "Implement Stripe Gateway Integration",
         "description": "Complete the Stripe gateway implementation with full status mapping, webhook handling, and payment processing",
         "details": "Implementation steps:\n1. Install Stripe PHP SDK: composer require stripe/stripe-php\n2. Complete StripeGateway implementation in src/Gateways/StripeGateway.php:\n   ```php\n   class StripeGateway implements PaymentGatewayInterface {\n       private \\Stripe\\StripeClient $client;\n       \n       public function __construct() {\n           $this->client = new \\Stripe\\StripeClient(config('payment.gateways.stripe.secret_key'));\n       }\n       \n       public function processPayment(Transaction $transaction): GatewayResponse {\n           try {\n               $paymentIntent = $this->client->paymentIntents->create([\n                   'amount' => $transaction->amount * 100, // Convert to cents\n                   'currency' => strtolower($transaction->currency),\n                   'payment_method' => $transaction->payment_method_token,\n                   'confirm' => true,\n                   'metadata' => ['transaction_id' => $transaction->id]\n               ]);\n               \n               return new GatewayResponse(\n                   success: $paymentIntent->status === 'succeeded',\n                   externalId: $paymentIntent->id,\n                   status: $this->mapStripeStatus($paymentIntent->status),\n                   rawResponse: $paymentIntent->toArray()\n               );\n           } catch (\\Stripe\\Exception\\ApiErrorException $e) {\n               return new GatewayResponse(\n                   success: false,\n                   externalId: null,\n                   status: 'failed',\n                   rawResponse: ['error' => $e->getMessage()]\n               );\n           }\n       }\n       \n       public function refund(Transaction $transaction): GatewayResponse { /* ... */ }\n       \n       private function mapStripeStatus(string $stripeStatus): string {\n           return match($stripeStatus) {\n               'succeeded' => 'completed',\n               'processing' => 'processing',\n               'requires_payment_method', 'requires_confirmation' => 'pending',\n               'canceled' => 'cancelled',\n               default => 'failed'\n           };\n       }\n   }\n   ```\n3. Implement webhook signature validation for Stripe\n4. Add Stripe-specific configuration to config/payment.php\n5. Handle Stripe webhook events (payment_intent.succeeded, payment_intent.payment_failed, etc.)",
         "testStrategy": "Unit tests: Mock Stripe API client, test payment processing, refunds, status mapping. Test error handling for API failures. Integration tests: Use Stripe test mode with test cards, verify end-to-end payment flow. Test webhook signature validation with Stripe test webhooks. Verify correct status transitions",
         "priority": "medium",
         "dependencies": [
-          13,
-          16
+          "13",
+          "16"
         ],
         "status": "deferred",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2025-11-20T00:17:16.432Z"
       },
       {
-        "id": 18,
+        "id": "18",
         "title": "Implement PayPal Gateway Integration",
         "description": "Complete the PayPal gateway implementation with full status mapping, webhook handling, and payment processing",
         "details": "Implementation steps:\n1. Install PayPal SDK: composer require paypal/rest-api-sdk-php\n2. Complete PayPalGateway implementation in src/Gateways/PayPalGateway.php:\n   ```php\n   class PayPalGateway implements PaymentGatewayInterface {\n       private \\PayPal\\Rest\\ApiContext $apiContext;\n       \n       public function __construct() {\n           $this->apiContext = new \\PayPal\\Rest\\ApiContext(\n               new \\PayPal\\Auth\\OAuthTokenCredential(\n                   config('payment.gateways.paypal.client_id'),\n                   config('payment.gateways.paypal.secret')\n               )\n           );\n           $this->apiContext->setConfig([\n               'mode' => config('payment.gateways.paypal.mode', 'sandbox')\n           ]);\n       }\n       \n       public function processPayment(Transaction $transaction): GatewayResponse {\n           try {\n               $payment = new \\PayPal\\Api\\Payment();\n               $payment->setIntent('sale')\n                   ->setPayer($this->createPayer($transaction))\n                   ->setTransactions([$this->createTransaction($transaction)]);\n               \n               $payment->create($this->apiContext);\n               \n               return new GatewayResponse(\n                   success: $payment->getState() === 'approved',\n                   externalId: $payment->getId(),\n                   status: $this->mapPayPalStatus($payment->getState()),\n                   rawResponse: $payment->toArray()\n               );\n           } catch (\\PayPal\\Exception\\PayPalConnectionException $e) {\n               return new GatewayResponse(\n                   success: false,\n                   externalId: null,\n                   status: 'failed',\n                   rawResponse: ['error' => $e->getMessage()]\n               );\n           }\n       }\n       \n       private function mapPayPalStatus(string $paypalStatus): string {\n           return match($paypalStatus) {\n               'approved', 'completed' => 'completed',\n               'created', 'pending' => 'pending',\n               'cancelled', 'expired' => 'cancelled',\n               default => 'failed'\n           };\n       }\n   }\n   ```\n3. Implement webhook signature validation for PayPal\n4. Add PayPal-specific configuration to config/payment.php\n5. Handle PayPal webhook events (PAYMENT.SALE.COMPLETED, PAYMENT.SALE.DENIED, etc.)",
         "testStrategy": "Unit tests: Mock PayPal API context, test payment processing, refunds, status mapping. Test error handling for API failures. Integration tests: Use PayPal sandbox environment, verify end-to-end payment flow with test accounts. Test webhook signature validation with PayPal test webhooks. Verify correct status transitions",
         "priority": "low",
         "dependencies": [
-          13,
-          16
+          "13",
+          "16"
         ],
         "status": "deferred",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2025-11-20T00:17:29.113Z"
       },
       {
-        "id": 19,
+        "id": "19",
         "title": "Create Comprehensive Test Suite for Webhook Processing",
         "description": "Develop automated tests covering the critical asynchronous webhook processing flow, including unit, integration, and end-to-end tests",
         "details": "Implementation steps:\n1. Create tests/Unit/Jobs/ProcessWebhookJobTest.php:\n   ```php\n   class ProcessWebhookJobTest extends TestCase {\n       public function test_processes_successful_payment_webhook() {\n           $transaction = Transaction::factory()->create(['status' => 'pending']);\n           $payload = ['external_id' => $transaction->external_id, 'status' => 'completed'];\n           \n           Event::fake();\n           $job = new ProcessWebhookJob('stripe', $payload);\n           $job->handle();\n           \n           $this->assertEquals('completed', $transaction->fresh()->status);\n           Event::assertDispatched(PaymentProcessed::class);\n       }\n       \n       public function test_handles_transaction_not_found() { /* ... */ }\n       public function test_handles_duplicate_webhook() { /* ... */ }\n   }\n   ```\n2. Create tests/Feature/WebhookControllerTest.php:\n   ```php\n   class WebhookControllerTest extends TestCase {\n       public function test_receives_and_queues_webhook() {\n           Queue::fake();\n           $payload = ['external_id' => 'test_123', 'status' => 'completed'];\n           \n           $response = $this->postJson('/api/webhooks/stripe', $payload);\n           \n           $response->assertStatus(200);\n           Queue::assertPushed(ProcessWebhookJob::class);\n       }\n       \n       public function test_rejects_invalid_signature() { /* ... */ }\n   }\n   ```\n3. Create tests/Integration/WebhookFlowTest.php for end-to-end testing\n4. Test edge cases: malformed payloads, unknown gateways, concurrent webhooks\n5. Create test fixtures for various gateway webhook formats\n6. Add tests for idempotency behavior\n7. Test retry logic for failed webhook processing",
         "testStrategy": "Run full test suite with PHPUnit. Verify code coverage meets minimum threshold (>80% for critical paths). Use Laravel's testing helpers (Queue::fake(), Event::fake(), Mail::fake()). Test with actual queue workers in integration tests. Verify database transactions are handled correctly. Test failure scenarios and error logging",
         "priority": "high",
         "dependencies": [
-          11,
-          13,
-          16
+          "11",
+          "13",
+          "16"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-11-20T00:16:21.451Z"
       },
       {
-        "id": 20,
+        "id": "20",
         "title": "Create Test Suite for New Services",
         "description": "Develop comprehensive unit and integration tests for IdempotencyService, RetryService, and payment validators",
         "details": "Implementation steps:\n1. Create tests/Unit/Services/IdempotencyServiceTest.php:\n   ```php\n   class IdempotencyServiceTest extends TestCase {\n       public function test_detects_processed_request() {\n           Cache::shouldReceive('has')->with('idempotency:test-key')->andReturn(true);\n           $service = new IdempotencyService(Cache::getFacadeRoot());\n           \n           $this->assertTrue($service->hasProcessed('test-key'));\n       }\n       \n       public function test_stores_and_retrieves_response() { /* ... */ }\n       public function test_generates_key_from_request() { /* ... */ }\n   }\n   ```\n2. Create tests/Unit/Services/RetryServiceTest.php:\n   ```php\n   class RetryServiceTest extends TestCase {\n       public function test_succeeds_on_first_attempt() {\n           $service = new RetryService();\n           $result = $service->execute(fn() => 'success');\n           \n           $this->assertEquals('success', $result);\n       }\n       \n       public function test_retries_on_failure() {\n           $attempts = 0;\n           $service = new RetryService();\n           \n           $result = $service->execute(function() use (&$attempts) {\n               $attempts++;\n               if ($attempts < 3) throw new \\Exception('Fail');\n               return 'success';\n           }, maxAttempts: 3);\n           \n           $this->assertEquals(3, $attempts);\n           $this->assertEquals('success', $result);\n       }\n       \n       public function test_throws_after_max_attempts() { /* ... */ }\n       public function test_exponential_backoff_timing() { /* ... */ }\n   }\n   ```\n3. Create tests/Unit/Validators/CreditCardValidatorTest.php:\n   ```php\n   class CreditCardValidatorTest extends TestCase {\n       public function test_validates_correct_card_number() {\n           $validator = new CreditCardValidator();\n           $result = $validator->validate([\n               'card_number' => '4532015112830366', // Valid test card\n               'expiry_month' => '12',\n               'expiry_year' => '2025',\n               'cvv' => '123'\n           ]);\n           \n           $this->assertTrue($result->isValid());\n       }\n       \n       public function test_rejects_invalid_luhn() { /* ... */ }\n       public function test_rejects_expired_card() { /* ... */ }\n   }\n   ```\n4. Create tests/Unit/Validators/PixValidatorTest.php with tests for all PIX key types\n5. Add integration tests verifying services work together correctly\n6. Test performance and concurrency scenarios for IdempotencyService",
         "testStrategy": "Run tests with PHPUnit and verify coverage. Use mocking for external dependencies. Test boundary conditions and edge cases. For RetryService: mock time functions to avoid slow tests. For validators: use known valid/invalid test data. Integration tests should verify services integrate correctly with Laravel framework components",
         "priority": "medium",
         "dependencies": [
-          12,
-          14,
-          15
+          "12",
+          "14",
+          "15"
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-11-20T00:16:33.764Z"
       }
     ],
     "metadata": {
-      "created": "2025-11-19T22:46:38.389Z",
-      "updated": "2025-11-19T22:46:38.390Z",
-      "description": "Tasks for master context"
+      "version": "1.0.0",
+      "lastModified": "2025-11-20T00:17:29.113Z",
+      "taskCount": 10,
+      "completedCount": 8,
+      "tags": [
+        "master"
+      ]
     }
   }
 }
