@@ -46,20 +46,13 @@ interface PaymentGatewayInterface
     public function cancelPayment(string $transactionId): CancelPaymentResponse;
 
     /**
-     * @param array<string, mixed> $data
-     *
-     * @return array<string, mixed>
-     */
-    public function createWebhook(array $data): array;
-
-    /**
-     * @param array<string, mixed> $data
+     * @param array<string, mixed> $payload
      *
      * @throws WebhookProcessingException
      *
      * @return array<string, mixed>
      */
-    public function processWebhook(array $data): array;
+    public function handleWebhook(array $payload): array;
 
     /**
      * @return array<string, mixed>

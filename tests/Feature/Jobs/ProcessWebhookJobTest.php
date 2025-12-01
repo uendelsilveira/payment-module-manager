@@ -1,12 +1,13 @@
 <?php
 
-namespace Tests\Unit\Jobs;
+namespace UendelSilveira\PaymentModuleManager\Tests\Feature\Jobs;
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
 use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
 use UendelSilveira\PaymentModuleManager\Facades\PaymentGateway;
 use UendelSilveira\PaymentModuleManager\Jobs\ProcessWebhookJob;
@@ -26,43 +27,31 @@ class ProcessWebhookJobTest extends TestCase
         $gatewayName = 'mercadopago';
         $externalId = '12345';
 
-        // Mock Gateway
         $gatewayMock = Mockery::mock(PaymentGatewayInterface::class);
-        $gatewayMock->shouldReceive('processWebhook')
+        $gatewayMock->shouldReceive('handleWebhook')
             ->with($payload)
             ->andReturn([
                 'transaction_id' => $externalId,
-                'status' => 'completed',
+                'status' => PaymentStatus::APPROVED->value,
                 'payment_method' => 'credit_card',
                 'amount' => 100.00,
                 'metadata' => [],
             ]);
 
-        PaymentGateway::shouldReceive('gateway')
-            ->with($gatewayName)
-            ->andReturn($gatewayMock);
+        PaymentGateway::shouldReceive('gateway')->with($gatewayName)->andReturn($gatewayMock);
 
-        // Real Transaction Object
-        $transaction = new Transaction;
-        $transaction->id = 1;
-        $transaction->status = 'pending';
-        $transaction->metadata = [];
-        $transaction->external_id = $externalId;
+        $transaction = Transaction::factory()->create(['status' => 'pending', 'external_id' => $externalId]);
 
         $repositoryMock = Mockery::mock(TransactionRepositoryInterface::class);
-        $repositoryMock->shouldReceive('findBy')
-            ->with('external_id', $externalId)
-            ->andReturn($transaction);
-
-        $repositoryMock->shouldReceive('update')
-            ->with(1, Mockery::on(fn ($data): bool => $data['status'] === 'completed'));
+        $repositoryMock->shouldReceive('findBy')->with('external_id', $externalId)->andReturn($transaction);
+        $repositoryMock->shouldReceive('update')->with($transaction->id, Mockery::on(fn ($data): bool => $data['status'] === PaymentStatus::APPROVED->value));
 
         $processWebhookJob = new ProcessWebhookJob($gatewayName, $payload);
         $processWebhookJob->handle($repositoryMock);
 
         Event::assertDispatched(PaymentStatusChanged::class, fn ($event): bool => $event->transaction->id === $transaction->id
             && $event->oldStatus === 'pending'
-            && $event->newStatus === 'completed');
+            && $event->newStatus === PaymentStatus::APPROVED->value);
     }
 
     public function test_handles_transaction_not_found(): void
@@ -73,12 +62,12 @@ class ProcessWebhookJobTest extends TestCase
         $payload = ['id' => '99999'];
         $gatewayName = 'mercadopago';
 
-        // Mock Gateway
         $gatewayMock = Mockery::mock(PaymentGatewayInterface::class);
-        $gatewayMock->shouldReceive('processWebhook')
+        $gatewayMock->shouldReceive('handleWebhook')
+            ->with($payload)
             ->andReturn([
                 'transaction_id' => '99999',
-                'status' => 'completed',
+                'status' => PaymentStatus::APPROVED->value,
                 'payment_method' => 'credit_card',
                 'amount' => 100.00,
                 'metadata' => [],
@@ -86,9 +75,8 @@ class ProcessWebhookJobTest extends TestCase
 
         PaymentGateway::shouldReceive('gateway')->andReturn($gatewayMock);
 
-        // Mock Repository returning null
         $repositoryMock = Mockery::mock(TransactionRepositoryInterface::class);
-        $repositoryMock->shouldReceive('findBy')->andReturn(null);
+        $repositoryMock->shouldReceive('findBy')->with('external_id', Mockery::any())->andReturn(null);
 
         $processWebhookJob = new ProcessWebhookJob($gatewayName, $payload);
         $processWebhookJob->handle($repositoryMock);
@@ -102,12 +90,11 @@ class ProcessWebhookJobTest extends TestCase
         $payload = ['id' => '12345'];
         $gatewayName = 'mercadopago';
 
-        // Mock Gateway
         $gatewayMock = Mockery::mock(PaymentGatewayInterface::class);
-        $gatewayMock->shouldReceive('processWebhook')
+        $gatewayMock->shouldReceive('handleWebhook')
             ->andReturn([
                 'transaction_id' => '12345',
-                'status' => 'completed', // New status
+                'status' => PaymentStatus::APPROVED->value,
                 'payment_method' => 'credit_card',
                 'amount' => 100.00,
                 'metadata' => [],
@@ -115,16 +102,11 @@ class ProcessWebhookJobTest extends TestCase
 
         PaymentGateway::shouldReceive('gateway')->andReturn($gatewayMock);
 
-        // Real Transaction Object already completed
-        $transaction = new Transaction;
-        $transaction->id = 1;
-        $transaction->status = 'completed';
-        $transaction->external_id = '12345';
+        // Alterado para um status final para ativar a lógica de idempotência
+        $transaction = Transaction::factory()->create(['status' => PaymentStatus::REFUNDED->value, 'external_id' => '12345']);
 
         $repositoryMock = Mockery::mock(TransactionRepositoryInterface::class);
-        $repositoryMock->shouldReceive('findBy')->andReturn($transaction);
-
-        // Ensure update is NEVER called
+        $repositoryMock->shouldReceive('findBy')->with('external_id', '12345')->andReturn($transaction);
         $repositoryMock->shouldReceive('update')->never();
 
         $processWebhookJob = new ProcessWebhookJob($gatewayName, $payload);
@@ -140,12 +122,11 @@ class ProcessWebhookJobTest extends TestCase
         $payload = ['id' => '12345', 'status' => 'rejected'];
         $gatewayName = 'mercadopago';
 
-        // Mock Gateway
         $gatewayMock = Mockery::mock(PaymentGatewayInterface::class);
-        $gatewayMock->shouldReceive('processWebhook')
+        $gatewayMock->shouldReceive('handleWebhook')
             ->andReturn([
                 'transaction_id' => '12345',
-                'status' => 'failed',
+                'status' => PaymentStatus::FAILED->value,
                 'payment_method' => 'credit_card',
                 'amount' => 100.00,
                 'metadata' => [],
@@ -153,15 +134,10 @@ class ProcessWebhookJobTest extends TestCase
 
         PaymentGateway::shouldReceive('gateway')->andReturn($gatewayMock);
 
-        // Real Transaction Object
-        $transaction = new Transaction;
-        $transaction->id = 1;
-        $transaction->status = 'pending';
-        $transaction->metadata = [];
-        $transaction->external_id = '12345';
+        $transaction = Transaction::factory()->create(['status' => 'pending', 'external_id' => '12345']);
 
         $repositoryMock = Mockery::mock(TransactionRepositoryInterface::class);
-        $repositoryMock->shouldReceive('findBy')->andReturn($transaction);
+        $repositoryMock->shouldReceive('findBy')->with('external_id', '12345')->andReturn($transaction);
         $repositoryMock->shouldReceive('update')->once();
 
         $processWebhookJob = new ProcessWebhookJob($gatewayName, $payload);
@@ -169,6 +145,6 @@ class ProcessWebhookJobTest extends TestCase
 
         Event::assertDispatched(PaymentStatusChanged::class, fn ($event): bool => $event->transaction->id === $transaction->id
             && $event->oldStatus === 'pending'
-            && $event->newStatus === 'failed');
+            && $event->newStatus === PaymentStatus::FAILED->value);
     }
 }

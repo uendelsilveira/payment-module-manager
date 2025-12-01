@@ -10,9 +10,9 @@
 namespace UendelSilveira\PaymentModuleManager\Gateways;
 
 use Illuminate\Support\Facades\Log;
-use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Exceptions\MPApiException;
 use MercadoPago\MercadoPagoConfig;
+use UendelSilveira\PaymentModuleManager\Contracts\MercadoPagoPaymentClientInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
 use UendelSilveira\PaymentModuleManager\DTOs\CancelPaymentResponse;
 use UendelSilveira\PaymentModuleManager\DTOs\ProcessPaymentResponse;
@@ -25,27 +25,28 @@ use UendelSilveira\PaymentModuleManager\Exceptions\WebhookProcessingException;
 
 class MercadoPagoGateway implements PaymentGatewayInterface
 {
+    protected MercadoPagoPaymentClientInterface $paymentClient;
+
     /**
-     * @var PaymentClient|object
-     *
-     * @phpstan-var PaymentClient|object{create: callable, get: callable, cancel: callable}
+     * @var callable|null
      */
-    public $paymentClient;
+    protected $webhookUrlGenerator = null;
 
     /**
      * @param array<string, mixed> $config
      */
-    public function __construct(protected array $config = [])
-    {
-        $this->initializeSDK();
-    }
+    public function __construct(
+        protected array $config = [],
+        ?MercadoPagoPaymentClientInterface $paymentClient = null,
+        ?callable $webhookUrlGenerator = null
+    ) {
+        if ($paymentClient) {
+            $this->paymentClient = $paymentClient;
+        } else {
+            $this->initializeSDK();
+        }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function getConfig(): array
-    {
-        return $this->config;
+        $this->webhookUrlGenerator = $webhookUrlGenerator;
     }
 
     protected function initializeSDK(): void
@@ -57,49 +58,31 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             MercadoPagoConfig::setRuntimeEnviroment(MercadoPagoConfig::LOCAL);
         }
 
-        $this->paymentClient = new PaymentClient;
+        $this->paymentClient = new MercadoPagoPaymentClientAdapter;
     }
 
-    /**
-     * @param array<string, mixed> $data
-     */
+    public function getConfig(): array
+    {
+        return $this->config;
+    }
+
     public function processPayment(array $data): ProcessPaymentResponse
     {
         try {
             $paymentData = $this->buildPaymentData($data);
-
-            Log::channel('payment')->debug('MP: Sending payment request', [
-                'amount' => $paymentData['transaction_amount'],
-                'method' => $paymentData['payment_method_id'],
-            ]);
-
+            Log::channel('payment')->debug('MP: Sending payment request', ['amount' => $paymentData['transaction_amount'], 'method' => $paymentData['payment_method_id']]);
             $payment = $this->paymentClient->create($paymentData);
-
-            Log::channel('payment')->info('MP: Payment created', [
-                'id' => $payment->id,
-                'status' => $payment->status,
-            ]);
-
+            Log::channel('payment')->info('MP: Payment created', ['id' => $payment->id, 'status' => $payment->status]);
             $responseArray = $this->formatResponse($payment);
 
-            return new ProcessPaymentResponse(
-                transactionId: $responseArray['transaction_id'],
-                status: $responseArray['status'],
-                details: $responseArray
-            );
+            $transactionId = is_string($responseArray['transaction_id']) ? $responseArray['transaction_id'] : '';
+            $status = $responseArray['status'] instanceof PaymentStatus ? $responseArray['status'] : PaymentStatus::UNKNOWN;
 
+            return new ProcessPaymentResponse($transactionId, $status, $responseArray);
         } catch (MPApiException $mpApiException) {
-            Log::channel('payment')->error('MP: API error', [
-                'message' => $mpApiException->getMessage(),
-                'status_code' => $mpApiException->getStatusCode(),
-                'api_response' => $mpApiException->getApiResponse(),
-            ]);
+            Log::channel('payment')->error('MP: API error', ['message' => $mpApiException->getMessage(), 'status_code' => $mpApiException->getStatusCode(), 'api_response' => $mpApiException->getApiResponse()]);
 
-            throw new PaymentFailedException(
-                'Mercado Pago error: '.$mpApiException->getMessage(),
-                $mpApiException->getStatusCode(),
-                $mpApiException
-            );
+            throw new PaymentFailedException('Mercado Pago error: '.$mpApiException->getMessage(), $mpApiException->getStatusCode(), $mpApiException);
         }
     }
 
@@ -109,12 +92,8 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             $payment = $this->paymentClient->get((int) $transactionId);
 
             return $this->mapStatus($payment->status);
-
         } catch (MPApiException $mpApiException) {
-            Log::channel('payment')->warning('MP: Failed to get payment status', [
-                'transaction_id' => $transactionId,
-                'error' => $mpApiException->getMessage(),
-            ]);
+            Log::channel('payment')->warning('MP: Failed to get payment status', ['transaction_id' => $transactionId, 'error' => $mpApiException->getMessage()]);
 
             if ($mpApiException->getStatusCode() === 404) {
                 throw new TransactionNotFoundException('Payment not found in Mercado Pago: '.$transactionId);
@@ -129,31 +108,15 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         try {
             $refundClient = new RefundClient;
             $refund = $refundClient->create((int) $transactionId, $amount);
+            Log::channel('payment')->info('MP: Refund processed', ['refund_id' => $refund->id, 'payment_id' => $transactionId, 'amount' => $refund->amount]);
 
-            Log::channel('payment')->info('MP: Refund processed', [
-                'refund_id' => $refund->id,
-                'payment_id' => $transactionId,
-                'amount' => $refund->amount,
-            ]);
-
-            return new RefundPaymentResponse(
-                refundId: (string) $refund->id,
-                transactionId: (string) $refund->payment_id,
-                status: $this->mapStatus($refund->status),
-                amount: (float) $refund->amount,
-                details: (array) $refund
-            );
-
+            return new RefundPaymentResponse((string) $refund->id, (string) $refund->payment_id, $this->mapStatus($refund->status), (float) $refund->amount, (array) $refund);
         } catch (MPApiException $mpApiException) {
             if ($mpApiException->getStatusCode() === 404) {
                 throw new TransactionNotFoundException('Payment not found for refund in Mercado Pago: '.$transactionId);
             }
 
-            throw new RefundFailedException(
-                'Failed to refund payment: '.$mpApiException->getMessage(),
-                $mpApiException->getStatusCode(),
-                $mpApiException
-            );
+            throw new RefundFailedException('Failed to refund payment: '.$mpApiException->getMessage(), $mpApiException->getStatusCode(), $mpApiException);
         }
     }
 
@@ -161,53 +124,29 @@ class MercadoPagoGateway implements PaymentGatewayInterface
     {
         try {
             $payment = $this->paymentClient->cancel((int) $transactionId);
+            Log::channel('payment')->info('MP: Payment cancelled', ['payment_id' => $transactionId, 'status' => $payment->status]);
 
-            Log::channel('payment')->info('MP: Payment cancelled', [
-                'payment_id' => $transactionId,
-                'status' => $payment->status,
-            ]);
-
-            return new CancelPaymentResponse(
-                transactionId: (string) $payment->id,
-                status: $this->mapStatus($payment->status),
-                details: (array) $payment
-            );
-
+            return new CancelPaymentResponse((string) $payment->id, $this->mapStatus($payment->status), (array) $payment);
         } catch (MPApiException $mpApiException) {
             if ($mpApiException->getStatusCode() === 404) {
                 throw new TransactionNotFoundException('Payment not found for cancellation in Mercado Pago: '.$transactionId);
             }
 
-            throw new PaymentFailedException(
-                'Failed to cancel payment: '.$mpApiException->getMessage(),
-                $mpApiException->getStatusCode(),
-                $mpApiException
-            );
+            throw new PaymentFailedException('Failed to cancel payment: '.$mpApiException->getMessage(), $mpApiException->getStatusCode(), $mpApiException);
         }
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param array<string, mixed> $payload
+     *
+     * @throws WebhookProcessingException
      *
      * @return array<string, mixed>
      */
-    public function createWebhook(array $data): array
+    public function handleWebhook(array $payload): array
     {
-        return ['success' => true];
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     *
-     * @return array<string, mixed>
-     */
-    public function processWebhook(array $data): array
-    {
-        $this->validateWebhookSignature($data);
-
-        $dataData = is_array($data['data'] ?? null) ? $data['data'] : [];
-        $paymentIdData = $dataData['id'] ?? null;
-        $paymentId = is_int($paymentIdData) || is_string($paymentIdData) ? (string) $paymentIdData : null;
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $paymentId = $data['id'] ?? null;
 
         if (! $paymentId) {
             throw new WebhookProcessingException('Invalid webhook data: missing payment ID');
@@ -217,22 +156,15 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             $paymentIdInt = is_numeric($paymentId) ? (int) $paymentId : 0;
             $payment = $this->paymentClient->get($paymentIdInt);
 
-            $paymentStatus = is_string($payment->status ?? null) ? $payment->status : null;
-
             return [
                 'transaction_id' => (string) $payment->id,
-                'status' => $this->mapStatus($paymentStatus),
-                'payment_method' => is_string($payment->payment_method_id ?? null) ? $payment->payment_method_id : '',
+                'status' => $this->mapStatus($payment->status),
+                'payment_method' => $payment->payment_method_id ?? '',
                 'amount' => $payment->transaction_amount,
-                'metadata' => $payment->metadata ?? [],
+                'metadata' => (array) ($payment->metadata ?? []),
             ];
-
         } catch (MPApiException $mpApiException) {
-            throw new WebhookProcessingException(
-                'Failed to process webhook: '.$mpApiException->getMessage(),
-                $mpApiException->getStatusCode(),
-                $mpApiException
-            );
+            throw new WebhookProcessingException('Failed to process webhook: '.$mpApiException->getMessage(), $mpApiException->getStatusCode(), $mpApiException);
         }
     }
 
@@ -244,15 +176,12 @@ class MercadoPagoGateway implements PaymentGatewayInterface
     private function buildPaymentData(array $data): array
     {
         $paymentMethod = $data['payment_method_id'] ?? 'pix';
-
         $amount = is_float($data['amount'] ?? null) || is_int($data['amount'] ?? null) ? (float) $data['amount'] : 0.0;
         $baseData = [
             'transaction_amount' => $amount,
             'description' => $data['description'] ?? 'Payment',
             'payment_method_id' => $paymentMethod,
-            'payer' => [
-                'email' => $data['payer_email'],
-            ],
+            'payer' => ['email' => $data['payer_email']],
         ];
 
         return match ($paymentMethod) {
@@ -271,9 +200,15 @@ class MercadoPagoGateway implements PaymentGatewayInterface
      */
     private function buildPixPayment(array $base, array $data): array
     {
-        return array_merge($base, [
-            'notification_url' => $data['webhook_url'] ?? route('payment.webhook'),
-        ]);
+        $webhookUrl = $data['webhook_url'] ?? null;
+
+        if ($webhookUrl === null && is_callable($this->webhookUrlGenerator)) {
+            $webhookUrl = call_user_func($this->webhookUrlGenerator, 'mercadopago');
+        } elseif ($webhookUrl === null) {
+            $webhookUrl = route('payment.webhook', ['gateway' => 'mercadopago']);
+        }
+
+        return array_merge($base, ['notification_url' => $webhookUrl]);
     }
 
     /**
@@ -284,6 +219,7 @@ class MercadoPagoGateway implements PaymentGatewayInterface
      */
     private function buildCreditCardPayment(array $base, array $data): array
     {
+        /** @var array<string, mixed> $payer */
         $payer = is_array($base['payer'] ?? null) ? $base['payer'] : [];
         $dataPayer = is_array($data['payer'] ?? null) ? $data['payer'] : [];
         $dataPayerIdentification = is_array($dataPayer['identification'] ?? null) ? $dataPayer['identification'] : [];
@@ -295,10 +231,7 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             'payer' => array_merge($payer, [
                 'first_name' => $dataPayer['first_name'] ?? '',
                 'last_name' => $dataPayer['last_name'] ?? '',
-                'identification' => [
-                    'type' => $dataPayerIdentification['type'] ?? 'CPF',
-                    'number' => $dataPayerIdentification['number'] ?? '',
-                ],
+                'identification' => ['type' => $dataPayerIdentification['type'] ?? 'CPF', 'number' => $dataPayerIdentification['number'] ?? ''],
             ]),
         ]);
     }
@@ -311,6 +244,7 @@ class MercadoPagoGateway implements PaymentGatewayInterface
      */
     private function buildBoletoPayment(array $base, array $data): array
     {
+        /** @var array<string, mixed> $payer */
         $payer = is_array($base['payer'] ?? null) ? $base['payer'] : [];
         $dataPayer = is_array($data['payer'] ?? null) ? $data['payer'] : [];
         $dataPayerIdentification = is_array($dataPayer['identification'] ?? null) ? $dataPayer['identification'] : [];
@@ -321,10 +255,7 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             'payer' => array_merge($payer, [
                 'first_name' => $dataPayer['first_name'] ?? '',
                 'last_name' => $dataPayer['last_name'] ?? '',
-                'identification' => [
-                    'type' => $dataPayerIdentification['type'] ?? 'CPF',
-                    'number' => $dataPayerIdentification['number'] ?? '',
-                ],
+                'identification' => ['type' => $dataPayerIdentification['type'] ?? 'CPF', 'number' => $dataPayerIdentification['number'] ?? ''],
                 'address' => [
                     'zip_code' => $dataPayerAddress['zip_code'] ?? '',
                     'street_name' => $dataPayerAddress['street_name'] ?? '',
@@ -338,44 +269,31 @@ class MercadoPagoGateway implements PaymentGatewayInterface
     }
 
     /**
-     * @return array{transaction_id: string, status: PaymentStatus, provider: string, payment_method: string, amount: float, created_at: string, pix_qr_code?: string|null, pix_qr_code_base64?: string|null, boleto_url?: string|null, boleto_barcode?: string|null}
+     * @return array<string, mixed>
      */
     private function formatResponse(object $payment): array
     {
-        $paymentStatus = is_string($payment->status ?? null) ? $payment->status : null;
         $paymentMethodId = is_string($payment->payment_method_id ?? null) ? $payment->payment_method_id : '';
-        /** @var array{transaction_id: string, status: PaymentStatus, provider: string, payment_method: string, amount: float, created_at: string, pix_qr_code?: string|null, pix_qr_code_base64?: string|null, boleto_url?: string|null, boleto_barcode?: string|null} $response */
         $response = [
             'transaction_id' => (string) ($payment->id ?? ''),
-            'status' => $this->mapStatus($paymentStatus),
+            'status' => $this->mapStatus($payment->status ?? null),
             'provider' => 'mercadopago',
             'payment_method' => $paymentMethodId,
-            'amount' => is_float($payment->transaction_amount ?? null) || is_int($payment->transaction_amount ?? null) ? (float) $payment->transaction_amount : 0.0,
-            'created_at' => is_string($payment->date_created ?? null) ? $payment->date_created : '',
+            'amount' => (float) ($payment->transaction_amount ?? 0.0),
+            'created_at' => $payment->date_created ?? '',
         ];
 
-        if ($paymentMethodId === 'pix' && isset($payment->point_of_interaction)) {
-            $pointOfInteraction = $payment->point_of_interaction;
-
-            if (is_object($pointOfInteraction) && isset($pointOfInteraction->transaction_data)) {
-                $transactionData = $pointOfInteraction->transaction_data;
-
-                if (is_object($transactionData)) {
-                    $response['pix_qr_code'] = is_string($transactionData->qr_code ?? null) ? $transactionData->qr_code : null;
-                    $response['pix_qr_code_base64'] = is_string($transactionData->qr_code_base64 ?? null) ? $transactionData->qr_code_base64 : null;
-                }
-            }
+        if ($paymentMethodId === 'pix' && isset($payment->point_of_interaction->transaction_data)) {
+            $transactionData = $payment->point_of_interaction->transaction_data;
+            $response['pix_qr_code'] = $transactionData->qr_code ?? null;
+            $response['pix_qr_code_base64'] = $transactionData->qr_code_base64 ?? null;
         }
 
-        if ($paymentMethodId === 'boleto' && isset($payment->transaction_details)) {
-            $transactionDetails = $payment->transaction_details;
+        if ($paymentMethodId === 'boleto' && isset($payment->transaction_details->external_resource_url)) {
+            $response['boleto_url'] = $payment->transaction_details->external_resource_url;
 
-            if (is_object($transactionDetails)) {
-                $response['boleto_url'] = is_string($transactionDetails->external_resource_url ?? null) ? $transactionDetails->external_resource_url : null;
-            }
-
-            if (isset($payment->barcode) && is_object($payment->barcode)) {
-                $response['boleto_barcode'] = is_string($payment->barcode->content ?? null) ? $payment->barcode->content : null;
+            if (isset($payment->barcode->content)) {
+                $response['boleto_barcode'] = $payment->barcode->content;
             }
         }
 
@@ -395,44 +313,5 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             'failed' => PaymentStatus::FAILED,
             default => PaymentStatus::UNKNOWN,
         };
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    private function validateWebhookSignature(array $data): void
-    {
-        if (config('app.env') !== 'production') {
-            return;
-        }
-
-        $signature = request()->header('x-signature');
-        $requestId = request()->header('x-request-id');
-
-        if (! is_string($signature) || ! is_string($requestId)) {
-            throw new WebhookProcessingException('Missing webhook signature headers');
-        }
-
-        preg_match('/ts=(\d+),v1=([a-f0-9]+)/', $signature, $matches);
-        $timestamp = isset($matches[1]) && is_string($matches[1]) ? (int) $matches[1] : null;
-        $hash = isset($matches[2]) && is_string($matches[2]) ? $matches[2] : null;
-
-        if (! $timestamp || ! $hash) {
-            throw new WebhookProcessingException('Invalid signature format');
-        }
-
-        if (abs(time() - $timestamp) > 300) {
-            throw new WebhookProcessingException('Webhook signature expired');
-        }
-
-        $secret = $this->config['webhook_secret'] ?? '';
-        $dataData = is_array($data['data'] ?? null) ? $data['data'] : [];
-        $paymentId = is_string($dataData['id'] ?? null) || is_int($dataData['id'] ?? null) ? (string) ($dataData['id']) : '';
-        $dataString = sprintf('id=%s;request-id=%s;ts=%d;', $paymentId, $requestId, $timestamp);
-        $expectedHash = hash_hmac('sha256', $dataString, is_string($secret) ? $secret : '');
-
-        if (! hash_equals($expectedHash, $hash)) {
-            throw new WebhookProcessingException('Invalid webhook signature');
-        }
     }
 }

@@ -24,7 +24,7 @@ class TransactionFactory extends Factory
         $status = $this->faker->randomElement(['pending', 'approved', 'failed']);
 
         return [
-            'gateway' => PaymentGateway::MERCADOPAGO,
+            'gateway' => 'mercadopago',
             'external_id' => 'mp_'.$this->faker->unique()->lexify('????????????'),
             'amount' => $this->faker->randomFloat(2, 10, 500),
             'description' => $description,

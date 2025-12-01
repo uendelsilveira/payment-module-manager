@@ -13,22 +13,36 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
-use UendelSilveira\PaymentModuleManager\Jobs\ProcessWebhookJob;
+use Throwable;
+use UendelSilveira\PaymentModuleManager\Services\WebhookService;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
 
 class WebhookController extends Controller
 {
     use ApiResponseTrait;
 
+    public function __construct(protected WebhookService $webhookService) {}
+
     /**
      * Handle incoming webhook from payment gateway
      */
     public function handle(Request $request, string $gateway): JsonResponse
     {
-        Log::info('Webhook received', ['gateway' => $gateway]);
+        try {
+            $result = $this->webhookService->handleWebhook($gateway, $request);
 
-        ProcessWebhookJob::dispatch($gateway, $request->all());
+            return $this->successResponse($result, 'Webhook handled successfully.');
 
-        return $this->successResponse([], 'Webhook received and queued for processing.');
+        } catch (Throwable $e) {
+            Log::error('Webhook processing failed', [
+                'gateway' => $gateway,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return $this->errorResponse(
+                'Webhook processing failed: '.$e->getMessage(),
+                500
+            );
+        }
     }
 }

@@ -15,67 +15,36 @@ use UendelSilveira\PaymentModuleManager\Models\WebhookLog;
 
 class WebhookLogRepository implements WebhookLogRepositoryInterface
 {
-    /**
-     * Cria um novo log de webhook.
-     *
-     * @param array<string, mixed> $data
-     */
     public function create(array $data): WebhookLog
     {
         return WebhookLog::create($data);
     }
 
-    /**
-     * Encontra um log de webhook pelo seu ID.
-     */
     public function find(int $id): ?WebhookLog
     {
         return WebhookLog::find($id);
     }
 
-    /**
-     * Encontra um log de webhook por uma coluna e valor específicos.
-     *
-     * @param mixed $value
-     */
     public function findBy(string $column, $value): ?WebhookLog
     {
         return WebhookLog::where($column, $value)->first();
     }
 
-    /**
-     * Atualiza um log de webhook.
-     *
-     * @param array<string, mixed> $data
-     */
     public function update(int $id, array $data): bool
     {
         $webhookLog = $this->find($id);
 
-        if ($webhookLog instanceof WebhookLog) {
-            return $webhookLog->update($data);
-        }
-
-        return false;
+        return $webhookLog?->update($data) ?? false;
     }
 
-    /**
-     * Deleta um log de webhook.
-     */
     public function delete(int $id): bool
     {
         $webhookLog = $this->find($id);
 
-        if ($webhookLog instanceof WebhookLog) {
-            return (bool) $webhookLog->delete();
-        }
-
-        return false;
+        return (bool) $webhookLog?->delete();
     }
 
     /**
-     * Retorna todos os logs de webhook.
-     *
      * @return Collection<int, WebhookLog>
      */
     public function getAll(): Collection
@@ -84,13 +53,68 @@ class WebhookLogRepository implements WebhookLogRepositoryInterface
     }
 
     /**
-     * Retorna logs de webhooks pendentes de processamento.
-     *
      * @return Collection<int, WebhookLog>
      */
     public function getPendingWebhooks(): Collection
     {
-        // Assumindo que 'status' e 'pending' são campos/valores relevantes para logs pendentes
         return WebhookLog::where('status', 'pending')->get();
+    }
+
+    public function isProcessed(string $gateway, string $eventId): bool
+    {
+        return WebhookLog::where('gateway', $gateway)
+            ->where('event_id', $eventId)
+            ->where('processed', true)
+            ->exists();
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    public function log(string $gateway, string $eventId, string $eventType, array $payload): void
+    {
+        WebhookLog::updateOrCreate(
+            ['gateway' => $gateway, 'event_id' => $eventId],
+            [
+                'event_type' => $eventType,
+                'payload' => $payload,
+                'processed' => false,
+            ]
+        );
+    }
+
+    public function markAsProcessed(string $gateway, string $eventId): void
+    {
+        WebhookLog::where('gateway', $gateway)
+            ->where('event_id', $eventId)
+            ->update([
+                'processed' => true,
+                'processed_at' => now(),
+            ]);
+    }
+
+    public function markAsFailed(string $gateway, string $eventId, string $errorMessage): void
+    {
+        WebhookLog::where('gateway', $gateway)
+            ->where('event_id', $eventId)
+            ->update([
+                'processed' => false,
+                'error_message' => $errorMessage,
+            ]);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, WebhookLog>
+     */
+    public function findUnprocessed(int $limit = 100): \Illuminate\Database\Eloquent\Collection
+    {
+        /** @var \Illuminate\Database\Eloquent\Collection<int, WebhookLog> $result */
+        $result = WebhookLog::where('processed', false)
+            ->whereNull('error_message')
+            ->orderBy('created_at', 'asc')
+            ->limit($limit)
+            ->get();
+
+        return $result;
     }
 }

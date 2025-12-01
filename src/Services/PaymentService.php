@@ -9,10 +9,11 @@
 
 namespace UendelSilveira\PaymentModuleManager\Services;
 
+use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
-use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\DTOs\CancelPaymentResponse;
 use UendelSilveira\PaymentModuleManager\DTOs\RefundPaymentResponse;
 use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
@@ -22,18 +23,21 @@ use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
 use UendelSilveira\PaymentModuleManager\Events\RefundProcessed;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
+use UendelSilveira\PaymentModuleManager\Repositories\TransactionRepository;
 use UendelSilveira\PaymentModuleManager\Support\LogContext;
 
 class PaymentService
 {
     public function __construct(
         protected PaymentGatewayManager $paymentGatewayManager,
-        protected TransactionRepositoryInterface $transactionRepository,
+        protected TransactionRepository $transactionRepository,
         protected RetryService $retryService
     ) {}
 
     /**
      * @param array<string, mixed> $data
+     *
+     * @throws Exception
      */
     public function processPayment(array $data): Transaction
     {
@@ -165,9 +169,9 @@ class PaymentService
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Collection<int, Transaction>
+     * @return Collection<int, Transaction>
      */
-    public function getFailedTransactions(): \Illuminate\Database\Eloquent\Collection
+    public function getFailedTransactions(): Collection
     {
         return $this->transactionRepository->getFailedToReprocess();
     }
@@ -188,7 +192,7 @@ class PaymentService
         if (! $this->retryService->isEligibleForRetry($transaction, $maxAttempts)) {
             Log::channel('payment')->warning('Transaction not eligible for retry', $logContext->toArray());
 
-            throw new \Exception('Transaction is not eligible for retry');
+            throw new Exception('Transaction is not eligible for retry');
         }
 
         Log::channel('payment')->info('Reprocessing transaction', $logContext->toArray());
@@ -252,15 +256,15 @@ class PaymentService
         Log::channel('payment')->info('Starting refund processing', $logContext->toArray());
 
         if (empty($transaction->external_id)) {
-            throw new \Exception('Transação não possui external_id. Não é possível estornar.');
+            throw new Exception('Transação não possui external_id. Não é possível estornar.');
         }
 
         if ($transaction->status === PaymentStatus::REFUNDED->value) {
-            throw new \Exception('Esta transação já foi estornada.');
+            throw new Exception('Esta transação já foi estornada.');
         }
 
         if ($transaction->status !== PaymentStatus::APPROVED->value && $transaction->status !== 'authorized') {
-            throw new \Exception('Apenas pagamentos aprovados ou autorizados podem ser estornados. Status atual: '.$transaction->status);
+            throw new Exception('Apenas pagamentos aprovados ou autorizados podem ser estornados. Status atual: '.$transaction->status);
         }
 
         try {
@@ -305,15 +309,15 @@ class PaymentService
         Log::channel('payment')->info('Starting payment cancellation', $logContext->toArray());
 
         if (empty($transaction->external_id)) {
-            throw new \Exception('Transação não possui external_id. Não é possível cancelar.');
+            throw new Exception('Transação não possui external_id. Não é possível cancelar.');
         }
 
         if ($transaction->status === PaymentStatus::CANCELLED->value) {
-            throw new \Exception('Esta transação já foi cancelada.');
+            throw new Exception('Esta transação já foi cancelada.');
         }
 
         if ($transaction->status !== PaymentStatus::PENDING->value && $transaction->status !== 'in_process') {
-            throw new \Exception('Apenas pagamentos pendentes ou em processamento podem ser cancelados. Status atual: '.$transaction->status);
+            throw new Exception('Apenas pagamentos pendentes ou em processamento podem ser cancelados. Status atual: '.$transaction->status);
         }
 
         try {
@@ -371,13 +375,13 @@ class PaymentService
         if ($amountInSmallestUnit < $min) {
             $minFormatted = is_int($min) ? ($min / 100) : $min;
 
-            throw new \Exception(sprintf("O valor do pagamento (%s) está abaixo do limite mínimo permitido (%s) para o gateway '%s' e método '%s'.", $amount, $minFormatted, $gatewayName, $paymentMethod));
+            throw new Exception(sprintf("O valor do pagamento (%s) está abaixo do limite mínimo permitido (%s) para o gateway '%s' e método '%s'.", $amount, $minFormatted, $gatewayName, $paymentMethod));
         }
 
         if ($amountInSmallestUnit > $max) {
             $maxFormatted = is_int($max) ? ($max / 100) : $max;
 
-            throw new \Exception(sprintf("O valor do pagamento (%s) excede o limite máximo permitido (%s) para o gateway '%s' e método '%s'.", $amount, $maxFormatted, $gatewayName, $paymentMethod));
+            throw new Exception(sprintf("O valor do pagamento (%s) excede o limite máximo permitido (%s) para o gateway '%s' e método '%s'.", $amount, $maxFormatted, $gatewayName, $paymentMethod));
         }
     }
 }

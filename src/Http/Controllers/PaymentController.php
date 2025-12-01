@@ -9,12 +9,13 @@
 
 namespace UendelSilveira\PaymentModuleManager\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use UendelSilveira\PaymentModuleManager\Http\Requests\CreatePaymentRequest;
-use UendelSilveira\PaymentModuleManager\Http\Requests\RefundRequest;
-use UendelSilveira\PaymentModuleManager\Http\Resources\TransactionResource; // Import the new TransactionResource
+use UendelSilveira\PaymentModuleManager\Http\Resources\TransactionResource;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
 use UendelSilveira\PaymentModuleManager\Traits\ApiResponseTrait;
@@ -25,7 +26,7 @@ class PaymentController extends Controller
 
     public function __construct(protected PaymentService $paymentService) {}
 
-    public function process(CreatePaymentRequest $createPaymentRequest): \Illuminate\Http\JsonResponse
+    public function process(CreatePaymentRequest $createPaymentRequest): JsonResponse
     {
         Log::info(
             '[PaymentController] Requisição para processar pagamento recebida.',
@@ -33,18 +34,16 @@ class PaymentController extends Controller
         );
 
         try {
+            /** @var array<string, mixed> $validated */
             $validated = $createPaymentRequest->validated();
-            assert(is_array($validated));
-            $validatedData = $validated;
 
-            if (isset($validatedData['method']) && ! isset($validatedData['gateway'])) {
-                $validatedData['gateway'] = $validatedData['method'];
+            if (! is_array($validated)) {
+                throw new \InvalidArgumentException('Validation returned non-array data.');
             }
-
-            $transaction = $this->paymentService->processPayment($validatedData);
+            $transaction = $this->paymentService->processPayment($validated);
 
             return $this->successResponse(
-                new TransactionResource($transaction), // Use TransactionResource
+                new TransactionResource($transaction),
                 'Pagamento processado com sucesso.',
                 201
             );
@@ -61,7 +60,7 @@ class PaymentController extends Controller
         }
     }
 
-    public function show(Transaction $transaction): \Illuminate\Http\JsonResponse
+    public function show(Transaction $transaction): JsonResponse
     {
         Log::info(
             '[PaymentController] Requisição para obter detalhes da transação.',
@@ -72,7 +71,7 @@ class PaymentController extends Controller
             $updatedTransaction = $this->paymentService->getPaymentDetails($transaction);
 
             return $this->successResponse(
-                new TransactionResource($updatedTransaction), // Use TransactionResource
+                new TransactionResource($updatedTransaction),
                 'Detalhes da transação obtidos com sucesso.'
             );
         } catch (Throwable $throwable) {
@@ -88,41 +87,37 @@ class PaymentController extends Controller
         }
     }
 
-    public function refund(
-        Transaction $transaction,
-        RefundRequest $refundRequest
-    ): \Illuminate\Http\JsonResponse {
+    public function refund(Request $request, Transaction $transaction): JsonResponse
+    {
         Log::info(
             '[PaymentController] Requisição para estornar pagamento.',
             ['transaction_id' => $transaction->id]
         );
 
         try {
-            $validated = $refundRequest->validated();
-            assert(is_array($validated));
-            $amountValue = $validated['amount'] ?? null;
-            $amount = (is_int($amountValue) || is_float($amountValue)) ? (float) $amountValue : null;
+            $amount = $request->input('amount');
+            $amount = is_numeric($amount) ? (float) $amount : null;
 
-            $refundData = $this->paymentService->refundPayment($transaction, $amount);
+            $refundResponse = $this->paymentService->refundPayment($transaction, $amount);
 
             return $this->successResponse(
-                $refundData,
-                'Estorno processado com sucesso.'
+                $refundResponse->details,
+                'Pagamento estornado com sucesso.'
             );
-        } catch (Throwable $throwable) {
+        } catch (Throwable $e) {
             Log::error(
                 '[PaymentController] Erro ao estornar pagamento.',
-                ['transaction_id' => $transaction->id, 'exception' => $throwable->getMessage()]
+                ['transaction_id' => $transaction->id, 'exception' => $e->getMessage()]
             );
 
             return $this->errorResponse(
-                'Falha ao processar estorno: '.$throwable->getMessage(),
+                'Falha ao estornar pagamento: '.$e->getMessage(),
                 500
             );
         }
     }
 
-    public function cancel(Transaction $transaction): \Illuminate\Http\JsonResponse
+    public function cancel(Transaction $transaction): JsonResponse
     {
         Log::info(
             '[PaymentController] Requisição para cancelar pagamento.',
@@ -130,20 +125,20 @@ class PaymentController extends Controller
         );
 
         try {
-            $cancelData = $this->paymentService->cancelPayment($transaction);
+            $cancelResponse = $this->paymentService->cancelPayment($transaction);
 
             return $this->successResponse(
-                $cancelData,
+                $cancelResponse->details,
                 'Pagamento cancelado com sucesso.'
             );
-        } catch (Throwable $throwable) {
+        } catch (Throwable $e) {
             Log::error(
                 '[PaymentController] Erro ao cancelar pagamento.',
-                ['transaction_id' => $transaction->id, 'exception' => $throwable->getMessage()]
+                ['transaction_id' => $transaction->id, 'exception' => $e->getMessage()]
             );
 
             return $this->errorResponse(
-                'Falha ao cancelar pagamento: '.$throwable->getMessage(),
+                'Falha ao cancelar pagamento: '.$e->getMessage(),
                 500
             );
         }

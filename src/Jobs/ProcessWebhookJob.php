@@ -15,14 +15,14 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
 use UendelSilveira\PaymentModuleManager\Facades\PaymentGateway;
+use UendelSilveira\PaymentModuleManager\Models\Transaction;
 
 class ProcessWebhookJob implements ShouldQueue
 {
-    use Dispatchable;
-    use InteractsWithQueue;
-    use Queueable;
-    use SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * @param array<string, mixed> $payload
@@ -32,18 +32,17 @@ class ProcessWebhookJob implements ShouldQueue
         public array $payload
     ) {}
 
-    public function handle(
-        \UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface $transactionRepository
-    ): void {
+    public function handle(TransactionRepositoryInterface $transactionRepository): void
+    {
         try {
             /** @var array{transaction_id: string, status: string, payment_method: string, amount: float, metadata: array<string, mixed>} $processedData */
-            $processedData = PaymentGateway::gateway($this->gateway)->processWebhook($this->payload);
+            $processedData = PaymentGateway::gateway($this->gateway)->handleWebhook($this->payload);
 
             $externalId = $processedData['transaction_id'];
 
             $transaction = $transactionRepository->findBy('external_id', $externalId);
 
-            if (! $transaction instanceof \UendelSilveira\PaymentModuleManager\Models\Transaction) {
+            if (! $transaction instanceof Transaction) {
                 Log::channel('payment')->error('Transaction not found for webhook', [
                     'gateway' => $this->gateway,
                     'external_id' => $externalId,
@@ -52,7 +51,6 @@ class ProcessWebhookJob implements ShouldQueue
                 return;
             }
 
-            // Idempotency check: if status is already final, skip
             if (in_array($transaction->status, ['completed', 'failed', 'refunded', 'cancelled'])) {
                 Log::channel('payment')->info('Transaction already in final state, skipping webhook', [
                     'transaction_id' => $transaction->id,
@@ -64,26 +62,27 @@ class ProcessWebhookJob implements ShouldQueue
             }
 
             $oldStatus = $transaction->status;
-            $transaction->status = $processedData['status'];
-            $transaction->metadata = array_merge($transaction->metadata ?? [], ['webhook_processed_at' => now()->toIso8601String()]);
+            $newStatus = $processedData['status'];
 
-            $transactionRepository->update($transaction->id, [
-                'status' => $processedData['status'],
-                'metadata' => $transaction->metadata,
-            ]);
+            if ($oldStatus !== $newStatus) {
+                $transactionRepository->update($transaction->id, [
+                    'status' => $newStatus,
+                    'metadata' => array_merge($transaction->metadata ?? [], ['webhook_processed_at' => now()->toIso8601String()]),
+                ]);
 
-            Log::channel('payment')->info('Webhook processed successfully', [
-                'gateway' => $this->gateway,
-                'transaction_id' => $transaction->id,
-                'old_status' => $oldStatus,
-                'new_status' => $transaction->status,
-            ]);
+                Log::channel('payment')->info('Webhook processed successfully', [
+                    'gateway' => $this->gateway,
+                    'transaction_id' => $transaction->id,
+                    'old_status' => $oldStatus,
+                    'new_status' => $newStatus,
+                ]);
 
-            // Dispatch events
-            if ($oldStatus !== $transaction->status) {
-                event(new \UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged($transaction, $oldStatus, $transaction->status));
+                $freshTransaction = $transaction->fresh();
+
+                if ($freshTransaction instanceof Transaction) {
+                    event(new PaymentStatusChanged($freshTransaction, $oldStatus, $newStatus));
+                }
             }
-
         } catch (\Exception $exception) {
             Log::channel('payment')->error('Error processing webhook', [
                 'gateway' => $this->gateway,

@@ -16,7 +16,7 @@ use UendelSilveira\PaymentModuleManager\Console\Commands\ReprocessFailedPayments
 use UendelSilveira\PaymentModuleManager\Contracts\GatewayRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\SettingsRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
-use UendelSilveira\PaymentModuleManager\Contracts\WebhookLogRepositoryInterface; // Adicionado
+use UendelSilveira\PaymentModuleManager\Contracts\WebhookLogRepositoryInterface;
 use UendelSilveira\PaymentModuleManager\Events\PaymentFailed;
 use UendelSilveira\PaymentModuleManager\Events\PaymentProcessed;
 use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
@@ -31,11 +31,11 @@ use UendelSilveira\PaymentModuleManager\Listeners\LogPaymentStatusChanged;
 use UendelSilveira\PaymentModuleManager\Listeners\SendPaymentStatusNotification;
 use UendelSilveira\PaymentModuleManager\PaymentGatewayManager;
 use UendelSilveira\PaymentModuleManager\Repositories\GatewayRepository;
+use UendelSilveira\PaymentModuleManager\Repositories\PaymentRepository;
 use UendelSilveira\PaymentModuleManager\Repositories\SettingsRepository;
 use UendelSilveira\PaymentModuleManager\Repositories\TransactionRepository;
-use UendelSilveira\PaymentModuleManager\Repositories\WebhookLogRepository; // Adicionado
+use UendelSilveira\PaymentModuleManager\Repositories\WebhookLogRepository;
 use UendelSilveira\PaymentModuleManager\Services\PaymentService;
-use UendelSilveira\PaymentModuleManager\Services\RetryService;
 
 class PaymentServiceProvider extends ServiceProvider
 {
@@ -43,21 +43,18 @@ class PaymentServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../../config/payment.php', 'payment');
 
-        // Registrar o PaymentGatewayManager como singleton, injetando a configuração.
-        $this->app->singleton(PaymentGatewayManager::class, fn ($app): \UendelSilveira\PaymentModuleManager\PaymentGatewayManager => new PaymentGatewayManager($app['config']['payment']));
+        // Registrar o PaymentGatewayManager como singleton.
+        $this->app->singleton(PaymentGatewayManager::class, fn ($app) => new PaymentGatewayManager($app['config']['payment']));
 
         // Bind das interfaces às suas implementações concretas.
         $this->app->bind(TransactionRepositoryInterface::class, TransactionRepository::class);
         $this->app->bind(SettingsRepositoryInterface::class, SettingsRepository::class);
         $this->app->bind(GatewayRepositoryInterface::class, GatewayRepository::class);
-        $this->app->bind(WebhookLogRepositoryInterface::class, WebhookLogRepository::class); // Adicionado
+        $this->app->bind(WebhookLogRepositoryInterface::class, WebhookLogRepository::class);
+        $this->app->bind(PaymentRepository::class, TransactionRepository::class); // Adicionado para consistência
 
-        // Registrar o PaymentService, que depende do Manager e do Repository.
-        $this->app->singleton(PaymentService::class, fn ($app): \UendelSilveira\PaymentModuleManager\Services\PaymentService => new PaymentService(
-            $app->make(PaymentGatewayManager::class),
-            $app->make(TransactionRepositoryInterface::class),
-            $app->make(RetryService::class)
-        ));
+        // Registrar o PaymentService. O Laravel cuidará da injeção de dependência.
+        $this->app->singleton(PaymentService::class);
     }
 
     public function boot(): void
@@ -97,6 +94,7 @@ class PaymentServiceProvider extends ServiceProvider
             ->middleware('api')
             ->group(fn () => $this->loadRoutesFrom(__DIR__.'/../../routes/api.php'));
 
+        // Carregar migrations (incluindo em testes)
         $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
     }
 }

@@ -23,9 +23,6 @@ class StripeGateway implements PaymentGatewayInterface
      */
     public function __construct(protected array $config = []) {}
 
-    /**
-     * @param array<string, mixed> $data
-     */
     public function processPayment(array $data): ProcessPaymentResponse
     {
         throw new NotImplementedException('Stripe payment processing is not implemented.');
@@ -47,24 +44,15 @@ class StripeGateway implements PaymentGatewayInterface
     }
 
     /**
-     * @param array<string, mixed> $data
-     */
-    public function createWebhook(array $data): array
-    {
-        throw new NotImplementedException('Stripe create webhook is not implemented.');
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    public function processWebhook(array $data): array
-    {
-        throw new NotImplementedException('Stripe process webhook is not implemented.');
-    }
-
-    /**
+     * @param array<string, mixed> $payload
+     *
      * @return array<string, mixed>
      */
+    public function handleWebhook(array $payload): array
+    {
+        throw new NotImplementedException('Stripe handle webhook is not implemented.');
+    }
+
     public function getConfig(): array
     {
         return $this->config;
