@@ -50,6 +50,7 @@
     "lint-check": "pint --test",
     "stan": "phpstan analyse --memory-limit=2G",
     "ci": [
+      "@lint",
       "@lint-check",
       "@stan",
       "@test"
