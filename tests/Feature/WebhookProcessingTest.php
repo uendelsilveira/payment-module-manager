@@ -1,11 +1,15 @@
 <?php
 
-namespace Tests\Feature;
+namespace UendelSilveira\PaymentModuleManager\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Queue;
+use Mockery;
+use UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface;
+use UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface;
+use UendelSilveira\PaymentModuleManager\Enums\PaymentStatus;
 use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
+use UendelSilveira\PaymentModuleManager\Facades\PaymentGateway;
 use UendelSilveira\PaymentModuleManager\Jobs\ProcessWebhookJob;
 use UendelSilveira\PaymentModuleManager\Models\Transaction;
 use UendelSilveira\PaymentModuleManager\Tests\TestCase;
@@ -16,64 +20,44 @@ class WebhookProcessingTest extends TestCase
 
     public function test_webhook_job_updates_transaction_and_dispatches_event(): void
     {
-        // We need to use the real queue or simulate the job execution
-        // For this test, we'll manually execute the job to verify the side effects
-        // as integration testing the queue worker is complex in this setup.
-
         Event::fake();
 
-        // Create a pending transaction
-        $transaction = Transaction::create([
+        $transaction = Transaction::factory()->create([
             'gateway' => 'stripe',
-            'amount' => 10.00,
-            'status' => 'pending',
-            'external_id' => 'pi_12345', // Matches the mock payload
-            'description' => 'Test Transaction',
+            'status' => PaymentStatus::PENDING,
+            'external_id' => 'pi_12345',
         ]);
 
         $payload = [
             'id' => 'evt_12345',
             'type' => 'payment_intent.succeeded',
-            'data' => [
-                'object' => [
-                    'id' => 'pi_12345',
-                    'amount' => 1000,
-                    'currency' => 'usd',
-                    'status' => 'succeeded',
-                ],
-            ],
+            'data' => ['object' => ['id' => 'pi_12345', 'status' => 'succeeded']],
         ];
 
-        // Mock the gateway response via Facade or by mocking the manager in the container
-        // Since ProcessWebhookJob uses the facade, we need to mock the underlying service
-
-        $mockGateway = \Mockery::mock(\UendelSilveira\PaymentModuleManager\Contracts\PaymentGatewayInterface::class);
-        $mockGateway->shouldReceive('processWebhook')
+        $mockGateway = Mockery::mock(PaymentGatewayInterface::class);
+        $mockGateway->shouldReceive('handleWebhook')
             ->with($payload)
             ->andReturn([
                 'transaction_id' => 'pi_12345',
-                'status' => 'approved',
+                'status' => PaymentStatus::APPROVED->value,
                 'payment_method' => 'credit_card',
                 'amount' => 10.00,
                 'metadata' => ['foo' => 'bar'],
             ]);
 
-        \UendelSilveira\PaymentModuleManager\Facades\PaymentGateway::shouldReceive('gateway')
-            ->with('stripe')
-            ->andReturn($mockGateway);
+        PaymentGateway::shouldReceive('gateway')->with('stripe')->andReturn($mockGateway);
 
-        // Execute the job
         $processWebhookJob = new ProcessWebhookJob('stripe', $payload);
-        $processWebhookJob->handle(app(\UendelSilveira\PaymentModuleManager\Contracts\TransactionRepositoryInterface::class));
+        $processWebhookJob->handle(app(TransactionRepositoryInterface::class));
 
-        // Verify Transaction Update
         $transaction->refresh();
-        $this->assertEquals('approved', $transaction->status);
+        $this->assertEquals(PaymentStatus::APPROVED->value, $transaction->status);
         $this->assertArrayHasKey('webhook_processed_at', $transaction->metadata);
 
-        // Verify Event Dispatch
-        Event::assertDispatched(PaymentStatusChanged::class, fn ($event): bool => $event->transaction->id === $transaction->id
-            && $event->oldStatus === 'pending'
-            && $event->newStatus === 'approved');
+        Event::assertDispatched(PaymentStatusChanged::class, function (PaymentStatusChanged $event) use ($transaction) {
+            return $event->transaction->id === $transaction->id &&
+                   $event->oldStatus === PaymentStatus::PENDING->value &&
+                   $event->newStatus === PaymentStatus::APPROVED->value;
+        });
     }
 }

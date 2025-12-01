@@ -32,16 +32,15 @@ class PaymentProcessingTest extends TestCase
     {
         parent::setUp();
 
-        // Mock da interface do Gateway
         $this->gatewayMock = Mockery::mock(PaymentGatewayInterface::class);
-
-        // Mock do Gateway Manager
         $this->gatewayManagerMock = Mockery::mock(PaymentGatewayManager::class);
 
-        // Substituir a instância do PaymentGatewayManager no container de serviços do Laravel
-        $this->app->instance(PaymentGatewayManager::class, $this->gatewayManagerMock);
+        // Adiciona a expectativa que faltava:
+        $this->gatewayManagerMock
+            ->shouldReceive('getDefaultGateway')
+            ->andReturn('mercadopago');
 
-        // Forçar a recriação do PaymentService para usar o mock do PaymentGatewayManager
+        $this->app->instance(PaymentGatewayManager::class, $this->gatewayManagerMock);
         $this->app->forgetInstance(\UendelSilveira\PaymentModuleManager\Services\PaymentService::class);
     }
 
@@ -58,15 +57,11 @@ class PaymentProcessingTest extends TestCase
         $user->id = 1;
         Sanctum::actingAs($user);
 
-        // 1. Arrange (Organizar)
-
-        // Configurar o mock do Gateway Manager para retornar nosso gateway mockado
         $this->gatewayManagerMock
             ->shouldReceive('gateway')
-            ->with('mercadopago') // ou o gateway que você espera que seja chamado
+            ->with('mercadopago')
             ->andReturn($this->gatewayMock);
 
-        // Configurar o mock do Gateway para simular uma resposta de sucesso com o DTO
         $processPaymentResponse = new ProcessPaymentResponse(
             transactionId: 'mock_transaction_12345',
             status: PaymentStatus::APPROVED,
@@ -78,21 +73,16 @@ class PaymentProcessingTest extends TestCase
             ->once()
             ->andReturn($processPaymentResponse);
 
-        // Dados da requisição (mínimo válido segundo CreatePaymentRequest)
         $requestData = [
-            'method' => 'mercadopago', // gateway dinâmico principal
+            'method' => 'mercadopago',
             'payment_method_id' => 'pix',
             'amount' => 120.50,
             'description' => 'Test Product',
             'payer_email' => 'customer@example.com',
         ];
 
-        // 2. Act (Agir)
         $testResponse = $this->postJson(route('payment.process'), $requestData);
 
-        // 3. Assert (Verificar)
-
-        // Verificar se a resposta da API foi de sucesso (201 Created)
         $testResponse->assertStatus(201)
             ->assertJson([
                 'success' => true,
@@ -101,7 +91,6 @@ class PaymentProcessingTest extends TestCase
             ->assertJsonPath('data.status', PaymentStatus::APPROVED->value)
             ->assertJsonPath('data.external_id', 'mock_transaction_12345');
 
-        // Verificar se a transação foi salva no banco de dados
         $this->assertDatabaseHas('transactions', [
             'gateway' => 'mercadopago',
             'amount' => 120.50,
@@ -117,7 +106,6 @@ class PaymentProcessingTest extends TestCase
         $user->id = 1;
         Sanctum::actingAs($user);
 
-        // 1. Arrange (mantém campos obrigatórios exceto amount)
         $requestData = [
             'method' => 'mercadopago',
             'payment_method_id' => 'pix',
@@ -125,11 +113,39 @@ class PaymentProcessingTest extends TestCase
             'payer_email' => 'customer@example.com',
         ];
 
-        // 2. Act
         $testResponse = $this->postJson(route('payment.process'), $requestData);
 
-        // 3. Assert
-        $testResponse->assertStatus(422) // HTTP 422 Unprocessable Entity
+        $testResponse->assertStatus(422)
+            ->assertJsonValidationErrors(['amount']);
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function it_returns_a_validation_error_if_amount_is_invalid(): void
+    {
+        $user = new User;
+        $user->id = 1;
+        Sanctum::actingAs($user);
+
+        $requestDataZero = [
+            'method' => 'mercadopago',
+            'payment_method_id' => 'pix',
+            'amount' => 0,
+            'description' => 'Test Product',
+            'payer_email' => 'customer@example.com',
+        ];
+        $this->postJson(route('payment.process'), $requestDataZero)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['amount']);
+
+        $requestDataNegative = [
+            'method' => 'mercadopago',
+            'payment_method_id' => 'pix',
+            'amount' => -10.50,
+            'description' => 'Test Product',
+            'payer_email' => 'customer@example.com',
+        ];
+        $this->postJson(route('payment.process'), $requestDataNegative)
+            ->assertStatus(422)
             ->assertJsonValidationErrors(['amount']);
     }
 }

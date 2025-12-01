@@ -1,14 +1,9 @@
 <?php
 
-/*
- By Uendel Silveira
- Developer Web
- IDE: PhpStorm
- Created: 19/11/2025 14:24:12
-*/
-
 namespace UendelSilveira\PaymentModuleManager\Tests;
 
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Testing\RefreshDatabase; // Reverted to RefreshDatabase
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use UendelSilveira\PaymentModuleManager\Providers\PaymentServiceProvider;
@@ -16,7 +11,15 @@ use UendelSilveira\PaymentModuleManager\Providers\PaymentServiceProvider;
 abstract class TestCase extends OrchestraTestCase
 {
     use MockeryPHPUnitIntegration;
+    use RefreshDatabase; // Reverted to RefreshDatabase
 
+    /**
+     * Get package providers.
+     *
+     * @param Application $app
+     *
+     * @return array<int, class-string>
+     */
     protected function getPackageProviders($app): array
     {
         return [
@@ -25,8 +28,14 @@ abstract class TestCase extends OrchestraTestCase
         ];
     }
 
-    protected function defineEnvironment($app): void
+    /**
+     * Define environment setup.
+     *
+     * @param Application $app
+     */
+    protected function getEnvironmentSetUp($app): void
     {
+        // Configura o banco de dados em memória para os testes.
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', [
             'driver' => 'sqlite',
@@ -34,48 +43,19 @@ abstract class TestCase extends OrchestraTestCase
             'prefix' => '',
         ]);
 
-        // Gateway padrão quando não especificado
+        // Configurações mínimas para o pacote funcionar.
         $app['config']->set('payment.default_gateway', 'mercadopago');
-
-        // Canais de log mínimos usados pelo pacote durante os testes
-        $app['config']->set('logging.default', 'single');
-        $app['config']->set('logging.channels.single', [
-            'driver' => 'single',
-            'path' => storage_path('logs/laravel.log'),
-            'level' => 'debug',
-            'replace_placeholders' => true,
-        ]);
-        $app['config']->set('logging.channels.payment', [
-            'driver' => 'single',
-            'path' => storage_path('logs/testing-payment.log'),
-            'level' => 'debug',
-            'replace_placeholders' => true,
-        ]);
-        $app['config']->set('logging.channels.transaction', [
-            'driver' => 'single',
-            'path' => storage_path('logs/testing-transaction.log'),
-            'level' => 'debug',
-            'replace_placeholders' => true,
-        ]);
-        $app['config']->set('logging.channels.webhook', [
-            'driver' => 'single',
-            'path' => storage_path('logs/testing-webhook.log'),
-            'level' => 'debug',
-            'replace_placeholders' => true,
-        ]);
-        $app['config']->set('logging.channels.gateway', [
-            'driver' => 'single',
-            'path' => storage_path('logs/testing-gateway.log'),
-            'level' => 'debug',
-            'replace_placeholders' => true,
-        ]);
-
-        // Rota dummy para webhooks usada em tests
-        $app['router']->post('/__test/webhook', fn () => response()->json(['ok' => true]))->name('payment.webhook');
+        $app['config']->set('logging.default', 'null');
     }
 
+    /**
+     * Define database migrations.
+     *
+     * @return void
+     */
     protected function defineDatabaseMigrations()
     {
-        $this->loadLaravelMigrations();
+        // Este método é chamado pelo trait RefreshDatabase
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
     }
 }
