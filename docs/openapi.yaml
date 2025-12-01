@@ -6,8 +6,10 @@
 openapi: 3.0.3
 info:
   title: Payment Module Manager API
-  description: API para processamento de pagamentos e gerenciamento de configurações.
-  version: 1.2.0
+  description: |-
+    API para processamento de pagamentos, gerenciamento de configurações e relatórios.
+    Esta documentação está sincronizada com o código-fonte e reflete todos os endpoints implementados.
+  version: 1.5.0
   contact:
     name: Uendel Silveira
     email: uendel.silveira@gmail.com
@@ -16,11 +18,50 @@ servers:
   - url: /api
     description: Servidor da Aplicação Laravel
 
+tags:
+  - name: Pagamentos
+    description: Endpoints para processar, consultar, cancelar e estornar pagamentos.
+  - name: Webhooks
+    description: Endpoint para receber notificações dos gateways de pagamento.
+  - name: Configurações
+    description: Endpoints para configurar e conectar gateways de pagamento.
+  - name: Relatórios
+    description: Endpoints para obter dados e métricas sobre transações.
+  - name: Health Check
+    description: Endpoint para verificação de saúde da aplicação.
+
 paths:
+  /health:
+    get:
+      summary: Verifica a saúde da aplicação
+      description: Retorna o status da aplicação e serviços conectados. Endpoint público.
+      tags:
+        - Health Check
+      responses:
+        '200':
+          description: Aplicação está saudável.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  database:
+                    type: string
+                    example: connected
+        '503':
+          description: Um ou mais serviços estão indisponíveis.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /payment/process:
     post:
       summary: Processa um novo pagamento
-      description: Cria uma nova transação e a processa através do gateway de pagamento configurado.
+      description: Cria uma nova transação e a processa. A estrutura da requisição varia com base no `payment_method_id`.
       tags:
         - Pagamentos
       requestBody:
@@ -31,7 +72,7 @@ paths:
               $ref: '#/components/schemas/CreatePaymentRequest'
       responses:
         '201':
-          description: Pagamento processado com sucesso.
+          description: Pagamento criado e processado com sucesso.
           content:
             application/json:
               schema:
@@ -52,7 +93,7 @@ paths:
   /payments/{transaction}:
     get:
       summary: Consulta os detalhes de um pagamento
-      description: Obtém o status e os detalhes mais recentes de uma transação específica, consultando o gateway de pagamento se necessário.
+      description: Obtém o status e os detalhes mais recentes de uma transação específica.
       tags:
         - Pagamentos
       parameters:
@@ -61,23 +102,211 @@ paths:
           schema:
             type: integer
           required: true
-          description: O ID da transação local.
+          description: O ID da transação.
       responses:
         '200':
-          description: Detalhes da transação obtidos com sucesso.
+          description: Detalhes da transação.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
         '404':
           description: Transação não encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /payments/{transaction}/refund:
+    post:
+      summary: Estorna um pagamento
+      description: Solicita o estorno total ou parcial de um pagamento aprovado.
+      tags:
+        - Pagamentos
+      parameters:
+        - in: path
+          name: transaction
+          schema:
+            type: integer
+          required: true
+          description: O ID da transação a ser estornada.
+      requestBody:
+        description: Opcionalmente, especifique um valor para estorno parcial. Se omitido, o estorno será total.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                  description: O valor a ser estornado.
+                  example: 50.00
+      responses:
+        '200':
+          description: Estorno processado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Transação não encontrada.
+        '422':
+          description: "Erro de negócio (ex: transação não pode ser estornada)."
+
+  /payments/{transaction}/cancel:
+    post:
+      summary: Cancela um pagamento
+      description: "Solicita o cancelamento de um pagamento que ainda não foi aprovado (ex: pendente)."
+      tags:
+        - Pagamentos
+      parameters:
+        - in: path
+          name: transaction
+          schema:
+            type: integer
+          required: true
+          description: O ID da transação a ser cancelada.
+      responses:
+        '200':
+          description: Cancelamento processado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Transação não encontrada.
+        '422':
+          description: "Erro de negócio (ex: transação já aprovada)."
+
+  /payment/webhook/{gateway}:
+    post:
+      summary: Recebe notificações de webhook
+      description: |-
+        Endpoint para receber atualizações de status dos gateways de pagamento.
+        **Importante:** A autenticidade é verificada via assinatura no header `X-Webhook-Signature`.
+      tags:
+        - Webhooks
+      parameters:
+        - in: path
+          name: gateway
+          schema:
+            type: string
+          required: true
+          description: O identificador do gateway que está enviando o webhook.
+        - in: header
+          name: X-Webhook-Signature
+          schema:
+            type: string
+          required: true
+          description: Assinatura HMAC SHA256 do payload para verificação.
+      requestBody:
+        required: true
+        description: O payload do evento de webhook.
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook recebido e processado.
+        '401':
+          description: Assinatura do webhook inválida.
         '500':
-          description: Erro interno do servidor.
+          description: Erro interno no processamento do webhook.
+
+  /settings/{gateway}:
+    get:
+      summary: Obtém as configurações de um gateway
+      description: Retorna as configurações salvas para um gateway específico.
+      tags:
+        - Configurações
+      parameters:
+        - in: path
+          name: gateway
+          schema:
+            type: string
+          required: true
+          description: O identificador do gateway.
+      responses:
+        '200':
+          description: Configurações do gateway.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+        '404':
+          description: Gateway não encontrado ou não configurado.
+    post:
+      summary: Salva as configurações de um gateway
+      description: Cria ou atualiza as configurações de um gateway.
+      tags:
+        - Configurações
+      parameters:
+        - in: path
+          name: gateway
+          schema:
+            type: string
+          required: true
+          description: O identificador do gateway.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsRequest'
+      responses:
+        '200':
+          description: Configurações salvas com sucesso.
+        '422':
+          description: Erro de validação dos dados de configuração.
+
+  /connect/{gateway}:
+    get:
+      summary: Inicia a conexão com um gateway (OAuth2)
+      description: Redireciona o usuário para a página de autorização do gateway para iniciar o fluxo de conexão.
+      tags:
+        - Configurações
+      parameters:
+        - in: path
+          name: gateway
+          schema:
+            type: string
+          required: true
+          description: O identificador do gateway.
+      responses:
+        '302':
+          description: Redirecionamento para o gateway.
+
+  /connect/{gateway}/callback:
+    get:
+      summary: Manipula o callback do gateway (OAuth2)
+      description: Endpoint para onde o gateway redireciona o usuário após a autorização. O sistema troca o código de autorização por um token de acesso.
+      tags:
+        - Configurações
+      parameters:
+        - in: path
+          name: gateway
+          schema:
+            type: string
+          required: true
+          description: O identificador do gateway.
+        - in: query
+          name: code
+          schema:
+            type: string
+          required: true
+          description: O código de autorização fornecido pelo gateway.
+      responses:
+        '200':
+          description: Conexão estabelecida com sucesso.
+        '500':
+          description: Falha ao obter o token de acesso.
 
   /reports/transactions/summary:
     get:
       summary: Obtém um resumo das transações
-      description: Retorna um resumo das transações, incluindo o total de transações, valor total, transações bem-sucedidas e transações falhas, para um período opcional.
+      description: Retorna um resumo agregado das transações.
       tags:
         - Relatórios
       parameters:
@@ -86,39 +315,25 @@ paths:
           schema:
             type: string
             format: date
-          required: false
-          description: Data de início para filtrar as transações (formato YYYY-MM-DD).
+          description: Data de início do filtro (YYYY-MM-DD).
         - in: query
           name: end_date
           schema:
             type: string
             format: date
-          required: false
-          description: Data de fim para filtrar as transações (formato YYYY-MM-DD).
+          description: Data de fim do filtro (YYYY-MM-DD).
       responses:
         '200':
-          description: Resumo das transações obtido com sucesso.
+          description: Resumo das transações.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransactionSummaryResponse'
-        '422':
-          description: Erro de validação.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Erro interno do servidor.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /reports/transactions/methods:
     get:
-      summary: Obtém transações agrupadas por método de pagamento
-      description: Retorna a contagem e o valor total das transações agrupadas por método de pagamento, para um período opcional.
+      summary: Obtém transações agrupadas por método
+      description: Retorna a contagem e o valor total das transações agrupadas por método de pagamento.
       tags:
         - Relatórios
       parameters:
@@ -127,226 +342,186 @@ paths:
           schema:
             type: string
             format: date
-          required: false
-          description: Data de início para filtrar as transações (formato YYYY-MM-DD).
+          description: Data de início do filtro (YYYY-MM-DD).
         - in: query
           name: end_date
           schema:
             type: string
             format: date
-          required: false
-          description: Data de fim para filtrar as transações (formato YYYY-MM-DD).
+          description: Data de fim do filtro (YYYY-MM-DD).
       responses:
         '200':
-          description: Transações por método de pagamento obtidas com sucesso.
+          description: Transações por método de pagamento.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransactionsByMethodResponse'
-        '422':
-          description: Erro de validação.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Erro interno do servidor.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
-    CreatePaymentRequest:
+    # Payment Schemas
+    BasePaymentRequest:
       type: object
-      required:
-        - amount
-        - method
-        - description
-        - payer_email
-        - payment_method_id
+      required: [amount, method, description, payer_email, payment_method_id]
       properties:
-        amount:
-          type: number
-          format: float
-          example: 199.90
-        method:
-          type: string
-          example: default_gateway
-        description:
-          type: string
-          example: Assinatura Premium
-        payer_email:
-          type: string
-          format: email
-          example: cliente@example.com
-        payment_method_id:
-          type: string
-          description: O ID do método de pagamento. Pode ser genérico (ex: 'credit_card', 'boleto', 'pix') ou um ID específico do gateway (ex: 'visa', 'bolbradesco').
-          example: credit_card
-        token:
-          type: string
-          description: Obrigatório se payment_method_id for um cartão de crédito.
-          example: 'e3e4e2f2a3b1e4e2f2a3b1e4e2f2a3b1'
-        installments:
-          type: integer
-          description: Número de parcelas (1 a 12). Obrigatório se payment_method_id for um cartão de crédito.
-          example: 1
-        issuer_id:
-          type: string
-          description: Obrigatório se payment_method_id for um cartão de crédito.
-          example: '24'
-        payer:
-          type: object
-          description: Dados do pagador. Obrigatório para cartões de crédito e boleto.
+        amount: { type: number, format: float, example: 199.90 }
+        method: { type: string, example: default_gateway }
+        description: { type: string, example: Assinatura Premium }
+        payer_email: { type: string, format: email, example: cliente@example.com }
+        payment_method_id: { type: string, description: "O ID do método de pagamento.", example: credit_card }
+
+    CreditCardPaymentRequest:
+      type: object
+      description: "Dados para pagamento com Cartão de Crédito."
+      allOf:
+        - $ref: '#/components/schemas/BasePaymentRequest'
+        - type: object
+          required: [token, installments, issuer_id, payer]
           properties:
-            first_name:
-              type: string
-              example: João
-            last_name:
-              type: string
-              example: Silva
-            identification:
-              type: object
-              properties:
-                type:
-                  type: string
-                  example: CPF
-                number:
-                  type: string
-                  example: '12345678909'
+            token: { type: string, description: Token do cartão., example: 'e3e4e2f2a3b1e4e2f2a3b1e4e2f2a3b1' }
+            installments: { type: integer, description: Número de parcelas., example: 1 }
+            issuer_id: { type: string, description: ID da bandeira., example: '24' }
+            payer: { $ref: '#/components/schemas/Payer' }
+
+    BoletoPaymentRequest:
+      type: object
+      description: "Dados para pagamento com Boleto."
+      allOf:
+        - $ref: '#/components/schemas/BasePaymentRequest'
+        - type: object
+          required: [payer]
+          properties:
+            payer: { $ref: '#/components/schemas/PayerWithAddress' }
+
+    PixPaymentRequest:
+      type: object
+      description: "Dados para pagamento com PIX."
+      allOf:
+        - $ref: '#/components/schemas/BasePaymentRequest'
+
+    CreatePaymentRequest:
+      oneOf:
+        - $ref: '#/components/schemas/CreditCardPaymentRequest'
+        - $ref: '#/components/schemas/BoletoPaymentRequest'
+        - $ref: '#/components/schemas/PixPaymentRequest'
+      discriminator:
+        propertyName: payment_method_id
+        mapping:
+          credit_card: '#/components/schemas/CreditCardPaymentRequest'
+          boleto: '#/components/schemas/BoletoPaymentRequest'
+          pix: '#/components/schemas/PixPaymentRequest'
+
+    # Settings Schemas
+    SettingsRequest:
+      type: object
+      description: Objeto para salvar as configurações de um gateway.
+      properties:
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        mode:
+          type: string
+          enum: [sandbox, production]
+          example: sandbox
+      required: [client_id, client_secret, mode]
+
+    SettingsResponse:
+      type: object
+      properties:
+        client_id:
+          type: string
+        mode:
+          type: string
+          enum: [sandbox, production]
+        is_connected:
+          type: boolean
+          example: true
+
+    # Reusable Component Schemas
+    Payer:
+      type: object
+      description: Dados do pagador.
+      required: [first_name, last_name, identification]
+      properties:
+        first_name: { type: string, example: João }
+        last_name: { type: string, example: Silva }
+        identification:
+          type: object
+          required: [type, number]
+          properties:
+            type: { type: string, example: CPF }
+            number: { type: string, example: '12345678909' }
+
+    PayerWithAddress:
+      allOf:
+        - $ref: '#/components/schemas/Payer'
+        - type: object
+          required: [address]
+          properties:
             address:
               type: object
-              description: Obrigatório se payment_method_id for boleto.
+              required: [zip_code, street_name, street_number, city, federal_unit]
               properties:
-                zip_code:
-                  type: string
-                  example: '01000000'
-                street_name:
-                  type: string
-                  example: 'Rua Exemplo'
-                street_number:
-                  type: string
-                  example: '123'
-                neighborhood:
-                  type: string
-                  example: 'Centro'
-                city:
-                  type: string
-                  example: 'São Paulo'
-                federal_unit:
-                  type: string
-                  example: 'SP'
+                zip_code: { type: string, example: '01000000' }
+                street_name: { type: string, example: 'Rua Exemplo' }
+                street_number: { type: string, example: '123' }
+                neighborhood: { type: string, example: 'Centro' }
+                city: { type: string, example: 'São Paulo' }
+                federal_unit: { type: string, example: 'SP' }
 
+    # API Response Schemas
     Transaction:
       type: object
       properties:
-        id:
-          type: integer
-          example: 1
-        external_id:
-          type: string
-          example: '1342016429'
-        gateway:
-          type: string
-          example: default_gateway
-        amount:
-          type: string
-          example: '199.90'
-        status:
-          type: string
-          example: approved
-        description:
-          type: string
-          example: Assinatura Premium
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        retries_count:
-          type: integer
-          example: 0
-          description: Número de tentativas de reprocessamento.
-        last_attempt_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: Data e hora da última tentativa de reprocessamento.
+        id: { type: integer, example: 1 }
+        external_id: { type: string, example: '1342016429' }
+        gateway: { type: string, example: default_gateway }
+        amount: { type: string, example: '199.90' }
+        status: { type: string, example: approved }
+        description: { type: string, example: Assinatura Premium }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        retries_count: { type: integer, example: 0 }
+        last_attempt_at: { type: string, format: date-time, nullable: true }
 
     SuccessResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Pagamento processado com sucesso.
-        data:
-          $ref: '#/components/schemas/Transaction'
+        success: { type: boolean, example: true }
+        message: { type: string, example: Operação realizada com sucesso. }
+        data: { $ref: '#/components/schemas/Transaction' }
 
     ErrorResponse:
       type: object
+      required: [success, message, error_code]
       properties:
-        success:
-          type: boolean
-          example: false
-        message:
-          type: string
-          example: Falha ao processar pagamento.
-        errors:
-          type: object
+        success: { type: boolean, example: false }
+        message: { type: string, example: Ocorreu um erro. }
+        error_code: { type: string, example: VALIDATION_ERROR }
+        errors: { type: object }
 
     TransactionSummaryResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Resumo de transações obtido com sucesso.
+        success: { type: boolean, example: true }
         data:
           type: object
           properties:
-            total_transactions:
-              type: integer
-              example: 100
-            total_amount:
-              type: number
-              format: float
-              example: 15000.50
-            successful_transactions:
-              type: integer
-              example: 90
-            failed_transactions:
-              type: integer
-              example: 10
+            total_transactions: { type: integer, example: 100 }
+            total_amount: { type: number, format: float, example: 15000.50 }
+            successful_transactions: { type: integer, example: 90 }
+            failed_transactions: { type: integer, example: 10 }
 
     TransactionsByMethodResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: Transações por método de pagamento obtidas com sucesso.
+        success: { type: boolean, example: true }
         data:
           type: array
           items:
             type: object
             properties:
-              payment_method_id:
-                type: string
-                example: credit_card
-              total_transactions:
-                type: integer
-                example: 50
-              total_amount:
-                type: number
-                format: float
-                example: 7500.25
+              payment_method_id: { type: string, example: credit_card }
+              total_transactions: { type: integer, example: 50 }
+              total_amount: { type: number, format: float, example: 7500.25 }

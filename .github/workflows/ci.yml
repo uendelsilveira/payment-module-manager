@@ -2,76 +2,133 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
-    # Ignora commits que contenham [skip ci] na mensagem
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, develop ]
 
 jobs:
-  build:
+  tests:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        php: [8.2, 8.3, 8.4]
+        php: ['8.2', '8.3', '8.4']
+
+    name: PHP ${{ matrix.php }} - Tests
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: payment_module_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, pdo, sqlite, pdo_sqlite, bcmath, curl, intl, zip, pcov
-          coverage: pcov
+          extensions: mbstring, intl, pdo_mysql, json
+          coverage: xdebug
           tools: composer:v2
-          ini-file: production
 
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
         with:
           path: vendor
           key: ${{ runner.os }}-php-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
           restore-keys: |
-            ${{ runner.os }}-php-
+            ${{ runner.os }}-php-${{ matrix.php }}-
 
-      - name: Validate composer.json
-        run: composer validate --strict
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
 
-      - name: Check PHP and Composer versions
+      - name: Create storage directories
         run: |
-          php -v
-          composer --version
-          composer check-platform-reqs
+          mkdir -p storage/logs
+          mkdir -p storage/cache/rate-limit
+          mkdir -p storage/test
 
-      - name: Install Composer dependencies
-        run: composer update --prefer-dist --no-interaction --no-progress --optimize-autoloader --prefer-stable
+      - name: Copy .env.testing
+        run: cp .env.example .env
+
+      - name: Run Code Style Check (Pint)
+        run: composer pint:test
+
+      - name: Run Static Analysis (PHPStan)
+        run: composer stan
+
+      - name: Run Unit Tests
         env:
-          COMPOSER_ALLOW_SUPERUSER: 1
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: payment_module_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: composer test:unit
 
-      - name: Run tests
+      - name: Run Integration Tests
         env:
-          MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
-        run: vendor/bin/phpunit --do-not-cache-result
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: payment_module_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: composer test:integration
 
-      - name: Run Tests with Coverage
-        if: success() && matrix.php == '8.4'
-        run: vendor/bin/phpunit --testdox --coverage-clover=coverage.xml --coverage-html=coverage-html
-        continue-on-error: true
+      - name: Generate Coverage Report
+        if: matrix.php == '8.3'
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: payment_module_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: composer test:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        if: matrix.php == '8.3'
+        uses: codecov/codecov-action@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.xml
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
           fail_ci_if_error: false
 
-      - name: Run Laravel Pint (if available)
-        run: |
-          if [ -f vendor/bin/pint ]; then
-            vendor/bin/pint --test
-          else
-            echo "Laravel Pint não instalado — etapa ignorada."
-          fi
+  security:
+    runs-on: ubuntu-latest
+    name: Security Audit
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run Security Audit
+        run: composer audit --format=plain
+
+      - name: Check for known security vulnerabilities
+        run: composer audit --format=json > security-audit.json || true
+
+      - name: Upload security audit results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-audit
+          path: security-audit.json
