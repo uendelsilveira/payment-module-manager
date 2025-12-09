@@ -50,7 +50,7 @@ jobs:
             ${{ runner.os }}-php-${{ matrix.php }}-
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
+        run: composer update --prefer-dist --no-progress
 
       - name: Create storage directories
         run: |
@@ -118,7 +118,7 @@ jobs:
           tools: composer:v2
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+        run: composer update --prefer-dist --no-progress
 
       - name: Run Security Audit
         run: composer audit --format=plain

@@ -38,7 +38,7 @@ jobs:
             ${{ runner.os }}-php-
 
       - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: composer update --prefer-dist --no-interaction --no-progress
         env:
           COMPOSER_ALLOW_SUPERUSER: 1
 
@@ -109,7 +109,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           sed -i "s/\*\*Versão:\*\* .*/\*\*Versão:\*\* $VERSION/" README.md || true
-          
+
 
       - name: Generate Changelog
         if: steps.version.outputs.should_release == 'true'
