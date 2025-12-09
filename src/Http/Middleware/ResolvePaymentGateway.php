@@ -24,29 +24,31 @@ class ResolvePaymentGateway
 
         $defaultConfig = config('payment.default_gateway');
         $default = is_string($defaultConfig) ? $defaultConfig : '';
-        $methodInput = $request->input('method');
+
+        // Priorizar 'gateway', usar 'method' como fallback (retrocompatibilidade)
         $gatewayInput = $request->input('gateway');
-        $chosenInput = is_string($methodInput) ? $methodInput : (is_string($gatewayInput) ? $gatewayInput : $default);
+        $methodInput = $request->input('method');
+        $chosenInput = is_string($gatewayInput) ? $gatewayInput : (is_string($methodInput) ? $methodInput : $default);
         $chosen = is_string($chosenInput) ? $chosenInput : '';
 
         if ($chosen === '') {
             return response()->json([
-                'message' => 'No default payment gateway configured. Set PAYMENT_DEFAULT_GATEWAY or provide method/gateway in the request.',
-            ], 500);
+                'error' => 'gateway_not_configured',
+                'message' => 'No payment gateway specified. Set PAYMENT_DEFAULT_GATEWAY or include "gateway" in request.',
+            ], 422);
         }
 
         if (! in_array($chosen, $supported, true)) {
             return response()->json([
+                'error' => 'gateway_not_supported',
                 'message' => 'Payment gateway not supported.',
                 'gateway' => $chosen,
-                'supported' => $supported,
+                'supported_gateways' => $supported,
             ], 422);
         }
 
-        $request->merge([
-            'method' => $chosen,
-            'gateway' => $chosen,
-        ]);
+        // Padronizar como 'gateway' para uso interno
+        $request->merge(['gateway' => $chosen]);
 
         return $next($request);
     }

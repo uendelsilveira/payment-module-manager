@@ -125,6 +125,19 @@ class PaymentGatewayManager
             throw new InvalidArgumentException('No default payment gateway has been specified.');
         }
 
+        // Validar que o gateway padrão existe na configuração
+        $gateways = is_array($this->config['gateways'] ?? null) ? $this->config['gateways'] : [];
+
+        if (! array_key_exists($default, $gateways)) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'Default gateway "%s" is not configured. Available gateways: %s',
+                    $default,
+                    implode(', ', array_keys($gateways))
+                )
+            );
+        }
+
         return $default;
     }
 
@@ -146,5 +159,27 @@ class PaymentGatewayManager
         $this->customCreators[$driver] = $callback;
 
         return $this;
+    }
+
+    /**
+     * Check if a gateway is configured.
+     */
+    public function isGatewayConfigured(string $name): bool
+    {
+        $gateways = is_array($this->config['gateways'] ?? null) ? $this->config['gateways'] : [];
+
+        return array_key_exists($name, $gateways);
+    }
+
+    /**
+     * Get list of configured gateway names.
+     *
+     * @return array<int, string>
+     */
+    public function getConfiguredGateways(): array
+    {
+        $gateways = is_array($this->config['gateways'] ?? null) ? $this->config['gateways'] : [];
+
+        return array_keys($gateways);
     }
 }

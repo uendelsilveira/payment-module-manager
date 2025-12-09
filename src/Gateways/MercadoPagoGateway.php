@@ -25,6 +25,13 @@ use UendelSilveira\PaymentModuleManager\Exceptions\WebhookProcessingException;
 
 class MercadoPagoGateway implements PaymentGatewayInterface
 {
+    /**
+     * Supported payment methods for Mercado Pago.
+     *
+     * @var array<string>
+     */
+    private const SUPPORTED_PAYMENT_METHODS = ['pix', 'credit_card', 'boleto'];
+
     protected MercadoPagoPaymentClientInterface $paymentClient;
 
     /**
@@ -177,6 +184,20 @@ class MercadoPagoGateway implements PaymentGatewayInterface
     {
         $paymentMethod = $data['payment_method_id'] ?? 'pix';
         $amount = is_float($data['amount'] ?? null) || is_int($data['amount'] ?? null) ? (float) $data['amount'] : 0.0;
+
+        // Validar método de pagamento
+        if (! in_array($paymentMethod, self::SUPPORTED_PAYMENT_METHODS, true)) {
+            $methodString = is_string($paymentMethod) ? $paymentMethod : 'unknown';
+
+            throw new PaymentFailedException(
+                sprintf(
+                    'Invalid payment method: %s. Supported methods: %s',
+                    $methodString,
+                    implode(', ', self::SUPPORTED_PAYMENT_METHODS)
+                )
+            );
+        }
+
         $baseData = [
             'transaction_amount' => $amount,
             'description' => $data['description'] ?? 'Payment',
@@ -188,7 +209,6 @@ class MercadoPagoGateway implements PaymentGatewayInterface
             'pix' => $this->buildPixPayment($baseData, $data),
             'credit_card' => $this->buildCreditCardPayment($baseData, $data),
             'boleto' => $this->buildBoletoPayment($baseData, $data),
-            default => $baseData,
         };
     }
 
@@ -203,9 +223,11 @@ class MercadoPagoGateway implements PaymentGatewayInterface
         $webhookUrl = $data['webhook_url'] ?? null;
 
         if ($webhookUrl === null && is_callable($this->webhookUrlGenerator)) {
-            $webhookUrl = call_user_func($this->webhookUrlGenerator, 'mercadopago');
+            $gatewayName = $this->config['name'] ?? 'mercadopago';
+            $webhookUrl = call_user_func($this->webhookUrlGenerator, $gatewayName);
         } elseif ($webhookUrl === null) {
-            $webhookUrl = route('payment.webhook', ['gateway' => 'mercadopago']);
+            $gatewayName = $this->config['name'] ?? 'mercadopago';
+            $webhookUrl = route('payment.webhook', ['gateway' => $gatewayName]);
         }
 
         return array_merge($base, ['notification_url' => $webhookUrl]);

@@ -24,6 +24,7 @@ return [
     'gateways' => [
         'mercadopago' => [
             'class' => \UendelSilveira\PaymentModuleManager\Gateways\MercadoPagoGateway::class,
+            'name' => 'mercadopago', // Nome do gateway para routing e webhooks
 
             // Credenciais para autenticação direta do Mercado Pago
             'public_key' => env('MERCADOPAGO_PUBLIC_KEY', ''),

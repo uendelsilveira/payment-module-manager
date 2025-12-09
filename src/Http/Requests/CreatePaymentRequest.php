@@ -40,7 +40,7 @@ class CreatePaymentRequest extends FormRequest
                 'min:0.01',
                 function ($attribute, float $value, $fail): void {
                     $monetaryLimitsValidator = app(MonetaryLimitsValidator::class);
-                    $gateway = $this->input('method');
+                    $gateway = $this->input('gateway') ?? $this->input('method');
                     $paymentMethod = $this->input('payment_method_id');
 
                     $error = $monetaryLimitsValidator->getValidationError($value, $gateway, $paymentMethod);
@@ -50,7 +50,9 @@ class CreatePaymentRequest extends FormRequest
                     }
                 },
             ],
-            'method' => ['required', 'string', Rule::in($configuredGateways)], // Gateway principal, agora dinâmico
+            'gateway' => ['required', 'string', Rule::in($configuredGateways)],
+            // Retrocompatibilidade: aceitar 'method' (deprecated, será removido na v2.0)
+            'method' => ['sometimes', 'string', Rule::in($configuredGateways)],
             'currency' => [
                 'sometimes',
                 'string',

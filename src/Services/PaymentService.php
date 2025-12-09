@@ -45,7 +45,8 @@ class PaymentService
         $correlationIdArray = LogContext::create()->withCorrelationId()->toArray();
         $correlationId = is_string($correlationIdArray['correlation_id'] ?? null) ? $correlationIdArray['correlation_id'] : null;
 
-        $gatewayName = is_string($data['gateway'] ?? null) ? $data['gateway'] : $this->paymentGatewayManager->getDefaultGateway();
+        // Middleware garante que 'gateway' existe e é válido
+        $gatewayName = is_string($data['gateway'] ?? null) ? $data['gateway'] : throw new \InvalidArgumentException('Gateway not specified in payment data');
         $amount = is_float($data['amount'] ?? null) || is_int($data['amount'] ?? null) ? (float) $data['amount'] : 0.0;
         $paymentMethod = is_string($data['payment_method_id'] ?? null) ? $data['payment_method_id'] : 'default';
 
