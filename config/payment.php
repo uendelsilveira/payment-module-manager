@@ -12,12 +12,6 @@ return [
     |--------------------------------------------------------------------------
     | Default Payment Gateway
     |--------------------------------------------------------------------------
-    |
-    | This option controls the default payment gateway that will be used
-    | when no specific gateway is requested.
-    |
-    | Supported: "mercadopago", "stripe", "paypal"
-    |
     */
     'default_gateway' => env('PAYMENT_DEFAULT_GATEWAY', 'mercadopago'),
 
@@ -42,80 +36,34 @@ return [
 
             // Configurações opcionais
             'sandbox' => env('APP_ENV') !== 'production',
-            'timeout' => 30, // segundos
+            'timeout' => 30,
             'max_retries' => 3,
         ],
+    ],
 
-        // Stripe configuration
-        'stripe' => [
-            'class' => \UendelSilveira\PaymentModuleManager\Gateways\StripeGateway::class,
-            'api_key' => env('STRIPE_API_KEY'),
-            'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    /*
+    |--------------------------------------------------------------------------
+    | Monetary Limits
+    |--------------------------------------------------------------------------
+    */
+    'monetary_limits' => [
+        'mercadopago' => [
+            'pix' => [
+                'min' => env('MP_PIX_MIN_AMOUNT', 1),
+                'max' => env('MP_PIX_MAX_AMOUNT', 1000000),
+            ],
+            'credit_card' => [
+                'min' => env('MP_CREDIT_CARD_MIN_AMOUNT', 100),
+                'max' => env('MP_CREDIT_CARD_MAX_AMOUNT', 5000000),
+            ],
+            'default' => [
+                'min' => env('MP_DEFAULT_MIN_AMOUNT', 100),
+                'max' => env('MP_DEFAULT_MAX_AMOUNT', 10000000),
+            ],
         ],
-
-        // PayPal configuration
-        'paypal' => [
-            'class' => \UendelSilveira\PaymentModuleManager\Gateways\PayPalGateway::class,
-            'client_id' => env('PAYPAL_CLIENT_ID'),
-            'client_secret' => env('PAYPAL_CLIENT_SECRET'),
-            'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
-            'sandbox' => env('PAYPAL_SANDBOX', true),
-        ],
-
-        'monetary_limits' => [
-            // Exemplo de limites para um gateway específico
-            'mercadopago' => [
-                'pix' => [
-                    'min' => env('MP_PIX_MIN_AMOUNT', 1), // R$ 0.01
-                    'max' => env('MP_PIX_MAX_AMOUNT', 1000000), // R$ 10,000.00
-                ],
-                'credit_card' => [
-                    'min' => env('MP_CREDIT_CARD_MIN_AMOUNT', 100), // R$ 1.00
-                    'max' => env('MP_CREDIT_CARD_MAX_AMOUNT', 5000000), // R$ 50,000.00
-                ],
-                'debit_card' => [
-                    'min' => env('MP_DEBIT_CARD_MIN_AMOUNT', 100), // R$ 1.00
-                    'max' => env('MP_DEBIT_CARD_MAX_AMOUNT', 1000000), // R$ 10,000.00
-                ],
-                'boleto' => [
-                    'min' => env('MP_BOLETO_MIN_AMOUNT', 100), // R$ 1.00
-                    'max' => env('MP_BOLETO_MAX_AMOUNT', 10000000), // R$ 100,000.00
-                ],
-                'default' => [
-                    'min' => env('MP_DEFAULT_MIN_AMOUNT', 100), // R$ 1.00
-                    'max' => env('MP_DEFAULT_MAX_AMOUNT', 10000000), // R$ 100,000.00
-                ],
-            ],
-
-            // Stripe
-            'stripe' => [
-                'credit_card' => [
-                    'min' => env('STRIPE_CREDIT_CARD_MIN_AMOUNT', 100), // R$ 1.00
-                    'max' => env('STRIPE_CREDIT_CARD_MAX_AMOUNT', 5000000), // R$ 50,000.00
-                ],
-                'default' => [
-                    'min' => env('STRIPE_DEFAULT_MIN_AMOUNT', 100), // R$ 1.00
-                    'max' => env('STRIPE_DEFAULT_MAX_AMOUNT', 10000000), // R$ 100,000.00
-                ],
-            ],
-
-            // PayPal
-            'paypal' => [
-                'credit_card' => [
-                    'min' => env('PAYPAL_CREDIT_CARD_MIN_AMOUNT', 100), // R$ 1.00
-                    'max' => env('PAYPAL_CREDIT_CARD_MAX_AMOUNT', 5000000), // R$ 50,000.00
-                ],
-                'default' => [
-                    'min' => env('PAYPAL_DEFAULT_MIN_AMOUNT', 100), // R$ 1.00
-                    'max' => env('PAYPAL_DEFAULT_MAX_AMOUNT', 10000000), // R$ 100,000.00
-                ],
-            ],
-
-            // Global fallback limits
-            'global' => [
-                'min' => env('PAYMENT_GLOBAL_MIN_AMOUNT', 100), // R$ 1.00
-                'max' => env('PAYMENT_GLOBAL_MAX_AMOUNT', 10000000), // R$ 100,000.00
-            ],
+        'global' => [
+            'min' => env('PAYMENT_GLOBAL_MIN_AMOUNT', 100),
+            'max' => env('PAYMENT_GLOBAL_MAX_AMOUNT', 10000000),
         ],
     ],
 
@@ -123,33 +71,15 @@ return [
     |--------------------------------------------------------------------------
     | Refund Rules Configuration
     |--------------------------------------------------------------------------
-    |
-    | Configure refund eligibility rules for different gateways and payment methods.
-    | This includes time windows, supported payment methods, and business rules.
-    |
     */
     'refund_rules' => [
         'mercadopago' => [
-            'time_window_days' => 180, // 180 days refund window
+            'time_window_days' => 180,
             'supported_methods' => ['credit_card', 'debit_card', 'pix'],
             'requires_settlement' => false,
         ],
-
-        'stripe' => [
-            'time_window_days' => 180, // 180 days refund window
-            'supported_methods' => ['credit_card', 'debit_card'],
-            'requires_settlement' => false,
-        ],
-
-        'paypal' => [
-            'time_window_days' => 180, // 180 days refund window
-            'supported_methods' => ['credit_card', 'paypal_account'],
-            'requires_settlement' => false,
-        ],
-
-        // Global refund rules (fallback)
         'global' => [
-            'time_window_days' => 90, // Default 90 days
+            'time_window_days' => 90,
             'supported_methods' => ['credit_card', 'debit_card'],
             'requires_settlement' => false,
         ],
