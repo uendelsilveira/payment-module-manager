@@ -9,6 +9,8 @@
 
 namespace UendelSilveira\PaymentModuleManager\Listeners;
 
+use GuzzleHttp\Promise\PromiseInterface;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use UendelSilveira\PaymentModuleManager\Events\PaymentStatusChanged;
@@ -77,6 +79,11 @@ class SendPaymentStatusNotification
 
             $response = Http::timeout(10)
                 ->post($url, $payload);
+
+            if ($response instanceof PromiseInterface) {
+                /** @var Response $response */
+                $response = $response->wait();
+            }
 
             if ($response->successful()) {
                 Log::channel('payment')->info('Webhook notification sent successfully', $logContext->with('webhook_url', $url)->toArray());
